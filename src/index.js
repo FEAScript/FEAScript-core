@@ -11,3 +11,4 @@
 export { FEAScriptModel } from "./FEAScript.js";
 export { plotSolution } from "./visualization/plotSolutionScript.js";
 export { printVersion, logSystem } from "./utilities/utilitiesScript.js";
+export { FEAWorkerScript } from "./FEAWorkerScript.js";
