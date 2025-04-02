@@ -1,3 +1,13 @@
+//   ______ ______           _____           _       _     //
+//  |  ____|  ____|   /\    / ____|         (_)     | |    //
+//  | |__  | |__     /  \  | (___   ___ ____ _ ____ | |_   //
+//  |  __| |  __|   / /\ \  \___ \ / __|  __| |  _ \| __|  //
+//  | |    | |____ / ____ \ ____) | (__| |  | | |_) | |    //
+//  |_|    |______/_/    \_\_____/ \___|_|  |_|  __/| |    //
+//                                            | |   | |    //
+//                                            |_|   | |_   //
+//       Website: https://feascript.com/             \__|  //
+
 import * as Comlink from "https://unpkg.com/comlink/dist/esm/comlink.mjs";
 import { FEAScriptModel } from "./FEAScript.js";
 import { create, all } from "https://cdn.jsdelivr.net/npm/mathjs@latest/+esm";
@@ -7,6 +17,11 @@ const math = create(all);
 globalThis.math = math;
 
 class FEAWorkerWrapper {
+  /**
+   * Constructor to initialize the FEAWorkerWrapper class.
+   * Creates an instance of the FEAScriptModel.
+   * @throws Will throw an error if the FEAScriptModel fails to initialize.
+   */
   constructor() {
     try {
       this.model = new FEAScriptModel();
@@ -16,6 +31,12 @@ class FEAWorkerWrapper {
     }
   }
 
+  /**
+   * Sets the solver configuration in the FEAScriptModel.
+   * @param {string} solverConfig - The solver configuration to set.
+   * @returns {boolean} Returns true if the configuration is set successfully.
+   * @throws Will throw an error if the configuration fails to set.
+   */
   setSolverConfig(solverConfig) {
     try {
       this.model.setSolverConfig(solverConfig);
@@ -26,6 +47,12 @@ class FEAWorkerWrapper {
     }
   }
 
+  /**
+   * Sets the mesh configuration in the FEAScriptModel.
+   * @param {object} meshConfig - The mesh configuration to set.
+   * @returns {boolean} Returns true if the configuration is set successfully.
+   * @throws Will throw an error if the configuration fails to set.
+   */
   setMeshConfig(meshConfig) {
     try {
       this.model.setMeshConfig(meshConfig);
@@ -36,6 +63,13 @@ class FEAWorkerWrapper {
     }
   }
 
+  /**
+   * Adds a boundary condition to the FEAScriptModel.
+   * @param {string} boundaryKey - The key identifying the boundary.
+   * @param {array} condition - The boundary condition to add.
+   * @returns {boolean} Returns true if the boundary condition is added successfully.
+   * @throws Will throw an error if the boundary condition fails to add.
+   */
   addBoundaryCondition(boundaryKey, condition) {
     try {
       this.model.addBoundaryCondition(boundaryKey, condition);
@@ -46,6 +80,12 @@ class FEAWorkerWrapper {
     }
   }
 
+  /**
+   * Sets the solver method in the FEAScriptModel.
+   * @param {string} solverMethod - The solver method to set.
+   * @returns {boolean} Returns true if the solver method is set successfully.
+   * @throws Will throw an error if the solver method fails to set.
+   */
   setSolverMethod(solverMethod) {
     try {
       this.model.setSolverMethod(solverMethod);
@@ -56,6 +96,11 @@ class FEAWorkerWrapper {
     }
   }
 
+  /**
+   * Solves the problem using the FEAScriptModel.
+   * @returns {object} Returns the solution result, including the solution vector, node coordinates, solver configuration, and mesh dimension.
+   * @throws Will throw an error if the solve operation fails.
+   */
   solve() {
     try {
       const result = this.model.solve();
@@ -71,6 +116,12 @@ class FEAWorkerWrapper {
       throw error;
     }
   }
+
+  /**
+   * Retrieves model information from the FEAScriptModel.
+   * @returns {object} Returns the model information, including solver configuration, mesh configuration, boundary conditions, and solver method.
+   * @throws Will throw an error if the model information fails to retrieve.
+   */
   getModelInfo() {
     try {
       return {
