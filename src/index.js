@@ -11,10 +11,4 @@
 export { FEAScriptModel } from "./FEAScript.js";
 export { plotSolution } from "./visualization/plotSolutionScript.js";
 export { printVersion, logSystem } from "./utilities/utilitiesScript.js";
-
-// Temporarily commenting out the worker export to avoid CORS issues
-// The Web Worker functionality relies on the Comlink library which is currently causing CORS errors:
-// - Error: "Loading module from 'https://unpkg.com/comlink/dist/esm/comlink.mjs' was blocked because of a disallowed MIME type ('text/html')"
-// - Error: "Cross-Origin Request Blocked: The Same Origin Policy disallows reading the remote resource"
-//
-// export { FEAWorkerScript } from "./FEAWorkerScript.js";
+export { FEAWorkerScript } from "./FEAWorkerScript.js";

@@ -8,7 +8,9 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
-import * as Comlink from "https://unpkg.com/comlink/dist/esm/comlink.mjs";
+// import * as Comlink from "https://unpkg.com/comlink/dist/esm/comlink.mjs";
+// The Web Worker functionality now uses the local Comlink library to avoid CORS issues
+import * as Comlink from "./vendor/comlink.mjs";
 import { basicLog } from "./utilities/utilitiesScript.js";
 
 export class FEAWorkerScript {
