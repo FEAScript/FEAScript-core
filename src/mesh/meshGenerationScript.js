@@ -11,6 +11,11 @@
 /**
  * Class to handle the generation of structured finite element meshes
  */
+
+
+import { importGmsh } from '../readers/gmshQuadReader';
+
+
 export class meshGeneration {
   /**
    * Constructor to initialize the meshGeneration class
@@ -82,6 +87,19 @@ export class meshGeneration {
       totalNodesY: nodesYCoordinates.length,
       elements,
     };
+  }
+
+ /**
+   * Generate a structured mesh based on the msh file
+   * @returns {object} An object containing the coordinates of nodes,
+   * total number of nodes, nodal numbering (NOP) array, and boundary elements
+   */
+  async generateMeshFromMshFile(file){
+
+    //for now i have made a parsing of simple quadrilateral .msh file of version 4.1
+    const outputMesh = await importGmsh(file)  
+
+    return outputMesh
   }
 
   /**
