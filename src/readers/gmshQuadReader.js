@@ -8,7 +8,8 @@ const importGmsh = async (file) => {
     ascii: false,
     fltBytes: 8,
     totalNodesX:0,
-    totalNodesY:0
+    totalNodesY:0,
+    physicalPropMap:[]
   };
   let textre = await file.text();
   textre = textre
@@ -18,9 +19,16 @@ const importGmsh = async (file) => {
 
   let inNodesSections = false;
 
+  const totalElements = newFin.nodalNumbering.length;
+  const numMaterials = newFin.physicalPropMap.length;
+  const baseChunkSize = Math.floor(totalElements / numMaterials);
+  const remainder = totalElements % numMaterials;
+
   let inElementsSecitons = false;
 
   let inMeshSections = false;
+
+  let inPhysicalNames = false;
 
   let lineNumber = 0;
 
@@ -34,6 +42,17 @@ const importGmsh = async (file) => {
       inMeshSections = false;
       continue;
     }
+    if (line == "$PhysicalNames") {
+      inPhysicalNames = true;
+      continue;
+    }
+    if (line == "$EndPhysicalNames") {
+      lineNumber = 0;
+      inPhysicalNames = false;
+
+            continue;
+    }
+    
     if (line == "$Nodes") {
       inNodesSections = true;
       continue;
@@ -41,6 +60,8 @@ const importGmsh = async (file) => {
     if (line == "$EndNodes") {
       lineNumber = 0;
       inNodesSections = false;
+
+
       continue;
     }
     if (line == "$Elements") {
@@ -53,9 +74,10 @@ const importGmsh = async (file) => {
       inElementsSecitons = false;
       continue;
     }
+    let temp = line.split(" ");
+
     lineNumber = lineNumber + 1;
     if (inMeshSections) {
-      let temp = line.split(" ");
       let gmshVersion = parseFloat(temp[0]);
       let asciiOr = temp[1] === "0" ? true : false;
       let fltBytesOr = temp[2];
@@ -64,7 +86,22 @@ const importGmsh = async (file) => {
       newFin.ascii = asciiOr;
       newFin.fltBytes = fltBytesOr;
     }
-    let temp = line.split(" ");
+
+    if(inPhysicalNames){
+      if(lineNumber>1){
+        let dimension = parseInt(temp[0]);
+let tag = parseInt(temp[1]);
+let name = temp[2].replace(/^"|"$/g, "");
+
+        newFin.physicalPropMap=[...newFin.physicalPropMap,
+          {
+            tag:tag,
+            dimension:dimension,
+            name:name
+          }
+      ]
+      }
+    }
     if (inNodesSections) {
       if (temp.length === 3) {
         newFin.totalNodesX += 1;
@@ -140,13 +177,24 @@ const importGmsh = async (file) => {
     }
   
     newFin.boundaryElements = newFin.boundaryElements.filter((each) => each);
+
+let tempElementArr = [];
+let startIndex = 0;
+
+for (let i = 0; i < numMaterials; i++) {
+  // Distribute one extra element for the first 'remainder' chunks
+  const currentChunkSize = baseChunkSize + (i < remainder ? 1 : 0);
+  tempElementArr.push(newFin.nodalNumbering.slice(startIndex, startIndex + currentChunkSize));
+  startIndex += currentChunkSize;
+}
+
+newFin.nodalNumbering = tempElementArr;
   
   // });
 
   // if (useKernel) {
   //   await taichiRunner.runKernel(useKernel);
   // }
-
   return newFin;
 };
 
