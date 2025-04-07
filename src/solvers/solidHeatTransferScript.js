@@ -12,7 +12,7 @@ import { basisFunctions } from "../mesh/basisFunctionsScript.js";
 import { numericalIntegration } from "../methods/numericalIntegrationScript.js";
 import { meshGeneration } from "../mesh/meshGenerationScript.js";
 import { ThermalBoundaryConditions } from "../methods/thermalBoundaryConditionsScript.js";
-import { basicLog, debugLog } from "../utilities/utilitiesScript.js";
+import { basicLog, debugLog } from "../utilities/loggingScript.js";
 
 /**
  * Assemble the solid heat transfer matrix
