@@ -9,7 +9,7 @@
 //       Website: https://feascript.com/             \__|  //
 
 import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
-import { basicLog, debugLog } from "./utilities/utilitiesScript.js";
+import { basicLog, debugLog } from "./utilities/loggingScript.js";
 
 /**
  * FEAScript: An open-source finite element simulation library developed in JavaScript
