@@ -35,11 +35,20 @@ export function plotSolution(
     const numNodesY = new Set(nodesYCoordinates).size;
 
     // Reshape the nodesXCoordinates and nodesYCoordinates arrays to match the grid dimensions
-    let reshapedXCoordinates = math.reshape(Array.from(nodesXCoordinates), [numNodesX, numNodesY]);
-    let reshapedYCoordinates = math.reshape(Array.from(nodesYCoordinates), [numNodesX, numNodesY]);
+    let reshapedXCoordinates = math.reshape(Array.from(nodesXCoordinates), [
+      numNodesX,
+      numNodesY,
+    ]);
+    let reshapedYCoordinates = math.reshape(Array.from(nodesYCoordinates), [
+      numNodesX,
+      numNodesY,
+    ]);
 
     // Reshape the solution array to match the grid dimensions
-    let reshapedSolution = math.reshape(Array.from(solutionVector), [numNodesX, numNodesY]);
+    let reshapedSolution = math.reshape(Array.from(solutionVector), [
+      numNodesX,
+      numNodesY,
+    ]);
 
     // Transpose the reshapedSolution array to get column-wise data
     let transposedSolution = math.transpose(reshapedSolution);
@@ -104,7 +113,9 @@ export function plotSolution(
 
     // Set the layout for the contour plot
     let layout = {
-      title: `${plotType} plot${showMesh ? " with mesh" : ""} - ${solverConfig}`,
+      title: `${plotType} plot${
+        showMesh ? " with mesh" : ""
+      } - ${solverConfig}`,
       width: plotWidth,
       height: plotHeight,
       xaxis: { title: "x" },
@@ -116,6 +127,6 @@ export function plotSolution(
     if (showMesh) {
       plotData.push(meshData);
     }
-    Plotly.newPlot(plotDivId, plotData, layout);
+    Plotly.newPlot(plotDivId, plotData, layout, { responsive: true });
   }
 }
