@@ -9,6 +9,7 @@
 //       Website: https://feascript.com/             \__|  //
 
 import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
+import { jacobiMethod } from "./methods/jacobiMethodScript.js";
 import { basicLog, debugLog } from "./utilities/loggingScript.js";
 
 /**
@@ -77,6 +78,20 @@ export class FEAScriptModel {
     console.time("systemSolving");
     if (this.solverMethod === "lusolve") {
       solutionVector = math.lusolve(jacobianMatrix, residualVector);
+    } else if (this.solverMethod === "jacobi") {
+      // Create initial guess of zeros
+      const initialGuess = new Array(residualVector.length).fill(0);
+      // Call Jacobi method with desired max iterations and tolerance
+      const jacobiResult = jacobiMethod(jacobianMatrix, residualVector, initialGuess, 1000, 1e-6);
+      
+      // Log convergence information
+      if (jacobiResult.converged) {
+        debugLog(`Jacobi method converged in ${jacobiResult.iterations} iterations`);
+      } else {
+        debugLog(`Jacobi method did not converge after ${jacobiResult.iterations} iterations`);
+      }
+      
+      solutionVector = jacobiResult.solution;
     }
     console.timeEnd("systemSolving");
     basicLog("System solved successfully");
