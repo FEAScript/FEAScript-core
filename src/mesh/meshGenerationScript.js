@@ -234,7 +234,11 @@ export class meshGeneration {
     }
 
     if (this.meshDimension === "1D") {
-      console.log("Unsupported dimension or element order");
+      // Left boundary (element 0, side 0)
+      boundaryElements[0].push([0, 0]);
+      
+      // Right boundary (last element, side 1)
+      boundaryElements[1].push([this.numElementsX - 1, 1]);
     } else if (this.meshDimension === "2D") {
       for (let elementIndexX = 0; elementIndexX < this.numElementsX; elementIndexX++) {
         for (let elementIndexY = 0; elementIndexY < this.numElementsY; elementIndexY++) {
