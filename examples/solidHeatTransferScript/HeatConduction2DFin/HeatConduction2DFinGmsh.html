@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+
+<!--   ______ ______           _____           _       _     -->
+<!--  |  ____|  ____|   /\    / ____|         (_)     | |    -->
+<!--  | |__  | |__     /  \  | (___   ___ ____ _ ____ | |_   -->
+<!--  |  __| |  __|   / /\ \  \___ \ / __|  __| |  _ \| __|  -->
+<!--  | |    | |____ / ____ \ ____) | (__| |  | | |_) | |    -->
+<!--  |_|    |______/_/    \_\_____/ \___|_|  |_|  __/| |    -->
+<!--                                            | |   | |    -->
+<!--                                            |_|   | |_   -->
+<!--       Website: https://feascript.com/             \__|  -->
+
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>FEAScript: Heat Conduction in a Two-Dimensional Fin Example (Experimental)</title>
+
+    <!-- Math.js and Plotly.js libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/5.0.0/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+
+    <!-- Link to the CSS files -->
+    <link href="https://feascript.com/FEAScript-website.css" rel="stylesheet" type="text/css" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
+
+    <!-- Custom layout styles -->
+    <style>
+      .container {
+        display: flex;
+        flex-wrap: wrap;
+      }
+
+      .column {
+        flex: 1 1 100%;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+
+      @media (min-width: 768px) {
+        .column {
+          flex: 1 1 50%;
+        }
+      }
+      
+      #solutionPlot {
+        width: 100%;
+        max-width: 800px;
+        height: 500px;
+      }
+
+      #inputForm {
+        margin-top: 20px;
+      }
+      
+      #resultOutput {
+        height: 500px;
+        margin-top: 10px;
+        padding: 10px;
+        background: #f0f0f0;
+        overflow: auto;
+        border: 1px solid #ccc;
+        white-space: pre-wrap;
+      }
+      
+      .experimental-badge {
+        background-color: #ff4500;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 0.8em;
+        margin-left: 10px;
+        vertical-align: middle;
+      }
+      
+      h1 .experimental-badge {
+        font-size: 0.5em;
+        vertical-align: middle;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Heat Conduction in a Two-Dimensional Fin Example <span class="experimental-badge">EXPERIMENTAL</span></h1>
+
+    <div class="container">
+      <!-- Left Column: Simulation Content -->
+      <div class="column">
+        <h2>Worker-Based Simulation</h2>
+        <div id="solutionPlot"></div>
+        
+        <p>
+          This is an experimental version using FEAWorkerScript and a larger mesh (36x18).
+          The worker-based implementation enables better performance for larger simulations.
+          Please refresh the page to update the results. If you need assistance, you can visit the
+          <a href="https://feascript.com/" target="_blank">FEAScript website</a>.
+        </p>
+        
+        <p>
+          <a href="HeatConduction2DFin.html">View Standard Example</a>
+        </p>
+
+        <p>&#169; 2023-<span id="currentYear"></span> FEAScript</p>
+      </div>
+
+      <!-- Right Column: File Upload & Output -->
+      <div class="column">
+        <h2>GMSH File Import <span class="experimental-badge">BETA</span></h2>
+        <form id="inputForm">
+          <label for="inputFile">Choose a .msh file:</label>
+          <input
+            type="file"
+            id="inputFile"
+            name="inputFile"
+            accept=".msh"
+            required
+          />
+        </form>
+        <div id="resultOutput">No file uploaded yet. Please select a GMSH (.msh) file.</div>
+      </div>
+    </div>
+
+    <script>
+      document.getElementById("currentYear").innerHTML = new Date().getFullYear();
+    </script>
+
+    <!-- GMSH File Import Script -->
+    <script type="module">
+      import { importGmshQuadTri } from "../../../src/readers/gmshQuadReader.js";
+      
+      document.getElementById("inputFile").addEventListener("change", async function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        try {
+          document.getElementById("resultOutput").innerHTML = "Processing file...";
+          const res = await importGmshQuadTri(file);
+          console.log(res);
+          document.getElementById("resultOutput").innerHTML = JSON.stringify(res, null, 2);
+        } catch (error) {
+          document.getElementById("resultOutput").innerHTML = `Error processing file: ${error.message}`;
+        }
+      });
+    </script>
+
+    <!-- Worker-Based Simulation Script -->
+    <script type="module">
+      import {
+        plotSolution,
+        printVersion
+      } from "https://feascript.github.io/FEAScript-core/src/index.js";
+      
+      import { FEAWorkerScript } from "../../../src/FEAWorkerScript.js";
+      
+      window.addEventListener("DOMContentLoaded", async () => {
+        try {
+          // Print FEAScript version in the console
+          printVersion();
+
+          // Create a new FEAScript model
+          const model = new FEAWorkerScript();
+
+          // Ensure the worker is ready
+          await model.ping();
+
+          // Set solver configuration
+          await model.setSolverConfig("solidHeatTransferScript");
+
+          // Define mesh configuration
+          await model.setMeshConfig({
+            meshDimension: "2D",
+            elementOrder: "quadratic",
+            numElementsX: 36,
+            numElementsY: 18,
+            maxX: 125,
+            maxY: 50,
+          });
+
+          // Define boundary conditions
+          await model.addBoundaryCondition("0", ["constantTemp", 200]);
+          await model.addBoundaryCondition("1", ["symmetry"]);
+          await model.addBoundaryCondition("2", ["convection", 1, 20]);
+          await model.addBoundaryCondition("3", ["constantTemp", 200]);
+
+          // Set solver method (optional) - 'lusolve' uses LU decomposition
+          await model.setSolverMethod("lusolve");
+
+          // Solve the problem and get the solution
+          const { solutionVector, nodesCoordinates } = await model.solve();
+
+          // Plot the solution as a 2D contour plot
+          plotSolution(
+            solutionVector,
+            nodesCoordinates,
+            "solidHeatTransferScript",
+            "2D",
+            "contour",
+            "solutionPlot"
+          );
+          
+          // Terminate the worker when done
+          model.terminate();
+        } catch (error) {
+          console.error("Error in experimental features:", error);
+          document.getElementById("solutionPlot").innerHTML = 
+            `<div style="color: red; padding: 20px;">Error running simulation: ${error.message}</div>`;
+        }
+      });
+    </script>
+  </body>
+</html>

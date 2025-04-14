@@ -21,120 +21,29 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
 
     <!-- Link to the CSS files -->
-    <link
-      href="https://feascript.com/FEAScript-website.css"
-      rel="stylesheet"
-      type="text/css"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
-      rel="stylesheet"
-    />
-
-    <!-- Custom layout styles -->
-    <style>
-      .container {
-        display: flex;
-        flex-wrap: wrap;
-      }
-
-      .column {
-        flex: 1 1 100%;
-        padding: 20px;
-        box-sizing: border-box;
-      }
-
-      @media (min-width: 768px) {
-        .column {
-          flex: 1 1 50%;
-        }
-      }
-      #solutionPlot {
-        width: 50%;
-        max-width: 100%;
-        min-height: 100px;
-        box-sizing: border-box;
-      }
-
-      #inputForm {
-        margin-top: 20px;
-      }
-      #resultOutput {
-        height: 70vh;
-        margin-top: 10px;
-        padding: 10px;
-        background: #f0f0f0;
-        overflow: auto;
-        border: 1px solid #ccc;
-        white-space: pre-wrap;
-      }
-    </style>
+    <link href="https://feascript.com/FEAScript-website.css" rel="stylesheet" type="text/css" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
   </head>
 
   <body>
-    <div class="container">
-      <!-- Left Column: Simulation Content -->
-      <div class="column">
-        <h1>Heat Conduction in a Two-Dimensional Fin Example</h1>
-        <div id="solutionPlot"></div>
+    <h1>Heat Conduction in a Two-Dimensional Fin Example</h1>
+    <div id="solutionPlot"></div>
 
-        <p>
-          The mesh configuration and boundary conditions are defined directly
-          within the JavaScript code in this example. Please refresh the page to
-          update the results. Detailed instructions for this example can be
-          found in the corresponding
-          <a
-            href="https://feascript.com/tutorials/HeatConduction2DFin.html"
-            target="_blank"
-            >FEAScript tutorial</a
-          >. If you need further assistance, you can visit the
-          <a href="https://feascript.com/" target="_blank">FEAScript website</a
-          >.
-        </p>
-        <p>&#169; 2023-<span id="currentYear"></span> FEAScript</p>
-      </div>
+    <p>
+      The mesh configuration and boundary conditions are defined directly within the JavaScript code in this
+      example. Please refresh the page to update the results. Detailed instructions for this example can be
+      found in the corresponding
+      <a href="https://feascript.com/tutorials/HeatConduction2DFin.html" target="_blank">FEAScript tutorial</a
+      >. If you need further assistance, you can visit the
+      <a href="https://feascript.com/" target="_blank">FEAScript website</a>.
+    </p>
 
-      <!-- Right Column: File Upload & Output -->
-      <div class="column">
-        <h2>Upload Input File</h2>
-        <form id="inputForm">
-          <label for="inputFile">Choose a file:</label>
-          <input
-            type="file"
-            id="inputFile"
-            name="inputFile"
-            accept=".msh"
-            required
-          />
-        </form>
-        <div id="resultOutput">No file uploaded.</div>
-      </div>
-    </div>
-
-    <script type="module">
-      import { importGmshQuadTri } from "../../../src/readers/gmshQuadReader.js";
-      document.getElementById("currentYear").innerHTML =
-        new Date().getFullYear();
-
-      document
-        .getElementById("inputFile")
-        .addEventListener("change", function (e) {
-          const file = e.target.files[0];
-          if (!file) return;
-          handleFileUpload(file);
-        });
-
-      async function handleFileUpload(file) {
-        const res = await importGmshQuadTri(file);
-        console.log(res);
-        document.getElementById("resultOutput").innerHTML = JSON.stringify(
-          res,
-          null,
-          2
-        );
-      }
+    <p>&#169; 2023-<span id="currentYear"></span> FEAScript</p>
+    <script>
+      document.getElementById("currentYear").innerHTML = new Date().getFullYear();
     </script>
 
+    <!-- Import FEAScript library -->
     <script type="module">
       import {
         FEAScriptModel,
@@ -142,14 +51,12 @@
         printVersion,
       } from "https://feascript.github.io/FEAScript-core/src/index.js";
 
-      import { FEAWorkerScript } from "../../../src/FEAWorkerScript.js";
-
-      window.addEventListener("DOMContentLoaded", async () => {
+      window.addEventListener("DOMContentLoaded", () => {
         // Print FEAScript version in the console
         printVersion();
 
         // Create a new FEAScript model
-        const model = new FEAWorkerScript();
+        const model = new FEAScriptModel();
 
         // Set solver configuration
         model.setSolverConfig("solidHeatTransferScript");
@@ -158,10 +65,10 @@
         model.setMeshConfig({
           meshDimension: "2D",
           elementOrder: "quadratic",
-          numElementsX: 36,
-          numElementsY: 18,
-          maxX: 125,
-          maxY: 50,
+          numElementsX: 8,
+          numElementsY: 4,
+          maxX: 4,
+          maxY: 2,
         });
 
         // Define boundary conditions
@@ -174,14 +81,14 @@
         model.setSolverMethod("lusolve");
 
         // Solve the problem and get the solution
-        const { solutionVector, nodesCoordinates } = await model.solve();
+        const { solutionVector, nodesCoordinates } = model.solve();
 
         // Plot the solution as a 2D contour plot
         plotSolution(
           solutionVector,
           nodesCoordinates,
           model.solverConfig,
-          "2D",
+          model.meshConfig.meshDimension,
           "contour",
           "solutionPlot"
         );
