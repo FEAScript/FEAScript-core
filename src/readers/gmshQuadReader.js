@@ -7,6 +7,7 @@ const importGmshQuadTri = async (file) => {
       triangleElements: [],
     },
     boundaryElements: [],
+    boundaryConditions: [], 
     gmshV: 0,
     ascii: false,
     fltBytes: "8",
@@ -43,6 +44,9 @@ const importGmshQuadTri = async (file) => {
     numElements: 0,
   };
   let elementsProcessedInBlock = 0;
+  
+  let boundaryElementsByTag = {};
+  
   while (lineIndex < lines.length) {
     const line = lines[lineIndex];
 
@@ -206,12 +210,22 @@ const importGmshQuadTri = async (file) => {
       }
 
       if (elementsProcessedInBlock < currentElementBlock.numElements) {
+        const elementTag = parseInt(parts[0], 10);
         const nodeIndices = parts.slice(1).map((idx) => parseInt(idx, 10));
 
-        if (currentElementBlock.elementType === 3) {
-          result.nodalNumbering.quadElements.push(nodeIndices);
+        if (currentElementBlock.elementType === 1) {
+          const physicalTag = currentElementBlock.tag;
+          
+          if (!boundaryElementsByTag[physicalTag]) {
+            boundaryElementsByTag[physicalTag] = [];
+          }
+          
+          boundaryElementsByTag[physicalTag].push(nodeIndices);
         } else if (currentElementBlock.elementType === 2) {
           result.nodalNumbering.triangleElements.push(nodeIndices);
+        } else if (currentElementBlock.elementType === 3) {
+          
+          result.nodalNumbering.quadElements.push(nodeIndices);
         }
 
         elementsProcessedInBlock++;
@@ -225,6 +239,20 @@ const importGmshQuadTri = async (file) => {
 
     lineIndex++;
   }
+
+  result.physicalPropMap.forEach(prop => {
+    if (prop.dimension === 1) {  
+      const boundaryNodes = boundaryElementsByTag[prop.tag] || [];
+      
+      if (boundaryNodes.length > 0) {
+        result.boundaryConditions.push({
+          name: prop.name,
+          tag: prop.tag,
+          nodes: boundaryNodes
+        });
+      }
+    }
+  });
 
   processBoundaryElements(
     result.nodalNumbering.triangleElements,
