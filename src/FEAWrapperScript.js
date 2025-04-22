@@ -137,6 +137,19 @@ class FEAWorkerWrapper {
       throw error;
     }
   }
+
+  /**
+   * Simple ping method to check if the worker is responsive.
+   * @returns {boolean} Returns true to indicate the worker is available.
+   */
+  ping() {
+    try {
+      return true;
+    } catch (error) {
+      console.error("FEA Worker: Error in ping", error);
+      throw error;
+    }
+  }
 }
 
 Comlink.expose(FEAWorkerWrapper);

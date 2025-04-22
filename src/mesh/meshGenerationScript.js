@@ -12,7 +12,7 @@
  * Class to handle the generation of structured finite element meshes
  */
 
-import { importGmsh } from '../readers/gmshQuadReader.js';
+import { importGmshQuadTri } from '../readers/gmshQuadReader.js';
 
 export class meshGeneration {
   /**
@@ -95,7 +95,7 @@ export class meshGeneration {
   async generateMeshFromMshFile(file){
 
     //for now i have made a parsing of simple quadrilateral .msh file of version 4.1
-    const outputMesh = await importGmsh(file)  
+    const outputMesh = await importGmshQuadTri(file);
 
     return outputMesh
   }
