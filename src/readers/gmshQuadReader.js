@@ -1,202 +1,5 @@
-const importGmsh = async (file) => {
-  let newFin = {
-    nodesXCoordinates: [],
-    nodesYCoordinates: [],
-    nodalNumbering: [],
-    boundaryElements: [],
-    gmshV: 0,
-    ascii: false,
-    fltBytes: 8,
-    totalNodesX: 0,
-    totalNodesY: 0,
-    physicalPropMap: [],
-  };
-  let textre = await file.text();
-  textre = textre
-    .split("\n")
-    .map((eachLine) => eachLine.trim())
-    .filter((eachLine) => eachLine != "" && eachLine != " ");
-
-  let inNodesSections = false;
-
-  const totalElements = newFin.nodalNumbering.length;
-  const numMaterials = newFin.physicalPropMap.length;
-  const baseChunkSize = Math.floor(totalElements / numMaterials);
-  const remainder = totalElements % numMaterials;
-
-  let inElementsSecitons = false;
-
-  let inMeshSections = false;
-
-  let inPhysicalNames = false;
-
-  let lineNumber = 0;
-
-  for (let line of textre) {
-    if (line == "$MeshFormat") {
-      inMeshSections = true;
-      continue;
-    }
-    if (line == "$EndMeshFormat") {
-      lineNumber = 0;
-      inMeshSections = false;
-      continue;
-    }
-    if (line == "$PhysicalNames") {
-      inPhysicalNames = true;
-      continue;
-    }
-    if (line == "$EndPhysicalNames") {
-      lineNumber = 0;
-      inPhysicalNames = false;
-
-      continue;
-    }
-
-    if (line == "$Nodes") {
-      inNodesSections = true;
-      continue;
-    }
-    if (line == "$EndNodes") {
-      lineNumber = 0;
-      inNodesSections = false;
-
-      continue;
-    }
-    if (line == "$Elements") {
-      inElementsSecitons = true;
-      continue;
-    }
-    if (line == "$EndElements") {
-      lineNumber = 0;
-
-      inElementsSecitons = false;
-      continue;
-    }
-    let temp = line.split(" ");
-
-    lineNumber = lineNumber + 1;
-    if (inMeshSections) {
-      let gmshVersion = parseFloat(temp[0]);
-      let asciiOr = temp[1] === "0" ? true : false;
-      let fltBytesOr = temp[2];
-
-      newFin.gmshV = gmshVersion;
-      newFin.ascii = asciiOr;
-      newFin.fltBytes = fltBytesOr;
-    }
-
-    if (inPhysicalNames) {
-      if (lineNumber > 1) {
-        let dimension = parseInt(temp[0]);
-        let tag = parseInt(temp[1]);
-        let name = temp[2].replace(/^"|"$/g, "");
-
-        newFin.physicalPropMap = [
-          ...newFin.physicalPropMap,
-          {
-            tag: tag,
-            dimension: dimension,
-            name: name,
-          },
-        ];
-      }
-    }
-    if (inNodesSections) {
-      if (temp.length === 3) {
-        newFin.totalNodesX += 1;
-        newFin.totalNodesY += 1;
-        newFin.nodesXCoordinates = [
-          ...newFin.nodesXCoordinates,
-          parseFloat(temp[0]),
-        ];
-        newFin.nodesYCoordinates = [
-          ...newFin.nodesYCoordinates,
-          parseFloat(temp[1]),
-        ];
-      }
-    }
-
-    if (inElementsSecitons) {
-      if (temp.length === 5) {
-        newFin.nodalNumbering = [
-          ...newFin.nodalNumbering,
-          temp.slice(1).map((num) => parseInt(num, 10)),
-        ];
-      }
-    }
-  }
-
-  // const taichiRunner = new TaichiRunner();
-  // await taichiRunner.init();
-
-  // await taichiRunner.addToScope({ newFin, tempBoundary });
-
-  // const useKernel = await taichiRunner.createKernel(() => {
-  const edgeCount = {};
-  for (let i = 0; i < newFin.nodalNumbering.length; i++) {
-    const element = newFin.nodalNumbering[i];
-    const edges = [
-      [element[0], element[1]],
-      [element[1], element[2]],
-      [element[2], element[3]],
-      [element[3], element[0]],
-    ];
-    edges.forEach((edge) => {
-      const key =
-        edge[0] < edge[1] ? `${edge[0]}-${edge[1]}` : `${edge[1]}-${edge[0]}`;
-      edgeCount[key] = (edgeCount[key] || 0) + 1;
-    });
-  }
-
-  newFin.boundaryElements = [];
-  for (let i = 0; i < newFin.nodalNumbering.length; i++) {
-    const element = newFin.nodalNumbering[i];
-    const edges = [
-      [element[0], element[1]],
-      [element[1], element[2]],
-      [element[2], element[3]],
-      [element[3], element[0]],
-    ];
-    for (let j = 0; j < edges.length; j++) {
-      const edge = edges[j];
-      const key =
-        edge[0] < edge[1] ? `${edge[0]}-${edge[1]}` : `${edge[1]}-${edge[0]}`;
-      if (edgeCount[key] === 1) {
-        if (!newFin.boundaryElements[i]) {
-          newFin.boundaryElements[i] = [];
-        }
-        newFin.boundaryElements[i].push([i, j]);
-      }
-    }
-  }
-
-  newFin.boundaryElements = newFin.boundaryElements.filter((each) => each);
-
-  let tempElementArr = [];
-  let startIndex = 0;
-
-  for (let i = 0; i < numMaterials; i++) {
-    // Distribute one extra element for the first 'remainder' chunks
-    const currentChunkSize = baseChunkSize + (i < remainder ? 1 : 0);
-    tempElementArr.push(
-      newFin.nodalNumbering.slice(startIndex, startIndex + currentChunkSize)
-    );
-    startIndex += currentChunkSize;
-  }
-
-  newFin.nodalNumbering = tempElementArr;
-
-  // });
-
-  // if (useKernel) {
-  //   await taichiRunner.runKernel(useKernel);
-  // }
-  return newFin;
-};
-
 const importGmshQuadTri = async (file) => {
-  let newFin = {
+  let result = {
     nodesXCoordinates: [],
     nodesYCoordinates: [],
     nodalNumbering: {
@@ -204,280 +7,308 @@ const importGmshQuadTri = async (file) => {
       triangleElements: [],
     },
     boundaryElements: [],
+    boundaryConditions: [], 
     gmshV: 0,
     ascii: false,
-    fltBytes: 8,
+    fltBytes: "8",
     totalNodesX: 0,
     totalNodesY: 0,
     physicalPropMap: [],
     elementTypes: {},
   };
 
-  let textre = await file.text();
-  textre = textre
+  let content = await file.text();
+  let lines = content
     .split("\n")
-    .map((eachLine) => eachLine.trim())
-    .filter((eachLine) => eachLine != "" && eachLine != " ");
+    .map((line) => line.trim())
+    .filter((line) => line !== "" && line !== " ");
 
-  let inNodesSections = false;
-  let inElementsSecitons = false;
-  let inMeshSections = false;
-  let inPhysicalNames = false;
-  let inEntities = false;
+  let section = "";
+  let lineIndex = 0;
 
-  let lineNumber = 0;
-  let entityBlocks = 0;
+  let nodeEntityBlocks = 0;
   let totalNodes = 0;
   let nodeBlocksProcessed = 0;
-  let currentNodeBlock = { dim: 0, tag: 0, parametric: 0, numNodes: 0 };
-  let nodeBlockDataStartLine = 0;
-  let collectingNodeTags = false;
-  let collectingNodeCoords = false;
-  let nodeTagsToProcess = [];
+  let currentNodeBlock = { numNodes: 0 };
+  let nodeTagsCollected = 0;
+  let nodeTags = [];
+  let nodeCoordinatesCollected = 0;
 
-  let entityBlocksElements = 0;
+  let elementEntityBlocks = 0;
   let totalElements = 0;
   let elementBlocksProcessed = 0;
-  let currentElementBlock = { dim: 0, tag: 0, elementType: 0, numElements: 0 };
-  let elementBlockStartLine = 0;
+  let currentElementBlock = {
+    dim: 0,
+    tag: 0,
+    elementType: 0,
+    numElements: 0,
+  };
+  let elementsProcessedInBlock = 0;
+  
+  let boundaryElementsByTag = {};
+  
+  while (lineIndex < lines.length) {
+    const line = lines[lineIndex];
 
-  for (let line of textre) {
-    if (line == "$MeshFormat") {
-      inMeshSections = true;
+    if (line === "$MeshFormat") {
+      section = "meshFormat";
+      lineIndex++;
       continue;
-    }
-    if (line == "$EndMeshFormat") {
-      lineNumber = 0;
-      inMeshSections = false;
+    } else if (line === "$EndMeshFormat") {
+      section = "";
+      lineIndex++;
       continue;
-    }
-    if (line == "$PhysicalNames") {
-      inPhysicalNames = true;
+    } else if (line === "$PhysicalNames") {
+      section = "physicalNames";
+      lineIndex++;
       continue;
-    }
-    if (line == "$EndPhysicalNames") {
-      lineNumber = 0;
-      inPhysicalNames = false;
+    } else if (line === "$EndPhysicalNames") {
+      section = "";
+      lineIndex++;
       continue;
-    }
-    if (line == "$Entities") {
-      inEntities = true;
+    } else if (line === "$Entities") {
+      section = "entities";
+      lineIndex++;
       continue;
-    }
-    if (line == "$EndEntities") {
-      lineNumber = 0;
-      inEntities = false;
+    } else if (line === "$EndEntities") {
+      section = "";
+      lineIndex++;
       continue;
-    }
-    if (line == "$Nodes") {
-      inNodesSections = true;
+    } else if (line === "$Nodes") {
+      section = "nodes";
+      lineIndex++;
       continue;
-    }
-    if (line == "$EndNodes") {
-      lineNumber = 0;
-      inNodesSections = false;
+    } else if (line === "$EndNodes") {
+      section = "";
+      lineIndex++;
       continue;
-    }
-    if (line == "$Elements") {
-      inElementsSecitons = true;
+    } else if (line === "$Elements") {
+      section = "elements";
+      lineIndex++;
       continue;
-    }
-    if (line == "$EndElements") {
-      lineNumber = 0;
-      inElementsSecitons = false;
+    } else if (line === "$EndElements") {
+      section = "";
+      lineIndex++;
       continue;
     }
 
-    let temp = line.split(" ").filter((item) => item !== "");
+    const parts = line.split(/\s+/).filter((part) => part !== "");
 
-    lineNumber = lineNumber + 1;
+    if (section === "meshFormat") {
+      result.gmshV = parseFloat(parts[0]);
+      result.ascii = parts[1] === "0";
+      result.fltBytes = parts[2];
+    } else if (section === "physicalNames") {
+      if (parts.length >= 3) {
+        if (!/^\d+$/.test(parts[0])) {
+          lineIndex++;
+          continue;
+        }
 
-    if (inMeshSections) {
-      if (lineNumber === 1) {
-        let gmshVersion = parseFloat(temp[0]);
-        let asciiOr = temp[1] === "0" ? true : false;
-        let fltBytesOr = temp[2];
+        const dimension = parseInt(parts[0], 10);
+        const tag = parseInt(parts[1], 10);
+        let name = parts.slice(2).join(" ");
+        name = name.replace(/^"|"$/g, "");
 
-        newFin.gmshV = gmshVersion;
-        newFin.ascii = asciiOr;
-        newFin.fltBytes = fltBytesOr;
+        result.physicalPropMap.push({
+          tag,
+          dimension,
+          name,
+        });
       }
-    }
-
-    if (inPhysicalNames) {
-      if (lineNumber === 1) {
+    } else if (section === "nodes") {
+      if (nodeEntityBlocks === 0) {
+        nodeEntityBlocks = parseInt(parts[0], 10);
+        totalNodes = parseInt(parts[1], 10);
+        result.nodesXCoordinates = new Array(totalNodes).fill(0);
+        result.nodesYCoordinates = new Array(totalNodes).fill(0);
+        lineIndex++;
         continue;
       }
 
-      if (temp.length >= 3) {
-        let dimension = parseInt(temp[0]);
-        let tag = parseInt(temp[1]);
+      if (
+        nodeBlocksProcessed < nodeEntityBlocks &&
+        currentNodeBlock.numNodes === 0
+      ) {
+        currentNodeBlock = {
+          dim: parseInt(parts[0], 10),
+          tag: parseInt(parts[1], 10),
+          parametric: parseInt(parts[2], 10),
+          numNodes: parseInt(parts[3], 10),
+        };
 
-        let name = temp.slice(2).join(" ");
-        name = name.replace(/^"|"$/g, "");
+        nodeTags = [];
+        nodeTagsCollected = 0;
+        nodeCoordinatesCollected = 0;
 
-        newFin.physicalPropMap.push({
-          tag: tag,
-          dimension: dimension,
-          name: name,
+        lineIndex++;
+        continue;
+      }
+
+      if (nodeTagsCollected < currentNodeBlock.numNodes) {
+        for (
+          let i = 0;
+          i < parts.length && nodeTagsCollected < currentNodeBlock.numNodes;
+          i++
+        ) {
+          nodeTags.push(parseInt(parts[i], 10));
+          nodeTagsCollected++;
+        }
+
+        if (nodeTagsCollected < currentNodeBlock.numNodes) {
+          lineIndex++;
+          continue;
+        }
+
+        lineIndex++;
+        continue;
+      }
+
+      if (nodeCoordinatesCollected < currentNodeBlock.numNodes) {
+        const nodeTag = nodeTags[nodeCoordinatesCollected] - 1;
+        const x = parseFloat(parts[0]);
+        const y = parseFloat(parts[1]);
+
+        result.nodesXCoordinates[nodeTag] = x;
+        result.nodesYCoordinates[nodeTag] = y;
+        result.totalNodesX++;
+        result.totalNodesY++;
+
+        nodeCoordinatesCollected++;
+
+        if (nodeCoordinatesCollected === currentNodeBlock.numNodes) {
+          nodeBlocksProcessed++;
+          currentNodeBlock = { numNodes: 0 };
+        }
+      }
+    } else if (section === "elements") {
+      if (elementEntityBlocks === 0) {
+        elementEntityBlocks = parseInt(parts[0], 10);
+        totalElements = parseInt(parts[1], 10);
+        lineIndex++;
+        continue;
+      }
+
+      if (
+        elementBlocksProcessed < elementEntityBlocks &&
+        currentElementBlock.numElements === 0
+      ) {
+        currentElementBlock = {
+          dim: parseInt(parts[0], 10),
+          tag: parseInt(parts[1], 10),
+          elementType: parseInt(parts[2], 10),
+          numElements: parseInt(parts[3], 10),
+        };
+
+        result.elementTypes[currentElementBlock.elementType] =
+          (result.elementTypes[currentElementBlock.elementType] || 0) +
+          currentElementBlock.numElements;
+
+        elementsProcessedInBlock = 0;
+        lineIndex++;
+        continue;
+      }
+
+      if (elementsProcessedInBlock < currentElementBlock.numElements) {
+        const elementTag = parseInt(parts[0], 10);
+        const nodeIndices = parts.slice(1).map((idx) => parseInt(idx, 10));
+
+        if (currentElementBlock.elementType === 1) {
+          const physicalTag = currentElementBlock.tag;
+          
+          if (!boundaryElementsByTag[physicalTag]) {
+            boundaryElementsByTag[physicalTag] = [];
+          }
+          
+          boundaryElementsByTag[physicalTag].push(nodeIndices);
+        } else if (currentElementBlock.elementType === 2) {
+          result.nodalNumbering.triangleElements.push(nodeIndices);
+        } else if (currentElementBlock.elementType === 3) {
+          
+          result.nodalNumbering.quadElements.push(nodeIndices);
+        }
+
+        elementsProcessedInBlock++;
+
+        if (elementsProcessedInBlock === currentElementBlock.numElements) {
+          elementBlocksProcessed++;
+          currentElementBlock = { numElements: 0 };
+        }
+      }
+    }
+
+    lineIndex++;
+  }
+
+  result.physicalPropMap.forEach(prop => {
+    if (prop.dimension === 1) {  
+      const boundaryNodes = boundaryElementsByTag[prop.tag] || [];
+      
+      if (boundaryNodes.length > 0) {
+        result.boundaryConditions.push({
+          name: prop.name,
+          tag: prop.tag,
+          nodes: boundaryNodes
         });
       }
     }
-
-    if (inNodesSections) {
-      if (lineNumber === 1) {
-        entityBlocks = parseInt(temp[0]);
-        totalNodes = parseInt(temp[1]);
-        newFin.nodesXCoordinates = new Array(totalNodes);
-        newFin.nodesYCoordinates = new Array(totalNodes);
-        continue;
-      }
-
-      if (nodeBlocksProcessed < entityBlocks) {
-        if (!collectingNodeTags && !collectingNodeCoords) {
-          currentNodeBlock.dim = parseInt(temp[0]);
-          currentNodeBlock.tag = parseInt(temp[1]);
-          currentNodeBlock.parametric = parseInt(temp[2]);
-          currentNodeBlock.numNodes = parseInt(temp[3]);
-
-          nodeTagsToProcess = [];
-          collectingNodeTags = true;
-          nodeBlockDataStartLine = lineNumber;
-          continue;
-        }
-
-        if (collectingNodeTags) {
-          for (let tag of temp) {
-            nodeTagsToProcess.push(parseInt(tag));
-          }
-
-          if (
-            lineNumber - nodeBlockDataStartLine >=
-            currentNodeBlock.numNodes
-          ) {
-            collectingNodeTags = false;
-            collectingNodeCoords = true;
-            continue;
-          }
-        }
-
-        if (collectingNodeCoords) {
-          const nodeIndex = nodeTagsToProcess.shift() - 1;
-
-          if (temp.length >= 2) {
-            newFin.nodesXCoordinates[nodeIndex] = parseFloat(temp[0]);
-            newFin.nodesYCoordinates[nodeIndex] = parseFloat(temp[1]);
-            newFin.totalNodesX++;
-            newFin.totalNodesY++;
-          }
-
-          if (nodeTagsToProcess.length === 0) {
-            collectingNodeCoords = false;
-            nodeBlocksProcessed++;
-          }
-        }
-      }
-    }
-
-    if (inElementsSecitons) {
-      if (lineNumber === 1) {
-        entityBlocksElements = parseInt(temp[0]);
-        totalElements = parseInt(temp[1]);
-        continue;
-      }
-
-      if (elementBlocksProcessed < entityBlocksElements) {
-        if (temp.length === 4) {
-          currentElementBlock.dim = parseInt(temp[0]);
-          currentElementBlock.tag = parseInt(temp[1]);
-          currentElementBlock.elementType = parseInt(temp[2]);
-          currentElementBlock.numElements = parseInt(temp[3]);
-
-          newFin.elementTypes[currentElementBlock.elementType] =
-            (newFin.elementTypes[currentElementBlock.elementType] || 0) +
-            currentElementBlock.numElements;
-
-          elementBlockStartLine = lineNumber;
-          continue;
-        }
-
-        if (
-          lineNumber > elementBlockStartLine &&
-          lineNumber <= elementBlockStartLine + currentElementBlock.numElements
-        ) {
-          const elementTag = parseInt(temp[0]);
-          const nodeIndices = temp.slice(1).map((idx) => parseInt(idx));
-
-          if (currentElementBlock.elementType === 3) {
-            newFin.nodalNumbering.quadElements.push(nodeIndices);
-          } else if (currentElementBlock.elementType === 2) {
-            newFin.nodalNumbering.triangleElements.push(nodeIndices);
-          }
-
-          if (
-            lineNumber ===
-            elementBlockStartLine + currentElementBlock.numElements
-          ) {
-            elementBlocksProcessed++;
-          }
-        }
-      }
-    }
-  }
+  });
 
   processBoundaryElements(
-    newFin.nodalNumbering.triangleElements,
-    newFin.boundaryElements,
-    3
+    result.nodalNumbering.triangleElements,
+    result.boundaryElements,
+    3,
+    "triangle"
   );
   processBoundaryElements(
-    newFin.nodalNumbering.quadElements,
-    newFin.boundaryElements,
-    4
+    result.nodalNumbering.quadElements,
+    result.boundaryElements,
+    4,
+    "quad"
   );
 
-  return newFin;
+  return result;
 };
 
-function processBoundaryElements(elements, boundaryElements, numNodes) {
+function processBoundaryElements(
+  elements,
+  boundaryElements,
+  numNodes,
+  elementType
+) {
   const edgeCount = {};
 
   for (let i = 0; i < elements.length; i++) {
     const element = elements[i];
 
-    const edges = [];
     for (let j = 0; j < numNodes; j++) {
-      edges.push([element[j], element[(j + 1) % numNodes]]);
-    }
+      const node1 = element[j];
+      const node2 = element[(j + 1) % numNodes];
 
-    edges.forEach((edge) => {
-      const key =
-        edge[0] < edge[1] ? `${edge[0]}-${edge[1]}` : `${edge[1]}-${edge[0]}`;
-      edgeCount[key] = (edgeCount[key] || 0) + 1;
-    });
+      const edgeKey = node1 < node2 ? `${node1}-${node2}` : `${node2}-${node1}`;
+
+      edgeCount[edgeKey] = (edgeCount[edgeKey] || 0) + 1;
+    }
   }
+
   for (let i = 0; i < elements.length; i++) {
     const element = elements[i];
-    const edges = [];
 
     for (let j = 0; j < numNodes; j++) {
-      edges.push([element[j], element[(j + 1) % numNodes]]);
-    }
+      const node1 = element[j];
+      const node2 = element[(j + 1) % numNodes];
 
-    for (let j = 0; j < edges.length; j++) {
-      const edge = edges[j];
-      const key =
-        edge[0] < edge[1] ? `${edge[0]}-${edge[1]}` : `${edge[1]}-${edge[0]}`;
+      const edgeKey = node1 < node2 ? `${node1}-${node2}` : `${node2}-${node1}`;
 
-      if (edgeCount[key] === 1) {
+      if (edgeCount[edgeKey] === 1) {
         boundaryElements.push({
           elementIndex: i,
           localEdgeIndex: j,
-          elementType: numNodes === 3 ? "triangle" : "quad",
+          elementType: elementType,
         });
       }
     }
   }
 }
 
-export { importGmsh, importGmshQuadTri };
+export { importGmshQuadTri };
