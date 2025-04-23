@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+
+<!--   ______ ______           _____           _       _     -->
+<!--  |  ____|  ____|   /\    / ____|         (_)     | |    -->
+<!--  | |__  | |__     /  \  | (___   ___ ____ _ ____ | |_   -->
+<!--  |  __| |  __|   / /\ \  \___ \ / __|  __| |  _ \| __|  -->
+<!--  | |    | |____ / ____ \ ____) | (__| |  | | |_) | |    -->
+<!--  |_|    |______/_/    \_\_____/ \___|_|  |_|  __/| |    -->
+<!--                                            | |   | |    -->
+<!--                                            |_|   | |_   -->
+<!--       Website: https://feascript.com/             \__|  -->
+
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>FEAScript: Heat Conduction in a Two-Dimensional Fin Example (Worker)</title>
+
+    <!-- Math.js and Plotly.js libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/5.0.0/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+
+    <!-- Link to the CSS files -->
+    <link href="https://feascript.com/FEAScript-website.css" rel="stylesheet" type="text/css" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
+    
+    <style>
+      #loading {
+        display: none;
+        margin-top: 20px;
+        text-align: center;
+        font-weight: bold;
+      }
+      .spinner {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border: 3px solid rgba(0,0,0,.3);
+        border-radius: 50%;
+        border-top-color: #000;
+        animation: spin 1s ease-in-out infinite;
+        margin-right: 10px;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Heat Conduction in a Two-Dimensional Fin Example (Worker)</h1>
+    <div id="solutionPlot"></div>
+    <div id="loading"><div class="spinner"></div>Solving...</div>
+
+    <p>
+      This is a worker-based implementation of the heat conduction in a two-dimensional fin example using a larger mesh (18x9). This implementation enables better performance for larger simulations.
+      The mesh configuration and boundary conditions are defined directly within the JavaScript code. Detailed instructions for this example can be
+      found in the corresponding
+      <a href="https://feascript.com/tutorials/HeatConduction2DFinWorker.html" target="_blank">FEAScript tutorial</a>.
+      If you need further assistance, you can visit the
+      <a href="https://feascript.com/" target="_blank">FEAScript website</a>.
+    </p>
+
+    <p>&#169; 2023-<span id="currentYear"></span> FEAScript</p>
+    <script>
+      document.getElementById("currentYear").innerHTML = new Date().getFullYear();
+    </script>
+
+    <!-- Import FEAScript library -->
+    <script type="module">
+      import {
+        FEAWorkerScript,
+        plotSolution,
+        printVersion,
+      } from "https://core.feascript.com/src/index.js";
+
+      window.addEventListener("DOMContentLoaded", async () => {
+        // Print FEAScript version in the console
+        printVersion();
+        
+        // Show loading indicator
+        document.getElementById("loading").style.display = "block";
+
+        try {
+          // Create a new FEAWorkerScript instance
+          const model = new FEAWorkerScript();
+
+          // Ensure the worker is ready
+          await model.ping();
+
+          // Set solver configuration
+          await model.setSolverConfig("solidHeatTransferScript");
+
+          // Define mesh configuration - using larger mesh
+          await model.setMeshConfig({
+            meshDimension: "2D",
+            elementOrder: "quadratic",
+            numElementsX: 18,
+            numElementsY: 9,
+            maxX: 4,
+            maxY: 2,
+          });
+
+          // Define boundary conditions
+          await model.addBoundaryCondition("0", ["constantTemp", 200]);
+          await model.addBoundaryCondition("1", ["symmetry"]);
+          await model.addBoundaryCondition("2", ["convection", 1, 20]);
+          await model.addBoundaryCondition("3", ["constantTemp", 200]);
+
+          // Set solver method - 'lusolve' uses LU decomposition
+          await model.setSolverMethod("lusolve");
+
+          // Solve the problem and get the solution
+          const { solutionVector, nodesCoordinates } = await model.solve();
+          
+          // Hide loading indicator
+          document.getElementById("loading").style.display = "none";
+
+          // Plot the solution as a 2D contour plot
+          plotSolution(
+            solutionVector,
+            nodesCoordinates,
+            "solidHeatTransferScript",
+            "2D",
+            "contour",
+            "solutionPlot"
+          );
+          
+          // Terminate the worker when done
+          model.terminate();
+        } catch (error) {
+          console.error("Error in FEAScript calculation:", error);
+          document.getElementById("loading").textContent = "Error: " + error.message;
+        }
+      });
+    </script>
+  </body>
+</html>
