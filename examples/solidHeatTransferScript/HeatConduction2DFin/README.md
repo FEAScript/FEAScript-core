@@ -4,6 +4,8 @@
 
 This example demonstrates solving a steady-state heat transfer problem in a 2D rectangular domain using the FEAScript library. The problem represents a typical cooling fin scenario, where the objective is to model heat conduction and understand temperature distribution under specific boundary conditions.
 
+All examples are intentionally kept simple and modular to facilitate easy integration with web applications. The clean, minimal structure makes it straightforward to incorporate these simulations into existing websites or web-based tools.
+
 ### Available Versions
 
 This example is available in three implementations:
