@@ -131,7 +131,13 @@ export class meshGeneration {
         }
       }
       // Generate nodal numbering (NOP) array
-      const nodalNumbering = this.generateNodalNumbering(this.numElementsX, totalNodesX, this.elementOrder);
+      const nodalNumbering = this.generateNodalNumbering(
+        this.numElementsX,
+        null,           // numElementsY (not used in 1D)
+        totalNodesX,
+        null,           // totalNodesY (not used in 1D)
+        this.elementOrder
+      );
       // Find boundary elements
       const boundaryElements = this.findBoundaryElements();
 
@@ -295,7 +301,7 @@ export class meshGeneration {
         for (let elementIndex = 0; elementIndex < numElementsX; elementIndex++) {
           nop[elementIndex] = [];
           for (let nodeIndex = 1; nodeIndex <= 2; nodeIndex++) {
-            nop[elementIndex][nodeIndex - 1] = i + (nodeIndex - 1);
+            nop[elementIndex][nodeIndex - 1] = elementIndex + nodeIndex;
           }
         }
       } else if (elementOrder === "quadratic") {
@@ -305,11 +311,11 @@ export class meshGeneration {
          *   1__2__3
          *
          */
-        let columnCounter = 2;
+        let columnCounter = 0;
         for (let elementIndex = 0; elementIndex < numElementsX; elementIndex++) {
           nop[elementIndex] = [];
           for (let nodeIndex = 1; nodeIndex <= 3; nodeIndex++) {
-            nop[elementIndex][nodeIndex - 1] = elementIndex + (nodeIndex - 1) + columnCounter;
+            nop[elementIndex][nodeIndex - 1] = elementIndex + nodeIndex + columnCounter;
           }
           columnCounter += 1;
         }
