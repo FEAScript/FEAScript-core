@@ -10,17 +10,17 @@
 
 // import * as Comlink from "https://unpkg.com/comlink/dist/esm/comlink.mjs";
 // The Web Worker functionality now uses the local Comlink library to avoid CORS issues
-import * as Comlink from "./vendor/comlink.mjs";
-import { FEAScriptModel } from "./FEAScript.js";
+import * as Comlink from "../vendor/comlink.mjs";
+import { FEAScriptModel } from "../FEAScript.js";
 import { create, all } from "https://cdn.jsdelivr.net/npm/mathjs@latest/+esm";
 
 const math = create(all);
 
 globalThis.math = math;
 
-class FEAWorkerWrapper {
+class workerWrapper {
   /**
-   * Constructor to initialize the FEAWorkerWrapper class.
+   * Constructor to initialize the workerWrapper class.
    * Creates an instance of the FEAScriptModel.
    * @throws Will throw an error if the FEAScriptModel fails to initialize.
    */
@@ -152,4 +152,4 @@ class FEAWorkerWrapper {
   }
 }
 
-Comlink.expose(FEAWorkerWrapper);
+Comlink.expose(workerWrapper);

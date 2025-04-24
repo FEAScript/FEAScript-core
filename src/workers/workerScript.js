@@ -10,13 +10,13 @@
 
 // import * as Comlink from "https://unpkg.com/comlink/dist/esm/comlink.mjs";
 // The Web Worker functionality now uses the local Comlink library to avoid CORS issues
-import * as Comlink from "./vendor/comlink.mjs";
-import { basicLog } from "./utilities/loggingScript.js";
+import * as Comlink from "../vendor/comlink.mjs";
+import { basicLog } from "../utilities/loggingScript.js";
 
-export class FEAWorkerScript {
+export class FEAScriptWorker {
   /**
-   * Constructor to initialize the FEAWorkerScript class
-   * Sets up the worker and initializes the FEAWorkerWrapper.
+   * Constructor to initialize the FEAScriptWorker class
+   * Sets up the worker and initializes the workerWrapper.
    */
   constructor() {
     this.worker = null;
@@ -34,18 +34,18 @@ export class FEAWorkerScript {
   async _initWorker() {
     try {
       this.worker = new Worker(
-        new URL("./FEAWrapperScript.js", import.meta.url),
+        new URL("./wrapperScript.js", import.meta.url),
         {
           type: "module",
         }
       );
 
       this.worker.onerror = (event) => {
-        console.error("FEAWorkerScript: Worker error:", event);
+        console.error("FEAScriptWorker: Worker error:", event);
       };
-      const FEAWorkerWrapper = Comlink.wrap(this.worker);
+      const workerWrapper = Comlink.wrap(this.worker);
 
-      this.feaWorker = await new FEAWorkerWrapper();
+      this.feaWorker = await new workerWrapper();
 
       this.isReady = true;
     } catch (error) {
@@ -88,7 +88,7 @@ export class FEAWorkerScript {
    */
   async setSolverConfig(solverConfig) {
     await this._ensureReady();
-    basicLog(`FEAWorkerScript: Setting solver config to: ${solverConfig}`);
+    basicLog(`FEAScriptWorker: Setting solver config to: ${solverConfig}`);
     return this.feaWorker.setSolverConfig(solverConfig);
   }
 
@@ -99,7 +99,7 @@ export class FEAWorkerScript {
    */
   async setMeshConfig(meshConfig) {
     await this._ensureReady();
-    basicLog(`FEAWorkerScript: Setting mesh config`);
+    basicLog(`FEAScriptWorker: Setting mesh config`);
     return this.feaWorker.setMeshConfig(meshConfig);
   }
 
@@ -112,7 +112,7 @@ export class FEAWorkerScript {
   async addBoundaryCondition(boundaryKey, condition) {
     await this._ensureReady();
     basicLog(
-      `FEAWorkerScript: Adding boundary condition for boundary: ${boundaryKey}`
+      `FEAScriptWorker: Adding boundary condition for boundary: ${boundaryKey}`
     );
     return this.feaWorker.addBoundaryCondition(boundaryKey, condition);
   }
@@ -124,7 +124,7 @@ export class FEAWorkerScript {
    */
   async setSolverMethod(solverMethod) {
     await this._ensureReady();
-    basicLog(`FEAWorkerScript: Setting solver method to: ${solverMethod}`);
+    basicLog(`FEAScriptWorker: Setting solver method to: ${solverMethod}`);
     return this.feaWorker.setSolverMethod(solverMethod);
   }
 
@@ -134,14 +134,14 @@ export class FEAWorkerScript {
    */
   async solve() {
     await this._ensureReady();
-    basicLog("FEAWorkerScript: Requesting solution from worker...");
+    basicLog("FEAScriptWorker: Requesting solution from worker...");
 
     const startTime = performance.now();
     const result = await this.feaWorker.solve();
     const endTime = performance.now();
 
     basicLog(
-      `FEAWorkerScript: Solution completed in ${(
+      `FEAScriptWorker: Solution completed in ${(
         (endTime - startTime) /
         1000
       ).toFixed(2)}s`

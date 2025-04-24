@@ -48,7 +48,7 @@ export function jacobiMethod(A, b, x0, maxIterations = 100, tolerance = 1e-7) {
     // Update x for next iteration
     x = [...xNew];
     
-    // If difference is small enough, we've converged
+    // Successfully converged if maxDiff is less than tolerance
     if (maxDiff < tolerance) {
       return {
         solution: x,
@@ -58,7 +58,7 @@ export function jacobiMethod(A, b, x0, maxIterations = 100, tolerance = 1e-7) {
     }
   }
   
-  // If we reach here, we didn't converge within maxIterations
+  // maxIterations were reached without convergence
   return {
     solution: x,
     iterations: maxIterations,
