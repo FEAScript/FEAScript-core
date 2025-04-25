@@ -29,7 +29,37 @@ export function plotSolution(
 ) {
   const { nodesXCoordinates, nodesYCoordinates } = nodesCoordinates;
 
-  if (meshDimension === "2D" && plotType === "contour") {
+  if (meshDimension === "1D" && plotType === "line") {
+    // Flatten solutionVector
+    let yData = solutionVector.map(arr => arr[0]);
+    let xData = Array.from(nodesXCoordinates);
+
+    let lineData = {
+      x: xData,
+      y: yData,
+      mode: "lines",
+      type: "scatter",
+      line: { color: "rgb(219, 64, 82)", width: 2 },
+      name: "Solution"
+    };
+
+    let maxWindowWidth = Math.min(window.innerWidth, 700);
+    let maxPlotWidth = Math.max(...xData);
+    let zoomFactor = maxWindowWidth / maxPlotWidth;
+    let plotWidth = Math.max(zoomFactor * maxPlotWidth, 400);
+    let plotHeight = 350;
+
+    let layout = {
+      title: `line plot - ${solverConfig}`,
+      width: plotWidth,
+      height: plotHeight,
+      xaxis: { title: "x" },
+      yaxis: { title: "Solution" },
+      margin: { l: 70, r: 40, t: 50, b: 50 }
+    };
+
+    Plotly.newPlot(plotDivId, [lineData], layout, { responsive: true });
+  } else if (meshDimension === "2D" && plotType === "contour") {
     // Calculate the number of nodes along the x-axis and y-axis
     const numNodesX = new Set(nodesXCoordinates).size;
     const numNodesY = new Set(nodesYCoordinates).size;
