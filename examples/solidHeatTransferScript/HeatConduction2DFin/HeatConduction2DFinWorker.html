@@ -28,14 +28,19 @@
   <body>
     <h1>Heat Conduction in a Two-Dimensional Fin Example (Worker)</h1>
     <div id="solutionPlot"></div>
-    <div id="loading"><div class="spinner"></div>Solving...</div>
+    <div id="loading">
+      <div class="spinner"></div>
+      Solving...
+    </div>
 
     <p>
-      This is a worker-based implementation of the heat conduction in a two-dimensional fin example using a larger mesh (18x9). This implementation enables better performance for larger simulations.
-      The mesh configuration and boundary conditions are defined directly within the JavaScript code. Detailed instructions for this example can be
-      found in the corresponding
-      <a href="https://feascript.com/tutorials/HeatConduction2DFinWorker.html" target="_blank">FEAScript tutorial</a>.
-      If you need further assistance, you can visit the
+      This is a worker-based implementation of the heat conduction in a two-dimensional fin example using a
+      larger mesh (18x9). This implementation enables better performance for larger simulations. The mesh
+      configuration and boundary conditions are defined directly within the JavaScript code. Detailed
+      instructions for this example can be found in the corresponding
+      <a href="https://feascript.com/tutorials/HeatConduction2DFinWorker.html" target="_blank"
+        >FEAScript tutorial</a
+      >. If you need further assistance, you can visit the
       <a href="https://feascript.com/" target="_blank">FEAScript website</a>.
     </p>
 
@@ -46,16 +51,12 @@
 
     <!-- Import FEAScript library -->
     <script type="module">
-      import {
-        FEAScriptWorker,
-        plotSolution,
-        printVersion,
-      } from "https://core.feascript.com/src/index.js";
+      import { FEAScriptWorker, plotSolution, printVersion } from "https://core.feascript.com/src/index.js";
 
       window.addEventListener("DOMContentLoaded", async () => {
         // Print FEAScript version in the console
         printVersion();
-        
+
         // Show loading indicator
         document.getElementById("loading").style.display = "block";
 
@@ -90,7 +91,7 @@
 
           // Solve the problem and get the solution
           const { solutionVector, nodesCoordinates } = await model.solve();
-          
+
           // Hide loading indicator
           document.getElementById("loading").style.display = "none";
 
@@ -103,7 +104,7 @@
             "contour",
             "solutionPlot"
           );
-          
+
           // Terminate the worker when done
           model.terminate();
         } catch (error) {
