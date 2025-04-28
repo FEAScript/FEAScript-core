@@ -30,8 +30,13 @@ export function plotSolution(
   const { nodesXCoordinates, nodesYCoordinates } = nodesCoordinates;
 
   if (meshDimension === "1D" && plotType === "line") {
-    // Flatten solutionVector
-    let yData = solutionVector.map(arr => arr[0]);
+    // Check if solutionVector is a nested array
+    let yData;
+    if (solutionVector.length > 0 && Array.isArray(solutionVector[0])) {
+      yData = solutionVector.map(arr => arr[0]);
+    } else {
+      yData = solutionVector;
+    }
     let xData = Array.from(nodesXCoordinates);
 
     let lineData = {

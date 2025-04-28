@@ -36,18 +36,11 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     elementOrder, // The order of elements
   } = meshConfig;
 
-  debugLog(`Mesh configuration: ${meshDimension}, Elements: ${numElementsX}x${numElementsY || 1}, Size: ${maxX}x${maxY || 0}, Order: ${elementOrder}`);
-
-  // Extract boundary conditions from the configuration object
-  let convectionHeatTranfCoeff = [];
-  let convectionExtTemp = [];
-  Object.keys(boundaryConditions).forEach((key) => {
-    const boundaryCondition = boundaryConditions[key];
-    if (boundaryCondition[0] === "convection") {
-      convectionHeatTranfCoeff[key] = boundaryCondition[1];
-      convectionExtTemp[key] = boundaryCondition[2];
-    }
-  });
+  debugLog(
+    `Mesh configuration: ${meshDimension}, Elements: ${numElementsX}x${numElementsY || 1}, Size: ${maxX}x${
+      maxY || 0
+    }, Order: ${elementOrder}`
+  );
 
   // Create a new instance of the meshGeneration class
   debugLog("Generating mesh...");
@@ -259,9 +252,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     gaussWeights,
     nodesXCoordinates,
     nodesYCoordinates,
-    basisFunctionsData,
-    convectionHeatTranfCoeff,
-    convectionExtTemp
+    basisFunctionsData
   );
   debugLog("Convection boundary conditions applied");
 

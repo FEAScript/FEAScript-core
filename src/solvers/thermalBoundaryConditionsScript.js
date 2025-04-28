@@ -132,8 +132,6 @@ export class ThermalBoundaryConditions {
    * @param {array} nodesXCoordinates - Array of x-coordinates of nodes
    * @param {array} nodesYCoordinates - Array of y-coordinates of nodes
    * @param {object} basisFunctionsData - Object containing basis functions and their derivatives
-   * @param {array} convectionHeatTranfCoeff - Array of convection heat transfer coefficients
-   * @param {array} convectionExtTemp - Array of external temperatures for convection
    */
   imposeConvectionBoundaryConditions(
     residualVector,
@@ -142,10 +140,19 @@ export class ThermalBoundaryConditions {
     gaussWeights,
     nodesXCoordinates,
     nodesYCoordinates,
-    basisFunctionsData,
-    convectionHeatTranfCoeff,
-    convectionExtTemp
+    basisFunctionsData
   ) {
+    // Extract convection parameters from boundary conditions
+    let convectionHeatTranfCoeff = [];
+    let convectionExtTemp = [];
+    Object.keys(this.boundaryConditions).forEach((key) => {
+      const boundaryCondition = this.boundaryConditions[key];
+      if (boundaryCondition[0] === "convection") {
+        convectionHeatTranfCoeff[key] = boundaryCondition[1];
+        convectionExtTemp[key] = boundaryCondition[2];
+      }
+    });
+
     if (this.meshDimension === "1D") {
       // 1D code
     } else if (this.meshDimension === "2D") {
