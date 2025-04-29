@@ -154,7 +154,36 @@ export class ThermalBoundaryConditions {
     });
 
     if (this.meshDimension === "1D") {
-      // 1D code
+      Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
+        if (this.boundaryConditions[boundaryKey][0] === "convection") {
+          const convectionCoeff = convectionHeatTranfCoeff[boundaryKey];
+          const extTemp = convectionExtTemp[boundaryKey];
+          this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
+            let nodeIndex;
+            if (this.elementOrder === "linear") {
+              if (side === 0) {
+                // Node at the left side of the reference element
+                nodeIndex = 0;
+              } else {
+                // Node at the right side of the reference element
+                nodeIndex = 1;
+              }
+            } else if (this.elementOrder === "quadratic") {
+              if (side === 0) {
+                // Node at the left side of the reference element
+                nodeIndex = 0;
+              } else {
+                // Node at the right side of the reference element
+                nodeIndex = 2;
+              }
+            }
+            
+            const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+            residualVector[globalNodeIndex] += -convectionCoeff * extTemp;
+            jacobianMatrix[globalNodeIndex][globalNodeIndex] += convectionCoeff;
+          });
+        }
+      });
     } else if (this.meshDimension === "2D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
         if (this.boundaryConditions[boundaryKey][0] === "convection") {

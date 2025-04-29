@@ -151,8 +151,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
         // Computation of Galerkin's residuals and Jacobian matrix
         for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
           let globalNodeIndex1 = localNodalNumbers[localNodeIndex1];
-          residualVector[globalNodeIndex1] +=
-            gaussWeights[gaussPointIndex1] * detJacobian * basisFunction[localNodeIndex1];
+          // residualVector is zero for this case
 
           for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
             let globalNodeIndex2 = localNodalNumbers[localNodeIndex2];
@@ -213,11 +212,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
           // Computation of Galerkin's residuals and Jacobian matrix
           for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
             let globalNodeIndex1 = localNodalNumbers[localNodeIndex1];
-            residualVector[globalNodeIndex1] +=
-              gaussWeights[gaussPointIndex1] *
-              gaussWeights[gaussPointIndex2] *
-              detJacobian *
-              basisFunction[localNodeIndex1];
+            // residualVector is zero for this case
 
             for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
               let globalNodeIndex2 = localNodalNumbers[localNodeIndex2];
