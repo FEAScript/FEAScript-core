@@ -60,4 +60,4 @@ We warmly welcome contributors to help expand and refine FEAScript. Please see t
 
 ## License
 
-FEAScript-core is released under the [MIT license](https://github.com/FEAScript/FEAScript-core/blob/main/LICENSE). &copy; 2023-2025 FEAScript.
+The core library of FEAScript is released under the [MIT license](https://github.com/FEAScript/FEAScript-core/blob/main/LICENSE). &copy; 2023-2025 FEAScript.
