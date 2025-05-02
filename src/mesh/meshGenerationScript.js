@@ -12,7 +12,7 @@
  * Class to handle the generation of structured finite element meshes
  */
 
-import { importGmshQuadTri } from "../readers/gmshQuadReader.js";
+import { importGmshQuadTri } from "../readers/gmshReaderScript.js";
 import { errorLog } from "../utilities/loggingScript.js";
 
 export class meshGeneration {
