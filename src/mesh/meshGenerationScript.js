@@ -12,26 +12,27 @@
  * Class to handle the generation of structured finite element meshes
  */
 
-import { importGmshQuadTri } from '../readers/gmshQuadReader.js';
+import { importGmshQuadTri } from "../readers/gmshQuadReader.js";
+import { errorLog } from "../utilities/loggingScript.js";
 
 export class meshGeneration {
   /**
    * Constructor to initialize the meshGeneration class
    * @param {object} config - Configuration object for the mesh
-   * @param {number} config.numElementsX - Number of elements along the x-axis
-   * @param {number} config.maxX - Maximum x-coordinate of the mesh
-   * @param {number} [config.numElementsY=1] - Number of elements along the y-axis (default is 1 for 1D meshes)
-   * @param {number} [config.maxY=0] - Maximum y-coordinate of the mesh (default is 0 for 1D meshes)
-   * @param {string} [config.meshDimension='2D'] - The dimension of the mesh, either 1D or 2D (default is 2D)
-   * @param {string} [config.meshFile=null] - Optional mesh file (JSON) for predefined meshes
-   * @param {string} [config.elementOrder='linear'] - The order of elements, either 'linear' or 'quadratic' (default is 'linear')
+   * @param {number} [config.numElementsX] - Number of elements along the x-axis (required for geometry-based mesh)
+   * @param {number} [config.maxX] - Maximum x-coordinate of the mesh (required for geometry-based mesh)
+   * @param {number} [config.numElementsY=1] - Number of elements along the y-axis (for 1D meshes)
+   * @param {number} [config.maxY=0] - Maximum y-coordinate of the mesh (for 1D meshes)
+   * @param {string} [config.meshDimension='2D'] - The dimension of the mesh, either 1D or 2D
+   * @param {string|File} [config.meshFile=null] - Optional mesh file for predefined meshes (.json or .msh)
+   * @param {string} [config.elementOrder='linear'] - The order of elements, either 'linear' or 'quadratic'
    */
   constructor({
-    numElementsX,
-    maxX,
-    numElementsY = 1,
-    maxY = 0,
-    meshDimension = "2D",
+    numElementsX = null,
+    maxX = null,
+    numElementsY = null,
+    maxY = null,
+    meshDimension = null,
     meshFile = null,
     elementOrder = "linear",
   }) {
@@ -54,6 +55,23 @@ export class meshGeneration {
       const meshData = this.generateMeshFromCustomFile(this.meshFile);
       return meshData;
     } else {
+      // Validate required geometry parameters based on mesh dimension
+      if (this.meshDimension === "1D") {
+        if (this.numElementsX === null || this.maxX === null) {
+          const errorMessage =
+            "numElementsX and maxX are required parameters when generating a 1D mesh from geometry";
+          errorLog(errorMessage);
+          throw new Error(errorMessage);
+        }
+      } else if (this.meshDimension === "2D") {
+        if (this.numElementsX === null || this.maxX === null || this.numElementsY === null || this.maxY === null) {
+          const errorMessage =
+            "numElementsX, maxX, numElementsY, and maxY are required parameters when generating a 2D mesh from geometry";
+          errorLog(errorMessage);
+          throw new Error(errorMessage);
+        }
+      }
+
       // Generate mesh based on dimension
       return this.generateMeshFromGeometry();
     }
@@ -87,17 +105,16 @@ export class meshGeneration {
     };
   }
 
- /**
+  /**
    * Generate a structured mesh based on the msh file
    * @returns {object} An object containing the coordinates of nodes,
    * total number of nodes, nodal numbering (NOP) array, and boundary elements
    */
-  async generateMeshFromMshFile(file){
-
+  async generateMeshFromMshFile(file) {
     //for now i have made a parsing of simple quadrilateral .msh file of version 4.1
     const outputMesh = await importGmshQuadTri(file);
 
-    return outputMesh
+    return outputMesh;
   }
 
   /**
@@ -133,9 +150,9 @@ export class meshGeneration {
       // Generate nodal numbering (NOP) array
       const nodalNumbering = this.generateNodalNumbering(
         this.numElementsX,
-        null,           // numElementsY (not used in 1D)
+        null, // numElementsY (not used in 1D)
         totalNodesX,
-        null,           // totalNodesY (not used in 1D)
+        null, // totalNodesY (not used in 1D)
         this.elementOrder
       );
       // Find boundary elements
@@ -159,15 +176,15 @@ export class meshGeneration {
         nodesYCoordinates[0] = yStart;
         for (let nodeIndexY = 1; nodeIndexY < totalNodesY; nodeIndexY++) {
           nodesXCoordinates[nodeIndexY] = nodesXCoordinates[0];
-          nodesYCoordinates[nodeIndexY] = nodesYCoordinates[0] + (nodeIndexY * deltaY);
+          nodesYCoordinates[nodeIndexY] = nodesYCoordinates[0] + nodeIndexY * deltaY;
         }
         for (let nodeIndexX = 1; nodeIndexX < totalNodesX; nodeIndexX++) {
           const nnode = nodeIndexX * totalNodesY;
-          nodesXCoordinates[nnode] = nodesXCoordinates[0] + (nodeIndexX * deltaX);
+          nodesXCoordinates[nnode] = nodesXCoordinates[0] + nodeIndexX * deltaX;
           nodesYCoordinates[nnode] = nodesYCoordinates[0];
           for (let nodeIndexY = 1; nodeIndexY < totalNodesY; nodeIndexY++) {
             nodesXCoordinates[nnode + nodeIndexY] = nodesXCoordinates[nnode];
-            nodesYCoordinates[nnode + nodeIndexY] = nodesYCoordinates[nnode] + (nodeIndexY * deltaY);
+            nodesYCoordinates[nnode + nodeIndexY] = nodesYCoordinates[nnode] + nodeIndexY * deltaY;
           }
         }
       } else if (this.elementOrder === "quadratic") {
@@ -242,7 +259,7 @@ export class meshGeneration {
     if (this.meshDimension === "1D") {
       // Left boundary (element 0, side 0)
       boundaryElements[0].push([0, 0]);
-      
+
       // Right boundary (last element, side 1)
       boundaryElements[1].push([this.numElementsX - 1, 1]);
     } else if (this.meshDimension === "2D") {
