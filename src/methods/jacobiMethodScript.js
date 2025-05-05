@@ -9,7 +9,7 @@
 //       Website: https://feascript.com/             \__|  //
 
 /**
- * Solves a system of linear equations using the Jacobi iterative method
+ * Function to solve a system of linear equations using the Jacobi iterative method
  * @param {array} A - The coefficient matrix (must be square)
  * @param {array} b - The right-hand side vector
  * @param {array} x0 - Initial guess for solution vector
@@ -22,9 +22,9 @@
  */
 export function jacobiMethod(A, b, x0, maxIterations = 100, tolerance = 1e-7) {
   const n = A.length; // Size of the square matrix
-  let x = [...x0];    // Current solution (starts with initial guess)
+  let x = [...x0]; // Current solution (starts with initial guess)
   let xNew = new Array(n); // Next iteration's solution
-  
+
   for (let iteration = 0; iteration < maxIterations; iteration++) {
     // Perform one iteration
     for (let i = 0; i < n; i++) {
@@ -38,30 +38,30 @@ export function jacobiMethod(A, b, x0, maxIterations = 100, tolerance = 1e-7) {
       // Update xNew[i] using the Jacobi formula
       xNew[i] = (b[i] - sum) / A[i][i];
     }
-    
+
     // Check convergence
     let maxDiff = 0;
     for (let i = 0; i < n; i++) {
       maxDiff = Math.max(maxDiff, Math.abs(xNew[i] - x[i]));
     }
-    
+
     // Update x for next iteration
     x = [...xNew];
-    
+
     // Successfully converged if maxDiff is less than tolerance
     if (maxDiff < tolerance) {
       return {
         solution: x,
         iterations: iteration + 1,
-        converged: true
+        converged: true,
       };
     }
   }
-  
+
   // maxIterations were reached without convergence
   return {
     solution: x,
     iterations: maxIterations,
-    converged: false
+    converged: false,
   };
 }

@@ -8,14 +8,15 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
-import { basisFunctions } from "../mesh/basisFunctionsScript.js";
+// Internal imports
 import { numericalIntegration } from "../methods/numericalIntegrationScript.js";
+import { basisFunctions } from "../mesh/basisFunctionsScript.js";
 import { meshGeneration } from "../mesh/meshGenerationScript.js";
 import { ThermalBoundaryConditions } from "./thermalBoundaryConditionsScript.js";
 import { basicLog, debugLog } from "../utilities/loggingScript.js";
 
 /**
- * Assemble the solid heat transfer matrix
+ * Function to assemble the solid heat transfer matrix
  * @param {object} meshConfig - Object containing computational mesh details
  * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
  * @returns {object} An object containing:

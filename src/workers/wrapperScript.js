@@ -8,16 +8,20 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
-// import * as Comlink from "https://unpkg.com/comlink/dist/esm/comlink.mjs";
-// The Web Worker functionality now uses the local Comlink library to avoid CORS issues
-import * as Comlink from "../vendor/comlink.mjs";
-import { FEAScriptModel } from "../FEAScript.js";
+// External imports
 import { create, all } from "https://cdn.jsdelivr.net/npm/mathjs@latest/+esm";
+import * as Comlink from "../vendor/comlink.mjs";
+
+// Internal imports
+import { FEAScriptModel } from "../FEAScript.js";
 
 const math = create(all);
 
 globalThis.math = math;
 
+/**
+ * Class to wrap the FEAScriptModel for use in a web worker context
+ */
 class workerWrapper {
   /**
    * Constructor to initialize the workerWrapper class.
@@ -34,7 +38,7 @@ class workerWrapper {
   }
 
   /**
-   * Sets the solver configuration in the FEAScriptModel.
+   * Function to set the solver configuration in the FEAScriptModel.
    * @param {string} solverConfig - The solver configuration to set.
    * @returns {boolean} Returns true if the configuration is set successfully.
    * @throws Will throw an error if the configuration fails to set.
@@ -50,7 +54,7 @@ class workerWrapper {
   }
 
   /**
-   * Sets the mesh configuration in the FEAScriptModel.
+   * Function to set the mesh configuration in the FEAScriptModel.
    * @param {object} meshConfig - The mesh configuration to set.
    * @returns {boolean} Returns true if the configuration is set successfully.
    * @throws Will throw an error if the configuration fails to set.
@@ -66,7 +70,7 @@ class workerWrapper {
   }
 
   /**
-   * Adds a boundary condition to the FEAScriptModel.
+   * Function to add a boundary condition to the FEAScriptModel.
    * @param {string} boundaryKey - The key identifying the boundary.
    * @param {array} condition - The boundary condition to add.
    * @returns {boolean} Returns true if the boundary condition is added successfully.
@@ -83,7 +87,7 @@ class workerWrapper {
   }
 
   /**
-   * Sets the solver method in the FEAScriptModel.
+   * Function to set the solver method in the FEAScriptModel.
    * @param {string} solverMethod - The solver method to set.
    * @returns {boolean} Returns true if the solver method is set successfully.
    * @throws Will throw an error if the solver method fails to set.
@@ -99,7 +103,7 @@ class workerWrapper {
   }
 
   /**
-   * Solves the problem using the FEAScriptModel.
+   * Function to solve the problem using the FEAScriptModel.
    * @returns {object} Returns the solution result, including the solution vector, node coordinates, solver configuration, and mesh dimension.
    * @throws Will throw an error if the solve operation fails.
    */
@@ -120,7 +124,7 @@ class workerWrapper {
   }
 
   /**
-   * Retrieves model information from the FEAScriptModel.
+   * Function to retrieve model information from the FEAScriptModel.
    * @returns {object} Returns the model information, including solver configuration, mesh configuration, boundary conditions, and solver method.
    * @throws Will throw an error if the model information fails to retrieve.
    */
@@ -139,7 +143,7 @@ class workerWrapper {
   }
 
   /**
-   * Simple ping method to check if the worker is responsive.
+   * Function to perform a simple ping to check if the worker is responsive.
    * @returns {boolean} Returns true to indicate the worker is available.
    */
   ping() {

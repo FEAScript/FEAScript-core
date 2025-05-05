@@ -23,7 +23,7 @@ export class basisFunctions {
   }
 
   /**
-   * Return the basis functions and their derivatives based on the dimension and order
+   * Function to calculate basis functions and their derivatives based on the dimension and order
    * @param {number} ksi - Natural coordinate (for both 1D and 2D)
    * @param {number} [eta] - Second natural coordinate (only for 2D elements)
    * @returns {object} An object containing:

@@ -9,7 +9,7 @@
 //       Website: https://feascript.com/             \__|  //
 
 /**
- * Create plots of the solution vector
+ * Function to create plots of the solution vector
  * @param {*} solutionVector - The computed solution vector
  * @param {*} nodesCoordinates - Object containing x and y coordinates for the nodes
  * @param {string} solverConfig - Parameter specifying the type of solver
@@ -33,7 +33,7 @@ export function plotSolution(
     // Check if solutionVector is a nested array
     let yData;
     if (solutionVector.length > 0 && Array.isArray(solutionVector[0])) {
-      yData = solutionVector.map(arr => arr[0]);
+      yData = solutionVector.map((arr) => arr[0]);
     } else {
       yData = solutionVector;
     }
@@ -45,7 +45,7 @@ export function plotSolution(
       mode: "lines",
       type: "scatter",
       line: { color: "rgb(219, 64, 82)", width: 2 },
-      name: "Solution"
+      name: "Solution",
     };
 
     let maxWindowWidth = Math.min(window.innerWidth, 700);
@@ -60,7 +60,7 @@ export function plotSolution(
       height: plotHeight,
       xaxis: { title: "x" },
       yaxis: { title: "Solution" },
-      margin: { l: 70, r: 40, t: 50, b: 50 }
+      margin: { l: 70, r: 40, t: 50, b: 50 },
     };
 
     Plotly.newPlot(plotDivId, [lineData], layout, { responsive: true });
@@ -70,20 +70,11 @@ export function plotSolution(
     const numNodesY = new Set(nodesYCoordinates).size;
 
     // Reshape the nodesXCoordinates and nodesYCoordinates arrays to match the grid dimensions
-    let reshapedXCoordinates = math.reshape(Array.from(nodesXCoordinates), [
-      numNodesX,
-      numNodesY,
-    ]);
-    let reshapedYCoordinates = math.reshape(Array.from(nodesYCoordinates), [
-      numNodesX,
-      numNodesY,
-    ]);
+    let reshapedXCoordinates = math.reshape(Array.from(nodesXCoordinates), [numNodesX, numNodesY]);
+    let reshapedYCoordinates = math.reshape(Array.from(nodesYCoordinates), [numNodesX, numNodesY]);
 
     // Reshape the solution array to match the grid dimensions
-    let reshapedSolution = math.reshape(Array.from(solutionVector), [
-      numNodesX,
-      numNodesY,
-    ]);
+    let reshapedSolution = math.reshape(Array.from(solutionVector), [numNodesX, numNodesY]);
 
     // Transpose the reshapedSolution array to get column-wise data
     let transposedSolution = math.transpose(reshapedSolution);
@@ -148,9 +139,7 @@ export function plotSolution(
 
     // Set the layout for the contour plot
     let layout = {
-      title: `${plotType} plot${
-        showMesh ? " with mesh" : ""
-      } - ${solverConfig}`,
+      title: `${plotType} plot${showMesh ? " with mesh" : ""} - ${solverConfig}`,
       width: plotWidth,
       height: plotHeight,
       xaxis: { title: "x" },

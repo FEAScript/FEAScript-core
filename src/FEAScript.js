@@ -8,12 +8,13 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
-import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
+// Internal imports
 import { jacobiMethod } from "./methods/jacobiMethodScript.js";
+import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
 import { basicLog, debugLog } from "./utilities/loggingScript.js";
 
 /**
- * FEAScript: An open-source finite element simulation library developed in JavaScript
+ * Class to implement finite element analysis in JavaScript
  * @param {string} solverConfig - Parameter specifying the type of solver
  * @param {object} meshConfig - Object containing computational mesh details
  * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
@@ -35,7 +36,11 @@ export class FEAScriptModel {
 
   setMeshConfig(meshConfig) {
     this.meshConfig = meshConfig;
-    debugLog(`Mesh config set with dimensions: ${meshConfig.meshDimension}, elements: ${meshConfig.numElementsX}x${meshConfig.numElementsY || 1}`);
+    debugLog(
+      `Mesh config set with dimensions: ${meshConfig.meshDimension}, elements: ${meshConfig.numElementsX}x${
+        meshConfig.numElementsY || 1
+      }`
+    );
   }
 
   addBoundaryCondition(boundaryKey, condition) {
@@ -83,14 +88,14 @@ export class FEAScriptModel {
       const initialGuess = new Array(residualVector.length).fill(0);
       // Call Jacobi method with desired max iterations and tolerance
       const jacobiResult = jacobiMethod(jacobianMatrix, residualVector, initialGuess, 1000, 1e-6);
-      
+
       // Log convergence information
       if (jacobiResult.converged) {
         debugLog(`Jacobi method converged in ${jacobiResult.iterations} iterations`);
       } else {
         debugLog(`Jacobi method did not converge after ${jacobiResult.iterations} iterations`);
       }
-      
+
       solutionVector = jacobiResult.solution;
     }
     console.timeEnd("systemSolving");

@@ -29,7 +29,7 @@ export class ThermalBoundaryConditions {
   }
 
   /**
-   * Impose constant temperature boundary conditions (Dirichlet type)
+   * Function to impose constant temperature boundary conditions (Dirichlet type)
    * @param {array} residualVector - The residual vector to be modified
    * @param {array} jacobianMatrix - The Jacobian matrix to be modified
    */
@@ -124,7 +124,7 @@ export class ThermalBoundaryConditions {
   }
 
   /**
-   * Impose convection boundary conditions (Robin type)
+   * Function to impose convection boundary conditions (Robin type)
    * @param {array} residualVector - The residual vector to be modified
    * @param {array} jacobianMatrix - The Jacobian matrix to be modified
    * @param {array} gaussPoints - Array of Gauss points for numerical integration
@@ -177,7 +177,7 @@ export class ThermalBoundaryConditions {
                 nodeIndex = 2;
               }
             }
-            
+
             const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
             residualVector[globalNodeIndex] += -convectionCoeff * extTemp;
             jacobianMatrix[globalNodeIndex][globalNodeIndex] += convectionCoeff;

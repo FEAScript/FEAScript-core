@@ -8,6 +8,11 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
+/**
+ * Function to import mesh data from Gmsh format containing quadrilateral and triangular elements
+ * @param {File} file - The Gmsh file to be parsed
+ * @returns {object} The parsed mesh data including node coordinates, element connectivity, and boundary conditions
+ */
 const importGmshQuadTri = async (file) => {
   let result = {
     nodesXCoordinates: [],
@@ -17,7 +22,7 @@ const importGmshQuadTri = async (file) => {
       triangleElements: [],
     },
     boundaryElements: [],
-    boundaryConditions: [], 
+    boundaryConditions: [],
     gmshV: 0,
     ascii: false,
     fltBytes: "8",
@@ -54,9 +59,9 @@ const importGmshQuadTri = async (file) => {
     numElements: 0,
   };
   let elementsProcessedInBlock = 0;
-  
+
   let boundaryElementsByTag = {};
-  
+
   while (lineIndex < lines.length) {
     const line = lines[lineIndex];
 
@@ -136,10 +141,7 @@ const importGmshQuadTri = async (file) => {
         continue;
       }
 
-      if (
-        nodeBlocksProcessed < nodeEntityBlocks &&
-        currentNodeBlock.numNodes === 0
-      ) {
+      if (nodeBlocksProcessed < nodeEntityBlocks && currentNodeBlock.numNodes === 0) {
         currentNodeBlock = {
           dim: parseInt(parts[0], 10),
           tag: parseInt(parts[1], 10),
@@ -156,11 +158,7 @@ const importGmshQuadTri = async (file) => {
       }
 
       if (nodeTagsCollected < currentNodeBlock.numNodes) {
-        for (
-          let i = 0;
-          i < parts.length && nodeTagsCollected < currentNodeBlock.numNodes;
-          i++
-        ) {
+        for (let i = 0; i < parts.length && nodeTagsCollected < currentNodeBlock.numNodes; i++) {
           nodeTags.push(parseInt(parts[i], 10));
           nodeTagsCollected++;
         }
@@ -199,10 +197,7 @@ const importGmshQuadTri = async (file) => {
         continue;
       }
 
-      if (
-        elementBlocksProcessed < elementEntityBlocks &&
-        currentElementBlock.numElements === 0
-      ) {
+      if (elementBlocksProcessed < elementEntityBlocks && currentElementBlock.numElements === 0) {
         currentElementBlock = {
           dim: parseInt(parts[0], 10),
           tag: parseInt(parts[1], 10),
@@ -211,8 +206,7 @@ const importGmshQuadTri = async (file) => {
         };
 
         result.elementTypes[currentElementBlock.elementType] =
-          (result.elementTypes[currentElementBlock.elementType] || 0) +
-          currentElementBlock.numElements;
+          (result.elementTypes[currentElementBlock.elementType] || 0) + currentElementBlock.numElements;
 
         elementsProcessedInBlock = 0;
         lineIndex++;
@@ -225,16 +219,15 @@ const importGmshQuadTri = async (file) => {
 
         if (currentElementBlock.elementType === 1) {
           const physicalTag = currentElementBlock.tag;
-          
+
           if (!boundaryElementsByTag[physicalTag]) {
             boundaryElementsByTag[physicalTag] = [];
           }
-          
+
           boundaryElementsByTag[physicalTag].push(nodeIndices);
         } else if (currentElementBlock.elementType === 2) {
           result.nodalNumbering.triangleElements.push(nodeIndices);
         } else if (currentElementBlock.elementType === 3) {
-          
           result.nodalNumbering.quadElements.push(nodeIndices);
         }
 
@@ -250,42 +243,34 @@ const importGmshQuadTri = async (file) => {
     lineIndex++;
   }
 
-  result.physicalPropMap.forEach(prop => {
-    if (prop.dimension === 1) {  
+  result.physicalPropMap.forEach((prop) => {
+    if (prop.dimension === 1) {
       const boundaryNodes = boundaryElementsByTag[prop.tag] || [];
-      
+
       if (boundaryNodes.length > 0) {
         result.boundaryConditions.push({
           name: prop.name,
           tag: prop.tag,
-          nodes: boundaryNodes
+          nodes: boundaryNodes,
         });
       }
     }
   });
 
-  processBoundaryElements(
-    result.nodalNumbering.triangleElements,
-    result.boundaryElements,
-    3,
-    "triangle"
-  );
-  processBoundaryElements(
-    result.nodalNumbering.quadElements,
-    result.boundaryElements,
-    4,
-    "quad"
-  );
+  processBoundaryElements(result.nodalNumbering.triangleElements, result.boundaryElements, 3, "triangle");
+  processBoundaryElements(result.nodalNumbering.quadElements, result.boundaryElements, 4, "quad");
 
   return result;
 };
 
-function processBoundaryElements(
-  elements,
-  boundaryElements,
-  numNodes,
-  elementType
-) {
+/**
+ * Function to process boundary elements from a mesh
+ * @param {array} elements - Array of elements to process
+ * @param {array} boundaryElements - Array to store the boundary elements
+ * @param {number} numNodes - Number of nodes per element
+ * @param {string} elementType - Type of element (triangle, quad)
+ */
+function processBoundaryElements(elements, boundaryElements, numNodes, elementType) {
   const edgeCount = {};
 
   for (let i = 0; i < elements.length; i++) {

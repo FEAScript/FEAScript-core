@@ -13,9 +13,9 @@
  */
 export class numericalIntegration {
   /**
-   * Constructor to initialize the numIntegration class
+   * Constructor to initialize the numericalIntegration class
    * @param {string} meshDimension - The dimension of the mesh
-   * @param {number} elementOrder - The order of elements
+   * @param {string} elementOrder - The order of elements
    */
   constructor({ meshDimension, elementOrder }) {
     this.meshDimension = meshDimension;
@@ -23,7 +23,7 @@ export class numericalIntegration {
   }
 
   /**
-   * Return Gauss points and weights based on element configuration
+   * Function to return Gauss points and weights based on element configuration
    * @returns {object} An object containing:
    *  - gaussPoints: Array of Gauss points
    *  - gaussWeights: Array of Gauss weights

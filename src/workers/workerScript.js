@@ -8,11 +8,15 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
-// import * as Comlink from "https://unpkg.com/comlink/dist/esm/comlink.mjs";
-// The Web Worker functionality now uses the local Comlink library to avoid CORS issues
+// External imports
 import * as Comlink from "../vendor/comlink.mjs";
+
+// Internal imports
 import { basicLog } from "../utilities/loggingScript.js";
 
+/**
+ * Class to facilitate communication with web workers for FEAScript operations
+ */
 export class FEAScriptWorker {
   /**
    * Constructor to initialize the FEAScriptWorker class
@@ -27,18 +31,15 @@ export class FEAScriptWorker {
   }
 
   /**
-   * Initializes the web worker and wraps it using Comlink.
+   * Function to initialize the web worker and wrap it using Comlink.
    * @private
    * @throws Will throw an error if the worker fails to initialize.
    */
   async _initWorker() {
     try {
-      this.worker = new Worker(
-        new URL("./wrapperScript.js", import.meta.url),
-        {
-          type: "module",
-        }
-      );
+      this.worker = new Worker(new URL("./wrapperScript.js", import.meta.url), {
+        type: "module",
+      });
 
       this.worker.onerror = (event) => {
         console.error("FEAScriptWorker: Worker error:", event);
@@ -55,7 +56,7 @@ export class FEAScriptWorker {
   }
 
   /**
-   * Ensures that the worker is ready before performing any operations.
+   * Function to ensure that the worker is ready before performing any operations.
    * @private
    * @returns {Promise<void>} Resolves when the worker is ready.
    * @throws Will throw an error if the worker is not ready within the timeout period.
@@ -82,7 +83,7 @@ export class FEAScriptWorker {
   }
 
   /**
-   * Sets the solver configuration in the worker.
+   * Function to set the solver configuration in the worker.
    * @param {string} solverConfig - The solver configuration to set.
    * @returns {Promise<boolean>} Resolves when the configuration is set.
    */
@@ -111,9 +112,7 @@ export class FEAScriptWorker {
    */
   async addBoundaryCondition(boundaryKey, condition) {
     await this._ensureReady();
-    basicLog(
-      `FEAScriptWorker: Adding boundary condition for boundary: ${boundaryKey}`
-    );
+    basicLog(`FEAScriptWorker: Adding boundary condition for boundary: ${boundaryKey}`);
     return this.feaWorker.addBoundaryCondition(boundaryKey, condition);
   }
 
@@ -140,12 +139,7 @@ export class FEAScriptWorker {
     const result = await this.feaWorker.solve();
     const endTime = performance.now();
 
-    basicLog(
-      `FEAScriptWorker: Solution completed in ${(
-        (endTime - startTime) /
-        1000
-      ).toFixed(2)}s`
-    );
+    basicLog(`FEAScriptWorker: Solution completed in ${((endTime - startTime) / 1000).toFixed(2)}s`);
     return result;
   }
 

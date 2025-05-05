@@ -8,13 +8,13 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
-/**
- * Class to handle the generation of structured finite element meshes
- */
-
+// Internal imports
 import { importGmshQuadTri } from "../readers/gmshReaderScript.js";
 import { errorLog } from "../utilities/loggingScript.js";
 
+/**
+ * Class to handle the generation of structured finite element meshes
+ */
 export class meshGeneration {
   /**
    * Constructor to initialize the meshGeneration class
@@ -46,7 +46,7 @@ export class meshGeneration {
   }
 
   /**
-   * Generate the mesh based on the dimension or custom mesh file
+   * Function to generate the mesh based on the dimension or custom mesh file
    * @returns {object} The generated mesh containing node coordinates and total nodes
    */
   generateMesh() {
@@ -64,7 +64,12 @@ export class meshGeneration {
           throw new Error(errorMessage);
         }
       } else if (this.meshDimension === "2D") {
-        if (this.numElementsX === null || this.maxX === null || this.numElementsY === null || this.maxY === null) {
+        if (
+          this.numElementsX === null ||
+          this.maxX === null ||
+          this.numElementsY === null ||
+          this.maxY === null
+        ) {
           const errorMessage =
             "numElementsX, maxX, numElementsY, and maxY are required parameters when generating a 2D mesh from geometry";
           errorLog(errorMessage);
@@ -78,7 +83,7 @@ export class meshGeneration {
   }
 
   /**
-   * Parse a custom mesh JSON file and generate the mesh
+   * Function to parse a custom mesh JSON file and generate the mesh
    * @param {string} meshFilePath - Path to the custom mesh file (JSON format)
    * @returns {object} Mesh data containing coordinates and connectivity
    */
@@ -106,7 +111,7 @@ export class meshGeneration {
   }
 
   /**
-   * Generate a structured mesh based on the msh file
+   * Function to generate a structured mesh based on the msh file
    * @returns {object} An object containing the coordinates of nodes,
    * total number of nodes, nodal numbering (NOP) array, and boundary elements
    */
@@ -118,7 +123,7 @@ export class meshGeneration {
   }
 
   /**
-   * Generate a structured mesh based on the geometry configuration
+   * Function to generate a structured mesh based on the geometry configuration
    * @returns {object} An object containing the coordinates of nodes,
    * total number of nodes, nodal numbering (NOP) array, and boundary elements
    */
@@ -233,21 +238,13 @@ export class meshGeneration {
   }
 
   /**
-   * Find the elements that belong to each boundary for a simple rectangular domain
+   * Function to find the elements that belong to each boundary for a simple rectangular domain
    * @returns {array} An array containing arrays of elements and their adjacent boundary side for each boundary
    * Each element in the array is of the form [elementIndex, side], where side for a rectangular element is:
    * 0 - Bottom side
    * 1 - Left side
    * 2 - Top side
    * 3 - Right side
-   *
-   * Example representation of boundaryElements array in case of a rectangular element:
-   * boundaryElements = [
-   *   [[element1, 0], [element2, 0], [element3, 0], ...], // Bottom boundary
-   *   [[element*, 1], [element*, 1], [element*, 1], ...], // Left boundary
-   *   [[element*, 2], [element*, 2], [element*, 2], ...], // Top boundary
-   *   [[element*, 3], [element*, 3], [element*, 3], ...]  // Right boundary
-   * ];
    */
   findBoundaryElements() {
     const boundaryElements = [];
@@ -294,7 +291,7 @@ export class meshGeneration {
   }
 
   /**
-   * Generate the nodal numbering (NOP) array for a structured mesh
+   * Function to generate the nodal numbering (NOP) array for a structured mesh
    * This array represents the connectivity between elements and their corresponding nodes
    * @param {number} numElementsX - Number of elements along the x-axis
    * @param {number} [numElementsY] - Number of elements along the y-axis (optional for 1D)
