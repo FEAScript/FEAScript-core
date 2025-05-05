@@ -25,7 +25,7 @@ export function plotSolution(
   meshDimension,
   plotType,
   plotDivId,
-  showMesh = false // Currently only for rectangular domains
+  showMesh = false // Only applicable for rectangular domains when using generateMeshFromGeometry
 ) {
   const { nodesXCoordinates, nodesYCoordinates } = nodesCoordinates;
 

@@ -10,7 +10,7 @@
 
 /**
  * Function to import mesh data from Gmsh format containing quadrilateral and triangular elements
- * @param {File} file - The Gmsh file to be parsed
+ * @param {File} file - The Gmsh file to be parsed (.msh version 4.1)
  * @returns {object} The parsed mesh data including node coordinates, element connectivity, and boundary conditions
  */
 const importGmshQuadTri = async (file) => {

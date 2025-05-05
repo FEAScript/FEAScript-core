@@ -24,7 +24,7 @@ export class meshGeneration {
    * @param {number} [config.numElementsY=1] - Number of elements along the y-axis (for 1D meshes)
    * @param {number} [config.maxY=0] - Maximum y-coordinate of the mesh (for 1D meshes)
    * @param {string} [config.meshDimension='2D'] - The dimension of the mesh, either 1D or 2D
-   * @param {string|File} [config.meshFile=null] - Optional mesh file for predefined meshes (.json or .msh)
+   * @param {string|File} [config.meshFile=null] - Optional mesh file for predefined meshes (.msh)
    * @param {string} [config.elementOrder='linear'] - The order of elements, either 'linear' or 'quadratic'
    */
   constructor({
@@ -46,14 +46,20 @@ export class meshGeneration {
   }
 
   /**
-   * Function to generate the mesh based on the dimension or custom mesh file
+   * Function to generate the mesh based on the dimension or parse a custom mesh file
    * @returns {object} The generated mesh containing node coordinates and total nodes
    */
   generateMesh() {
     if (this.meshFile) {
-      // If a custom mesh file is provided, read and parse it
-      const meshData = this.generateMeshFromCustomFile(this.meshFile);
-      return meshData;
+      // If a mesh file is provided, check if it's a Gmsh (.msh) file and parse it
+      if ((typeof this.meshFile === 'string' && this.meshFile.toLowerCase().endsWith('.msh')) ||
+          (this.meshFile instanceof File && this.meshFile.name.toLowerCase().endsWith('.msh'))) {
+        return this.generateMeshFromMshFile(this.meshFile);
+      } else {
+        const errorMessage = "Only .msh files are supported for mesh import";
+        errorLog(errorMessage);
+        throw new Error(errorMessage);
+      }
     } else {
       // Validate required geometry parameters based on mesh dimension
       if (this.meshDimension === "1D") {
@@ -83,40 +89,13 @@ export class meshGeneration {
   }
 
   /**
-   * Function to parse a custom mesh JSON file and generate the mesh
-   * @param {string} meshFilePath - Path to the custom mesh file (JSON format)
-   * @returns {object} Mesh data containing coordinates and connectivity
-   */
-  generateMeshFromCustomFile(meshFilePath) {
-    const response = fetch(meshFilePath);
-    const meshData = response.json();
-
-    const nodesXCoordinates = [];
-    const nodesYCoordinates = [];
-    const { nodes, elements } = meshData;
-
-    // Parse the node coordinates
-    nodes.forEach((node) => {
-      nodesXCoordinates.push(node.x);
-      nodesYCoordinates.push(node.y);
-    });
-
-    return {
-      nodesXCoordinates,
-      nodesYCoordinates,
-      totalNodesX: nodesXCoordinates.length,
-      totalNodesY: nodesYCoordinates.length,
-      elements,
-    };
-  }
-
-  /**
-   * Function to generate a structured mesh based on the msh file
+   * Function to import a mesh from a Gmsh (.msh) file
+   * @param {string|File} file - Path or File object to the mesh file (.msh format)
    * @returns {object} An object containing the coordinates of nodes,
    * total number of nodes, nodal numbering (NOP) array, and boundary elements
    */
   async generateMeshFromMshFile(file) {
-    //for now i have made a parsing of simple quadrilateral .msh file of version 4.1
+    // Import mesh data from the Gmsh file
     const outputMesh = await importGmshQuadTri(file);
 
     return outputMesh;
