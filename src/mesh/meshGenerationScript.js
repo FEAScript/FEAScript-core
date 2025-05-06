@@ -24,8 +24,8 @@ export class meshGeneration {
    * @param {number} [config.numElementsY=1] - Number of elements along the y-axis (for 1D meshes)
    * @param {number} [config.maxY=0] - Maximum y-coordinate of the mesh (for 1D meshes)
    * @param {string} [config.meshDimension='2D'] - The dimension of the mesh, either 1D or 2D
-   * @param {string|File} [config.meshFile=null] - Optional mesh file for predefined meshes (.msh)
    * @param {string} [config.elementOrder='linear'] - The order of elements, either 'linear' or 'quadratic'
+   * @param {object} [config.parsedMesh=null] - Optional pre-parsed mesh data 
    */
   constructor({
     numElementsX = null,
@@ -33,33 +33,26 @@ export class meshGeneration {
     numElementsY = null,
     maxY = null,
     meshDimension = null,
-    meshFile = null,
     elementOrder = "linear",
+    parsedMesh = null,
   }) {
     this.numElementsX = numElementsX;
     this.numElementsY = numElementsY;
     this.maxX = maxX;
     this.maxY = maxY;
     this.meshDimension = meshDimension;
-    this.meshFile = meshFile;
     this.elementOrder = elementOrder;
+    this.parsedMesh = parsedMesh;
   }
 
   /**
-   * Function to generate the mesh based on the dimension or parse a custom mesh file
+   * Function to generate the mesh based on the dimension or use a pre-parsed mesh
    * @returns {object} The generated mesh containing node coordinates and total nodes
    */
   generateMesh() {
-    if (this.meshFile) {
-      // If a mesh file is provided, check if it's a Gmsh (.msh) file and parse it
-      if ((typeof this.meshFile === 'string' && this.meshFile.toLowerCase().endsWith('.msh')) ||
-          (this.meshFile instanceof File && this.meshFile.name.toLowerCase().endsWith('.msh'))) {
-        return this.generateMeshFromMshFile(this.meshFile);
-      } else {
-        const errorMessage = "Only .msh files are supported for mesh import";
-        errorLog(errorMessage);
-        throw new Error(errorMessage);
-      }
+    // If pre-parsed mesh data is provided, use it directly
+    if (this.parsedMesh) {
+      return this.parsedMesh;
     } else {
       // Validate required geometry parameters based on mesh dimension
       if (this.meshDimension === "1D") {
@@ -86,19 +79,6 @@ export class meshGeneration {
       // Generate mesh based on dimension
       return this.generateMeshFromGeometry();
     }
-  }
-
-  /**
-   * Function to import a mesh from a Gmsh (.msh) file
-   * @param {string|File} file - Path or File object to the mesh file (.msh format)
-   * @returns {object} An object containing the coordinates of nodes,
-   * total number of nodes, nodal numbering (NOP) array, and boundary elements
-   */
-  async generateMeshFromMshFile(file) {
-    // Import mesh data from the Gmsh file
-    const outputMesh = await importGmshQuadTri(file);
-
-    return outputMesh;
   }
 
   /**

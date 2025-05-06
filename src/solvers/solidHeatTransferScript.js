@@ -35,13 +35,8 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     maxX, // Max x-coordinate (m) of the domain
     maxY, // Max y-coordinate (m) of the domain (only for 2D)
     elementOrder, // The order of elements
+    parsedMesh, // The pre-parsed mesh data (if available)
   } = meshConfig;
-
-  debugLog(
-    `Mesh configuration: ${meshDimension}, Elements: ${numElementsX}x${numElementsY || 1}, Size: ${maxX}x${
-      maxY || 0
-    }, Order: ${elementOrder}`
-  );
 
   // Create a new instance of the meshGeneration class
   debugLog("Generating mesh...");
@@ -52,6 +47,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     maxY,
     meshDimension,
     elementOrder,
+    parsedMesh, // Pass the parsed mesh to the mesh generator
   });
 
   // Generate the mesh
@@ -65,9 +61,27 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
   let nop = nodesCoordinatesAndNumbering.nodalNumbering;
   let boundaryElements = nodesCoordinatesAndNumbering.boundaryElements;
 
+  // Check the mesh type
+  const isParsedMesh = parsedMesh !== undefined && parsedMesh !== null;
+
+  // Calculate totalElements and totalNodes based on mesh type
+  let totalElements, totalNodes;
+
+  if (isParsedMesh) {
+    totalElements = nop.length; // Number of elements is the length of the nodal numbering array
+    totalNodes = nodesXCoordinates.length; // Number of nodes is the length of the coordinates array
+    
+    // Debug log for mesh size
+    debugLog(`Using parsed mesh with ${totalElements} elements and ${totalNodes} nodes`);
+  } else {
+    // For structured mesh, calculate based on dimensions
+    totalElements = numElementsX * (meshDimension === "2D" ? numElementsY : 1);
+    totalNodes = totalNodesX * (meshDimension === "2D" ? totalNodesY : 1);
+    // Debug log for mesh size
+    debugLog(`Using mesh generated from geometry with ${totalElements} elements and ${totalNodes} nodes`);
+  }
+
   // Initialize variables for matrix assembly
-  const totalElements = numElementsX * (meshDimension === "2D" ? numElementsY : 1); // Total number of elements
-  const totalNodes = totalNodesX * (meshDimension === "2D" ? totalNodesY : 1); // Total number of nodes
   let localNodalNumbers = []; // Local nodal numbering
   let gaussPoints = []; // Gauss points
   let gaussWeights = []; // Gauss weights

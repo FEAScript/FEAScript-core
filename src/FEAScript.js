@@ -37,9 +37,7 @@ export class FEAScriptModel {
   setMeshConfig(meshConfig) {
     this.meshConfig = meshConfig;
     debugLog(
-      `Mesh config set with dimensions: ${meshConfig.meshDimension}, elements: ${meshConfig.numElementsX}x${
-        meshConfig.numElementsY || 1
-      }`
+      `Mesh config set with dimensions: ${meshConfig.meshDimension}`
     );
   }
 
