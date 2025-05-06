@@ -9,7 +9,6 @@
 //       Website: https://feascript.com/             \__|  //
 
 // Internal imports
-import { importGmshQuadTri } from "../readers/gmshReaderScript.js";
 import { errorLog } from "../utilities/loggingScript.js";
 
 /**

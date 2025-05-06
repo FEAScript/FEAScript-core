@@ -9,6 +9,7 @@
 //       Website: https://feascript.com/             \__|  //
 
 export { FEAScriptModel } from "./FEAScript.js";
+export { importGmshQuadTri } from "./readers/gmshReaderScript.js";
+export { logSystem, printVersion } from "./utilities/loggingScript.js";
 export { plotSolution } from "./visualization/plotSolutionScript.js";
-export { printVersion, logSystem } from "./utilities/loggingScript.js";
 export { FEAScriptWorker } from "./workers/workerScript.js";
