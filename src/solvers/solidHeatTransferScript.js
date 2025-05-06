@@ -25,7 +25,7 @@ import { basicLog, debugLog } from "../utilities/loggingScript.js";
  *  - nodesCoordinates: Object containing x and y coordinates of nodes
  */
 export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
-  basicLog("Starting solid heat transfer matrix assembly");
+  basicLog("Starting solid heat transfer matrix assembly...");
 
   // Extract mesh details from the configuration object
   const {
