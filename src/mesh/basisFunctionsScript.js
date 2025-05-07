@@ -8,6 +8,9 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
+// Internal imports
+import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+
 /**
  * Class to handle basis functions and their derivatives based on element configuration
  */
@@ -58,7 +61,7 @@ export class basisFunctions {
       }
     } else if (this.meshDimension === "2D") {
       if (eta === null) {
-        console.log("Eta coordinate is required for 2D elements");
+        errorLog("Eta coordinate is required for 2D elements");
         return;
       }
 

@@ -8,6 +8,9 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
+// Internal imports
+import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+
 /**
  * Function to import mesh data from Gmsh format containing quadrilateral and triangular elements
  * @param {File} file - The Gmsh file to be parsed (.msh version 4.1)
@@ -21,7 +24,7 @@ const importGmshQuadTri = async (file) => {
       quadElements: [],
       triangleElements: [],
     },
-    boundaryElements: [], // Will be initialized as array of arrays below
+    boundaryElements: [],
     boundaryConditions: [],
     gmshV: 0,
     ascii: false,
@@ -31,11 +34,6 @@ const importGmshQuadTri = async (file) => {
     physicalPropMap: [],
     elementTypes: {},
   };
-
-  // Initialize boundaryElements as an array of 4 empty arrays (one for each side)
-  for (let i = 0; i < 4; i++) {
-    result.boundaryElements[i] = [];
-  }
 
   let content = await file.text();
   let lines = content
@@ -258,68 +256,40 @@ const importGmshQuadTri = async (file) => {
           tag: prop.tag,
           nodes: boundaryNodes,
         });
+
+        // Initialize boundary element array based on the number of PhysicalNames
+        if (!result.boundaryElements[prop.tag]) {
+          result.boundaryElements[prop.tag] = [];
+        }
+        // TODO: Calculate the boundaryElements based on boundaryElementsByTag and nodalNumbering
+        // NEXT TODO: Remap nodalNumbering according to https://gmsh.info/doc/texinfo/gmsh.html#Node-ordering. 
+        // In the case of quadrilaterals, the order is:
+        /**
+         * Gmsh quadrilateral node numbering (linear elements):
+         *
+         *   3__ __2
+         *   |     |
+         *   |__ __|
+         *   0     1
+         *
+         * FEAScript quadrilateral node numbering:
+         *
+         *   1__ __3
+         *   |     |
+         *   |__ __|
+         *   0     2
+         *
+         * Remapping:
+         * - 0 (bottom left): stays as 0
+         * - 3 (top left): becomes 1
+         * - 1 (bottom right): becomes 2
+         * - 2 (top right): becomes 3
+         */
       }
     }
   });
 
-  processBoundaryElements(result.nodalNumbering.triangleElements, result.boundaryElements, 3, "triangle");
-  processBoundaryElements(result.nodalNumbering.quadElements, result.boundaryElements, 4, "quad");
-
   return result;
 };
-
-/**
- * Function to process boundary elements from a mesh
- * @param {array} elements - Array of elements to process
- * @param {array} boundaryElements - Array to store the boundary elements
- * @param {number} numNodes - Number of nodes per element
- * @param {string} elementType - Type of element (triangle, quad)
- */
-function processBoundaryElements(elements, boundaryElements, numNodes, elementType) {
-  const edgeCount = {};
-
-  // Count occurrences of each edge
-  for (let i = 0; i < elements.length; i++) {
-    const element = elements[i];
-
-    for (let j = 0; j < numNodes; j++) {
-      const node1 = element[j];
-      const node2 = element[(j + 1) % numNodes];
-
-      const edgeKey = node1 < node2 ? `${node1}-${node2}` : `${node2}-${node1}`;
-
-      edgeCount[edgeKey] = (edgeCount[edgeKey] || 0) + 1;
-    }
-  }
-
-  // Process boundary edges
-  for (let i = 0; i < elements.length; i++) {
-    const element = elements[i];
-
-    for (let j = 0; j < numNodes; j++) {
-      const node1 = element[j];
-      const node2 = element[(j + 1) % numNodes];
-
-      const edgeKey = node1 < node2 ? `${node1}-${node2}` : `${node2}-${node1}`;
-
-      if (edgeCount[edgeKey] === 1) { // Boundary edge
-        // Map local edge index to side index (0: bottom, 1: left, 2: top, 3: right)
-        let sideIndex;
-        
-        if (elementType === "quad") {
-          // For quadrilateral elements
-          // Gmsh format: 0 → bottom, 1 → right, 2 → top, 3 → left
-          // Adjusted to match the FEAScript format: 0 → bottom, 1 → left, 2 → top, 3 → right
-          const sideMap = [0, 3, 2, 1];
-          sideIndex = sideMap[j];
-        } else if (elementType === "triangle") {
-          // For triangular elements
-        }
-
-        boundaryElements[sideIndex].push([i, j]);
-      }
-    }
-  }
-}
 
 export { importGmshQuadTri };

@@ -11,7 +11,7 @@
 // Internal imports
 import { jacobiMethod } from "./methods/jacobiMethodScript.js";
 import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
-import { basicLog, debugLog } from "./utilities/loggingScript.js";
+import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
 
 /**
  * Class to implement finite element analysis in JavaScript

@@ -9,7 +9,7 @@
 //       Website: https://feascript.com/             \__|  //
 
 // Internal imports
-import { errorLog } from "../utilities/loggingScript.js";
+import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**
  * Class to handle the generation of structured finite element meshes
@@ -24,7 +24,7 @@ export class meshGeneration {
    * @param {number} [config.maxY=0] - Maximum y-coordinate of the mesh (for 1D meshes)
    * @param {string} [config.meshDimension='2D'] - The dimension of the mesh, either 1D or 2D
    * @param {string} [config.elementOrder='linear'] - The order of elements, either 'linear' or 'quadratic'
-   * @param {object} [config.parsedMesh=null] - Optional pre-parsed mesh data 
+   * @param {object} [config.parsedMesh=null] - Optional pre-parsed mesh data
    */
   constructor({
     numElementsX = null,
@@ -196,9 +196,15 @@ export class meshGeneration {
   }
 
   /**
-   * Function to find the elements that belong to each boundary for a simple rectangular domain
+   * Function to find the elements that belong to each boundary for a simple domain
    * @returns {array} An array containing arrays of elements and their adjacent boundary side for each boundary
-   * Each element in the array is of the form [elementIndex, side], where side for a rectangular element is:
+   * Each element in the array is of the form [elementIndex, side], where:
+   *
+   * For 1D domains (line segments):
+   * 0 - Left endpoint
+   * 1 - Right endpoint
+   *
+   * For 2D domains (rectangular):
    * 0 - Bottom side
    * 1 - Left side
    * 2 - Top side
@@ -206,7 +212,7 @@ export class meshGeneration {
    */
   findBoundaryElements() {
     const boundaryElements = [];
-    const maxSides = 4; // Number of sides of the reference element
+    const maxSides = this.meshDimension === "1D" ? 2 : 4; // Number of element sides based on mesh dimension
     for (let sideIndex = 0; sideIndex < maxSides; sideIndex++) {
       boundaryElements.push([]);
     }
