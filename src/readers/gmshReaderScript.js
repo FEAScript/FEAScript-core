@@ -21,7 +21,7 @@ const importGmshQuadTri = async (file) => {
       quadElements: [],
       triangleElements: [],
     },
-    boundaryElements: [],
+    boundaryElements: [], // Will be initialized as array of arrays below
     boundaryConditions: [],
     gmshV: 0,
     ascii: false,
@@ -31,6 +31,11 @@ const importGmshQuadTri = async (file) => {
     physicalPropMap: [],
     elementTypes: {},
   };
+
+  // Initialize boundaryElements as an array of 4 empty arrays (one for each side)
+  for (let i = 0; i < 4; i++) {
+    result.boundaryElements[i] = [];
+  }
 
   let content = await file.text();
   let lines = content
@@ -273,6 +278,7 @@ const importGmshQuadTri = async (file) => {
 function processBoundaryElements(elements, boundaryElements, numNodes, elementType) {
   const edgeCount = {};
 
+  // Count occurrences of each edge
   for (let i = 0; i < elements.length; i++) {
     const element = elements[i];
 
@@ -286,6 +292,7 @@ function processBoundaryElements(elements, boundaryElements, numNodes, elementTy
     }
   }
 
+  // Process boundary edges
   for (let i = 0; i < elements.length; i++) {
     const element = elements[i];
 
@@ -295,12 +302,21 @@ function processBoundaryElements(elements, boundaryElements, numNodes, elementTy
 
       const edgeKey = node1 < node2 ? `${node1}-${node2}` : `${node2}-${node1}`;
 
-      if (edgeCount[edgeKey] === 1) {
-        boundaryElements.push({
-          elementIndex: i,
-          localEdgeIndex: j,
-          elementType: elementType,
-        });
+      if (edgeCount[edgeKey] === 1) { // Boundary edge
+        // Map local edge index to side index (0: bottom, 1: left, 2: top, 3: right)
+        let sideIndex;
+        
+        if (elementType === "quad") {
+          // For quadrilateral elements
+          // Gmsh format: 0 → bottom, 1 → right, 2 → top, 3 → left
+          // Adjusted to match the FEAScript format: 0 → bottom, 1 → left, 2 → top, 3 → right
+          const sideMap = [0, 3, 2, 1];
+          sideIndex = sideMap[j];
+        } else if (elementType === "triangle") {
+          // For triangular elements
+        }
+
+        boundaryElements[sideIndex].push([i, j]);
       }
     }
   }
