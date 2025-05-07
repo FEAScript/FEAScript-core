@@ -56,10 +56,7 @@ export class meshGeneration {
       // Validate required geometry parameters based on mesh dimension
       if (this.meshDimension === "1D") {
         if (this.numElementsX === null || this.maxX === null) {
-          const errorMessage =
-            "numElementsX and maxX are required parameters when generating a 1D mesh from geometry";
-          errorLog(errorMessage);
-          throw new Error(errorMessage);
+          errorLog("numElementsX and maxX are required parameters when generating a 1D mesh from geometry");
         }
       } else if (this.meshDimension === "2D") {
         if (
@@ -68,10 +65,9 @@ export class meshGeneration {
           this.numElementsY === null ||
           this.maxY === null
         ) {
-          const errorMessage =
-            "numElementsX, maxX, numElementsY, and maxY are required parameters when generating a 2D mesh from geometry";
-          errorLog(errorMessage);
-          throw new Error(errorMessage);
+          errorLog(
+            "numElementsX, maxX, numElementsY, and maxY are required parameters when generating a 2D mesh from geometry"
+          );
         }
       }
 
@@ -196,19 +192,20 @@ export class meshGeneration {
   }
 
   /**
-   * Function to find the elements that belong to each boundary for a simple domain
+   * Function to find the elements that belong to each boundary of a domain
    * @returns {array} An array containing arrays of elements and their adjacent boundary side for each boundary
-   * Each element in the array is of the form [elementIndex, side], where:
+   * Each element in the array is of the form [elementIndex, side], where 'side' indicates which side
+   * of the reference element is in contact with the physical boundary:
    *
    * For 1D domains (line segments):
-   * 0 - Left endpoint
-   * 1 - Right endpoint
+   * 0 - Left node of reference element (maps to physical left endpoint)
+   * 1 - Right node of reference element (maps to physical right endpoint)
    *
    * For 2D domains (rectangular):
-   * 0 - Bottom side
-   * 1 - Left side
-   * 2 - Top side
-   * 3 - Right side
+   * 0 - Bottom side of reference element (maps to physical bottom boundary)
+   * 1 - Left side of reference element (maps to physical left boundary)
+   * 2 - Top side of reference element (maps to physical top boundary)
+   * 3 - Right side of reference element (maps to physical right boundary)
    */
   findBoundaryElements() {
     const boundaryElements = [];
