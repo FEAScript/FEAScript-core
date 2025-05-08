@@ -51,6 +51,155 @@ export class meshGeneration {
   generateMesh() {
     // If pre-parsed mesh data is provided, use it directly
     if (this.parsedMesh) {
+      // Process the nodalNumbering from gmshReader format to the format expected by the solver
+      if (this.parsedMesh.nodalNumbering) {
+        if (
+          typeof this.parsedMesh.nodalNumbering === "object" &&
+          !Array.isArray(this.parsedMesh.nodalNumbering)
+        ) {
+          // Store the nodal numbering structure before converting
+          const quadElements = this.parsedMesh.nodalNumbering.quadElements || [];
+          const triangleElements = this.parsedMesh.nodalNumbering.triangleElements || [];
+
+          console.log("Parsed mesh nodal numbering:", this.parsedMesh.nodalNumbering);
+
+          // Check if it has quadElements or triangleElements structure from gmshReader
+          if (quadElements && quadElements.length > 0) {
+            // Map nodal numbering from GMSH format to FEAScript format for quad elements
+            const mappedNodalNumbering = [];
+
+            for (let elemIdx = 0; elemIdx < quadElements.length; elemIdx++) {
+              const gmshNodes = quadElements[elemIdx];
+              const feaScriptNodes = new Array(gmshNodes.length);
+
+              // Simple mapping for linear quad elements (4 nodes)
+              // GMSH:       FEAScript:
+              // 3 --- 2     1 --- 3
+              // |     |     |     |
+              // 0 --- 1     0 --- 2
+
+              feaScriptNodes[0] = gmshNodes[0]; // 0 -> 0
+              feaScriptNodes[1] = gmshNodes[3]; // 3 -> 1
+              feaScriptNodes[2] = gmshNodes[1]; // 1 -> 2
+              feaScriptNodes[3] = gmshNodes[2]; // 2 -> 3
+
+              mappedNodalNumbering.push(feaScriptNodes);
+            }
+
+            this.parsedMesh.nodalNumbering = mappedNodalNumbering;
+          } else if (triangleElements && triangleElements.length > 0) {
+            this.parsedMesh.nodalNumbering = triangleElements;
+          }
+
+          console.log("Mapped nodal numbering:", this.parsedMesh.nodalNumbering);
+
+          // Process boundary elements if they exist and if physical property mapping exists
+          if (this.parsedMesh.physicalPropMap && this.parsedMesh.boundaryElements) {
+            // Check if boundary elements need to be processed
+            if (
+              Array.isArray(this.parsedMesh.boundaryElements) &&
+              this.parsedMesh.boundaryElements.length > 0 &&
+              this.parsedMesh.boundaryElements[0] === undefined
+            ) {
+              // Create a new array without the empty first element
+              const fixedBoundaryElements = [];
+              for (let i = 1; i < this.parsedMesh.boundaryElements.length; i++) {
+                if (this.parsedMesh.boundaryElements[i]) {
+                  fixedBoundaryElements.push(this.parsedMesh.boundaryElements[i]);
+                }
+              }
+              this.parsedMesh.boundaryElements = fixedBoundaryElements;
+            }
+
+            // If boundary node pairs exist but boundary elements haven't been processed
+            if (this.parsedMesh.boundaryNodePairs && !this.parsedMesh.boundaryElementsProcessed) {
+              this.parsedMesh.boundaryElements = [];
+
+              this.parsedMesh.physicalPropMap.forEach((prop) => {
+                if (prop.dimension === 1) {
+                  const boundaryNodes = this.parsedMesh.boundaryNodePairs[prop.tag] || [];
+
+                  if (boundaryNodes.length > 0) {
+                    // Initialize boundary element array for this tag
+                    if (!this.parsedMesh.boundaryElements[prop.tag]) {
+                      this.parsedMesh.boundaryElements[prop.tag] = [];
+                    }
+
+                    // For each boundary line segment (2 nodes)
+                    boundaryNodes.forEach((nodesPair) => {
+                      // Find which element contains both nodes of this boundary
+                      let foundElement = false;
+                      for (let elemIdx = 0; elemIdx < this.parsedMesh.nodalNumbering.length; elemIdx++) {
+                        const elemNodes = this.parsedMesh.nodalNumbering[elemIdx];
+
+                        // Check if both boundary nodes are in this element
+                        if (elemNodes.includes(nodesPair[0]) && elemNodes.includes(nodesPair[1])) {
+                          // Find which side of the element these nodes form
+                          let side;
+
+                          // Using FEAScript orientation for sides
+                          // Side 0 (Bottom): nodes 0-2
+                          // Side 1 (Left): nodes 0-1
+                          // Side 2 (Top): nodes 1-3
+                          // Side 3 (Right): nodes 2-3
+
+                          if (
+                            (elemNodes.indexOf(nodesPair[0]) === 0 &&
+                              elemNodes.indexOf(nodesPair[1]) === 2) ||
+                            (elemNodes.indexOf(nodesPair[1]) === 0 && elemNodes.indexOf(nodesPair[0]) === 2)
+                          ) {
+                            side = 0; // Bottom side
+                          } else if (
+                            (elemNodes.indexOf(nodesPair[0]) === 0 &&
+                              elemNodes.indexOf(nodesPair[1]) === 1) ||
+                            (elemNodes.indexOf(nodesPair[1]) === 0 && elemNodes.indexOf(nodesPair[0]) === 1)
+                          ) {
+                            side = 1; // Left side
+                          } else if (
+                            (elemNodes.indexOf(nodesPair[0]) === 1 &&
+                              elemNodes.indexOf(nodesPair[1]) === 3) ||
+                            (elemNodes.indexOf(nodesPair[1]) === 1 && elemNodes.indexOf(nodesPair[0]) === 3)
+                          ) {
+                            side = 2; // Top side
+                          } else if (
+                            (elemNodes.indexOf(nodesPair[0]) === 2 &&
+                              elemNodes.indexOf(nodesPair[1]) === 3) ||
+                            (elemNodes.indexOf(nodesPair[1]) === 2 && elemNodes.indexOf(nodesPair[0]) === 3)
+                          ) {
+                            side = 3; // Right side
+                          }
+
+                          // Add to boundary elements
+                          this.parsedMesh.boundaryElements[prop.tag].push([elemIdx, side]);
+                          foundElement = true;
+                          break;
+                        }
+                      }
+                    });
+                  }
+                }
+              });
+
+              // Mark as processed
+              this.parsedMesh.boundaryElementsProcessed = true;
+
+              // Fix boundary elements array - remove undefined entries
+              if (
+                this.parsedMesh.boundaryElements.length > 0 &&
+                this.parsedMesh.boundaryElements[0] === undefined
+              ) {
+                const fixedBoundaryElements = [];
+                for (let i = 1; i < this.parsedMesh.boundaryElements.length; i++) {
+                  if (this.parsedMesh.boundaryElements[i]) {
+                    fixedBoundaryElements.push(this.parsedMesh.boundaryElements[i]);
+                  }
+                }
+                this.parsedMesh.boundaryElements = fixedBoundaryElements;
+              }
+            }
+          }
+        }
+      }
       return this.parsedMesh;
     } else {
       // Validate required geometry parameters based on mesh dimension
@@ -178,6 +327,9 @@ export class meshGeneration {
       );
       // Find boundary elements
       const boundaryElements = this.findBoundaryElements();
+
+      console.log("x  coordinates of nodes:", nodesXCoordinates);
+      console.log("y  coordinates of nodes:", nodesYCoordinates);
 
       // Return x and y coordinates of nodes, total nodes, NOP array, and boundary elements
       return {

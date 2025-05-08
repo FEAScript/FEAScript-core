@@ -82,7 +82,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
   }
 
   // Initialize variables for matrix assembly
-  let localNodalNumbers = []; // Local nodal numbering
+  let localToGlobalMap = []; // Maps local element node indices to global mesh node indices
   let gaussPoints = []; // Gauss points
   let gaussWeights = []; // Gauss weights
   let basisFunction = []; // Basis functions
@@ -133,7 +133,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
   for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {
     for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
       // Subtract 1 from nop in order to start numbering from 0
-      localNodalNumbers[localNodeIndex] = nop[elementIndex][localNodeIndex] - 1;
+      localToGlobalMap[localNodeIndex] = nop[elementIndex][localNodeIndex] - 1;
     }
 
     // Loop over Gauss points
@@ -152,9 +152,9 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
         // Isoparametric mapping
         for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
           xCoordinates +=
-            nodesXCoordinates[localNodalNumbers[localNodeIndex]] * basisFunction[localNodeIndex];
+            nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunction[localNodeIndex];
           ksiDerivX +=
-            nodesXCoordinates[localNodalNumbers[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
+            nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
           detJacobian = ksiDerivX;
         }
 
@@ -165,12 +165,12 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
 
         // Computation of Galerkin's residuals and Jacobian matrix
         for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
-          let globalNodeIndex1 = localNodalNumbers[localNodeIndex1];
+          let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
           // residualVector is zero for this case
 
           for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
-            let globalNodeIndex2 = localNodalNumbers[localNodeIndex2];
-            jacobianMatrix[globalNodeIndex1][globalNodeIndex2] +=
+            let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
+            jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
               -gaussWeights[gaussPointIndex1] *
               detJacobian *
               (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2]);
@@ -198,17 +198,17 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
           // Isoparametric mapping
           for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
             xCoordinates +=
-              nodesXCoordinates[localNodalNumbers[localNodeIndex]] * basisFunction[localNodeIndex];
+              nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunction[localNodeIndex];
             yCoordinates +=
-              nodesYCoordinates[localNodalNumbers[localNodeIndex]] * basisFunction[localNodeIndex];
+              nodesYCoordinates[localToGlobalMap[localNodeIndex]] * basisFunction[localNodeIndex];
             ksiDerivX +=
-              nodesXCoordinates[localNodalNumbers[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
+              nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
             etaDerivX +=
-              nodesXCoordinates[localNodalNumbers[localNodeIndex]] * basisFunctionDerivEta[localNodeIndex];
+              nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivEta[localNodeIndex];
             ksiDerivY +=
-              nodesYCoordinates[localNodalNumbers[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
+              nodesYCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
             etaDerivY +=
-              nodesYCoordinates[localNodalNumbers[localNodeIndex]] * basisFunctionDerivEta[localNodeIndex];
+              nodesYCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivEta[localNodeIndex];
             detJacobian = meshDimension === "2D" ? ksiDerivX * etaDerivY - etaDerivX * ksiDerivY : ksiDerivX;
           }
 
@@ -226,12 +226,12 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
 
           // Computation of Galerkin's residuals and Jacobian matrix
           for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
-            let globalNodeIndex1 = localNodalNumbers[localNodeIndex1];
+            let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
             // residualVector is zero for this case
 
             for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
-              let globalNodeIndex2 = localNodalNumbers[localNodeIndex2];
-              jacobianMatrix[globalNodeIndex1][globalNodeIndex2] +=
+              let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
+              jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
                 -gaussWeights[gaussPointIndex1] *
                 gaussWeights[gaussPointIndex2] *
                 detJacobian *
