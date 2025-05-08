@@ -261,33 +261,102 @@ const importGmshQuadTri = async (file) => {
         if (!result.boundaryElements[prop.tag]) {
           result.boundaryElements[prop.tag] = [];
         }
-        // TODO: Calculate the boundaryElements based on boundaryElementsByTag and nodalNumbering
-        // NEXT TODO: Remap nodalNumbering according to https://gmsh.info/doc/texinfo/gmsh.html#Node-ordering. 
-        // In the case of quadrilaterals, the order is:
-        /**
-         * Gmsh quadrilateral node numbering (linear elements):
-         *
-         *   3__ __2
-         *   |     |
-         *   |__ __|
-         *   0     1
-         *
-         * FEAScript quadrilateral node numbering:
-         *
-         *   1__ __3
-         *   |     |
-         *   |__ __|
-         *   0     2
-         *
-         * Remapping:
-         * - 0 (bottom left): stays as 0
-         * - 3 (top left): becomes 1
-         * - 1 (bottom right): becomes 2
-         * - 2 (top right): becomes 3
-         */
+
+        // For each boundary line segment (2 nodes)
+        boundaryNodes.forEach((nodesPair) => {
+          // Find which quad element contains both nodes of this boundary
+          let foundElement = false;
+          for (let elemIdx = 0; elemIdx < result.nodalNumbering.quadElements.length; elemIdx++) {
+            const elemNodes = result.nodalNumbering.quadElements[elemIdx];
+
+            // Check if both boundary nodes are in this element
+            if (elemNodes.includes(nodesPair[0]) && elemNodes.includes(nodesPair[1])) {
+              // Find which side of the element these nodes form
+              let side;
+
+              // For linear quadrilateral elements, the Gmsh local numbering is:
+              // 3 --- 2
+              // |     |
+              // 0 --- 1
+
+              // Check which side these nodes belong to
+              if (
+                (elemNodes.indexOf(nodesPair[0]) === 0 && elemNodes.indexOf(nodesPair[1]) === 1) ||
+                (elemNodes.indexOf(nodesPair[1]) === 0 && elemNodes.indexOf(nodesPair[0]) === 1)
+              ) {
+                side = 0; // Bottom side
+              } else if (
+                (elemNodes.indexOf(nodesPair[0]) === 1 && elemNodes.indexOf(nodesPair[1]) === 2) ||
+                (elemNodes.indexOf(nodesPair[1]) === 1 && elemNodes.indexOf(nodesPair[0]) === 2)
+              ) {
+                side = 1; // Right side
+              } else if (
+                (elemNodes.indexOf(nodesPair[0]) === 2 && elemNodes.indexOf(nodesPair[1]) === 3) ||
+                (elemNodes.indexOf(nodesPair[1]) === 2 && elemNodes.indexOf(nodesPair[0]) === 3)
+              ) {
+                side = 2; // Top side
+              } else if (
+                (elemNodes.indexOf(nodesPair[0]) === 3 && elemNodes.indexOf(nodesPair[1]) === 0) ||
+                (elemNodes.indexOf(nodesPair[1]) === 3 && elemNodes.indexOf(nodesPair[0]) === 0)
+              ) {
+                side = 3; // Left side
+              }
+
+              // Add to boundary elements
+              result.boundaryElements[prop.tag].push([elemIdx, side]);
+              foundElement = true;
+              break;
+            }
+          }
+        });
       }
     }
   });
+
+  // Remap nodal numbering from Gmsh format to FEAScript format for quadrilateral elements
+  if (result.nodalNumbering.quadElements.length > 0) {
+    /*
+     * Gmsh quadrilateral node numbering (linear elements):
+     *
+     *   3__ __2
+     *   |     |
+     *   |__ __|
+     *   0     1
+     *
+     * FEAScript quadrilateral node numbering (linear elements):
+     *
+     *   1__ __3
+     *   |     |
+     *   |__ __|
+     *   0     2
+     *
+     */
+    // Mapping: Gmsh → FEAScript
+    // 0 → 0 (bottom left)
+    // 1 → 2 (bottom right)
+    // 2 → 3 (top right)
+    // 3 → 1 (top left)
+    const gmshToFEAMap = [0, 2, 3, 1];
+
+    for (let i = 0; i < result.nodalNumbering.quadElements.length; i++) {
+      const originalNodes = [...result.nodalNumbering.quadElements[i]];
+      for (let j = 0; j < 4; j++) {
+        result.nodalNumbering.quadElements[i][gmshToFEAMap[j]] = originalNodes[j];
+      }
+    }
+  }
+
+  // Fix boundary elements array - remove the empty first element
+  if (result.boundaryElements.length > 0 && result.boundaryElements[0] === undefined) {
+    // Create a new array without the empty first element
+    const fixedBoundaryElements = [];
+    for (let i = 1; i < result.boundaryElements.length; i++) {
+      if (result.boundaryElements[i]) {
+        fixedBoundaryElements.push(result.boundaryElements[i]);
+      }
+    }
+    result.boundaryElements = fixedBoundaryElements;
+  }
 
   return result;
 };
