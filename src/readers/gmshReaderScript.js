@@ -229,7 +229,7 @@ const importGmshQuadTri = async (file) => {
           }
 
           boundaryElementsByTag[physicalTag].push(nodeIndices);
-          
+
           // Store boundary node pairs for later processing in meshGenerationScript
           if (!result.boundaryNodePairs[physicalTag]) {
             result.boundaryNodePairs[physicalTag] = [];
@@ -267,6 +267,12 @@ const importGmshQuadTri = async (file) => {
       }
     }
   });
+
+  debugLog(
+    `Parsed boundary node pairs by physical tag: ${JSON.stringify(
+      result.boundaryNodePairs
+    )}. These pairs will be used to identify boundary elements in the mesh.`
+  );
 
   return result;
 };

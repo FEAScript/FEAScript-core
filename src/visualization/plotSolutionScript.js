@@ -87,7 +87,7 @@ export function plotSolution(
     
     // Common layout properties
     let layout = {
-      title: `${plotType} plot (${meshType}) - ${solverConfig}`,
+      title: `${plotType} plot - ${solverConfig}`,
       width: plotWidth,
       height: plotHeight,
       xaxis: { title: "x" },

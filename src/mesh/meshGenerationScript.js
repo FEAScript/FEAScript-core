@@ -61,7 +61,10 @@ export class meshGeneration {
           const quadElements = this.parsedMesh.nodalNumbering.quadElements || [];
           const triangleElements = this.parsedMesh.nodalNumbering.triangleElements || [];
 
-          console.log("Parsed mesh nodal numbering:", this.parsedMesh.nodalNumbering);
+          debugLog(
+            "Initial parsed mesh nodal numbering from GMSH format: " +
+              JSON.stringify(this.parsedMesh.nodalNumbering)
+          );
 
           // Check if it has quadElements or triangleElements structure from gmshReader
           if (quadElements && quadElements.length > 0) {
@@ -91,7 +94,10 @@ export class meshGeneration {
             this.parsedMesh.nodalNumbering = triangleElements;
           }
 
-          console.log("Mapped nodal numbering:", this.parsedMesh.nodalNumbering);
+          debugLog(
+            "Nodal numbering after mapping from GMSH to FEAScript format: " +
+              JSON.stringify(this.parsedMesh.nodalNumbering)
+          );
 
           // Process boundary elements if they exist and if physical property mapping exists
           if (this.parsedMesh.physicalPropMap && this.parsedMesh.boundaryElements) {
@@ -113,67 +119,100 @@ export class meshGeneration {
 
             // If boundary node pairs exist but boundary elements haven't been processed
             if (this.parsedMesh.boundaryNodePairs && !this.parsedMesh.boundaryElementsProcessed) {
+              // Reset boundary elements array
               this.parsedMesh.boundaryElements = [];
 
+              // Process each physical property from the Gmsh file
               this.parsedMesh.physicalPropMap.forEach((prop) => {
+                // Only process 1D physical entities (boundary lines)
                 if (prop.dimension === 1) {
-                  const boundaryNodes = this.parsedMesh.boundaryNodePairs[prop.tag] || [];
+                  // Get all node pairs for this boundary
+                  const boundaryNodePairs = this.parsedMesh.boundaryNodePairs[prop.tag] || [];
 
-                  if (boundaryNodes.length > 0) {
-                    // Initialize boundary element array for this tag
+                  if (boundaryNodePairs.length > 0) {
+                    // Initialize array for this boundary tag
                     if (!this.parsedMesh.boundaryElements[prop.tag]) {
                       this.parsedMesh.boundaryElements[prop.tag] = [];
                     }
 
-                    // For each boundary line segment (2 nodes)
-                    boundaryNodes.forEach((nodesPair) => {
-                      // Find which element contains both nodes of this boundary
+                    // For each boundary line segment (defined by a pair of nodes)
+                    boundaryNodePairs.forEach((nodesPair) => {
+                      const node1 = nodesPair[0]; // First node in the pair
+                      const node2 = nodesPair[1]; // Second node in the pair
+
+                      debugLog(
+                        `Processing boundary node pair: [${node1}, ${node2}] for boundary ${prop.tag} (${
+                          prop.name || "unnamed"
+                        })`
+                      );
+
+                      // Search through all elements to find which one contains both nodes
                       let foundElement = false;
+
+                      // Loop through all elements in the mesh
                       for (let elemIdx = 0; elemIdx < this.parsedMesh.nodalNumbering.length; elemIdx++) {
                         const elemNodes = this.parsedMesh.nodalNumbering[elemIdx];
 
-                        // Check if both boundary nodes are in this element
-                        if (elemNodes.includes(nodesPair[0]) && elemNodes.includes(nodesPair[1])) {
-                          // Find which side of the element these nodes form
-                          let side;
+                        // For linear quadrilateral elements only (4 nodes)
+                        if (elemNodes.length === 4) {
+                          // Check if both boundary nodes are in this element
+                          if (elemNodes.includes(node1) && elemNodes.includes(node2)) {
+                            // Find which side of the element these nodes form
+                            let side;
 
-                          // Using FEAScript orientation for sides
-                          // Side 0 (Bottom): nodes 0-2
-                          // Side 1 (Left): nodes 0-1
-                          // Side 2 (Top): nodes 1-3
-                          // Side 3 (Right): nodes 2-3
+                            const node1Index = elemNodes.indexOf(node1);
+                            const node2Index = elemNodes.indexOf(node2);
 
-                          if (
-                            (elemNodes.indexOf(nodesPair[0]) === 0 &&
-                              elemNodes.indexOf(nodesPair[1]) === 2) ||
-                            (elemNodes.indexOf(nodesPair[1]) === 0 && elemNodes.indexOf(nodesPair[0]) === 2)
-                          ) {
-                            side = 0; // Bottom side
-                          } else if (
-                            (elemNodes.indexOf(nodesPair[0]) === 0 &&
-                              elemNodes.indexOf(nodesPair[1]) === 1) ||
-                            (elemNodes.indexOf(nodesPair[1]) === 0 && elemNodes.indexOf(nodesPair[0]) === 1)
-                          ) {
-                            side = 1; // Left side
-                          } else if (
-                            (elemNodes.indexOf(nodesPair[0]) === 1 &&
-                              elemNodes.indexOf(nodesPair[1]) === 3) ||
-                            (elemNodes.indexOf(nodesPair[1]) === 1 && elemNodes.indexOf(nodesPair[0]) === 3)
-                          ) {
-                            side = 2; // Top side
-                          } else if (
-                            (elemNodes.indexOf(nodesPair[0]) === 2 &&
-                              elemNodes.indexOf(nodesPair[1]) === 3) ||
-                            (elemNodes.indexOf(nodesPair[1]) === 2 && elemNodes.indexOf(nodesPair[0]) === 3)
-                          ) {
-                            side = 3; // Right side
+                            debugLog(
+                              `  Found element ${elemIdx} containing boundary nodes. Element nodes: [${elemNodes.join(
+                                ", "
+                              )}]`
+                            );
+                            debugLog(
+                              `  Node ${node1} is at index ${node1Index}, Node ${node2} is at index ${node2Index} in the element`
+                            );
+
+                            if (
+                              (node1Index === 0 && node2Index === 2) ||
+                              (node1Index === 2 && node2Index === 0)
+                            ) {
+                              side = 0; // Bottom side
+                              debugLog(`  These nodes form the BOTTOM side (${side}) of element ${elemIdx}`);
+                            } else if (
+                              (node1Index === 0 && node2Index === 1) ||
+                              (node1Index === 1 && node2Index === 0)
+                            ) {
+                              side = 1; // Left side
+                              debugLog(`  These nodes form the LEFT side (${side}) of element ${elemIdx}`);
+                            } else if (
+                              (node1Index === 1 && node2Index === 3) ||
+                              (node1Index === 3 && node2Index === 1)
+                            ) {
+                              side = 2; // Top side
+                              debugLog(`  These nodes form the TOP side (${side}) of element ${elemIdx}`);
+                            } else if (
+                              (node1Index === 2 && node2Index === 3) ||
+                              (node1Index === 3 && node2Index === 2)
+                            ) {
+                              side = 3; // Right side
+                              debugLog(`  These nodes form the RIGHT side (${side}) of element ${elemIdx}`);
+                            }
+
+                            // Add the element and side to the boundary elements array
+                            this.parsedMesh.boundaryElements[prop.tag].push([elemIdx, side]);
+                            debugLog(
+                              `  Added element-side pair [${elemIdx}, ${side}] to boundary tag ${prop.tag}`
+                            );
+                            foundElement = true;
+                            break;
                           }
-
-                          // Add to boundary elements
-                          this.parsedMesh.boundaryElements[prop.tag].push([elemIdx, side]);
-                          foundElement = true;
-                          break;
                         }
+                      }
+
+                      if (!foundElement) {
+                        errorLog(
+                          `Could not find element containing boundary nodes ${node1} and ${node2}. Boundary may be incomplete.`
+                        );
                       }
                     });
                   }
@@ -200,6 +239,9 @@ export class meshGeneration {
           }
         }
       }
+
+      debugLog("Processed boundary elements by tag: " + JSON.stringify(this.parsedMesh.boundaryElements));
+
       return this.parsedMesh;
     } else {
       // Validate required geometry parameters based on mesh dimension
@@ -266,6 +308,8 @@ export class meshGeneration {
       // Find boundary elements
       const boundaryElements = this.findBoundaryElements();
 
+      debugLog("Generated node X coordinates: " + JSON.stringify(nodesXCoordinates));
+
       // Return x coordinates of nodes, total nodes, NOP array, and boundary elements
       return {
         nodesXCoordinates,
@@ -328,8 +372,8 @@ export class meshGeneration {
       // Find boundary elements
       const boundaryElements = this.findBoundaryElements();
 
-      console.log("x  coordinates of nodes:", nodesXCoordinates);
-      console.log("y  coordinates of nodes:", nodesYCoordinates);
+      debugLog("Generated node X coordinates: " + JSON.stringify(nodesXCoordinates));
+      debugLog("Generated node Y coordinates: " + JSON.stringify(nodesYCoordinates));
 
       // Return x and y coordinates of nodes, total nodes, NOP array, and boundary elements
       return {
@@ -400,6 +444,7 @@ export class meshGeneration {
       }
     }
 
+    debugLog("Identified boundary elements by side: " + JSON.stringify(boundaryElements));
     return boundaryElements;
   }
 
@@ -422,7 +467,7 @@ export class meshGeneration {
         /**
          * Linear 1D elements with the following nodes representation:
          *
-         *   1__ __2
+         *   1 --- 2
          *
          */
         for (let elementIndex = 0; elementIndex < numElementsX; elementIndex++) {
@@ -435,7 +480,7 @@ export class meshGeneration {
         /**
          * Quadratic 1D elements with the following nodes representation:
          *
-         *   1__2__3
+         *   1 --- 2 --- 3
          *
          */
         let columnCounter = 0;
@@ -452,10 +497,9 @@ export class meshGeneration {
         /**
          * Linear rectangular elements with the following nodes representation:
          *
-         *   1__ __3
+         *   1 --- 3
          *   |     |
-         *   |__ __|
-         *   0     2
+         *   0 --- 2
          *
          */
         let rowCounter = 0;
@@ -476,11 +520,11 @@ export class meshGeneration {
         /**
          * Quadratic rectangular elements with the following nodes representation:
          *
-         *   2__5__8
-         *   |     |
-         *   1  4  7
-         *   |__ __|
-         *   0  3  6
+         *   2 --- 5 --- 8
+         *   |     |     |
+         *   1 --- 4 --- 7
+         *   |     |     |
+         *   0 --- 3 --- 6
          *
          */
         for (let elementIndexX = 1; elementIndexX <= numElementsX; elementIndexX++) {

@@ -70,7 +70,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
   if (isParsedMesh) {
     totalElements = nop.length; // Number of elements is the length of the nodal numbering array
     totalNodes = nodesXCoordinates.length; // Number of nodes is the length of the coordinates array
-    
+
     // Debug log for mesh size
     debugLog(`Using parsed mesh with ${totalElements} elements and ${totalNodes} nodes`);
   } else {
@@ -151,8 +151,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
 
         // Isoparametric mapping
         for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
-          xCoordinates +=
-            nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunction[localNodeIndex];
+          xCoordinates += nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunction[localNodeIndex];
           ksiDerivX +=
             nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
           detJacobian = ksiDerivX;
