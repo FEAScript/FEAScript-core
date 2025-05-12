@@ -66,8 +66,10 @@ export class meshGeneration {
               JSON.stringify(this.parsedMesh.nodalNumbering)
           );
 
+          console.log(this.parsedMesh.elementTypes[3]);
+
           // Check if it has quadElements or triangleElements structure from gmshReader
-          if (quadElements && quadElements.length > 0) {
+          if (this.parsedMesh.elementTypes[3] || this.parsedMesh.elementTypes[10]) {
             // Map nodal numbering from GMSH format to FEAScript format for quad elements
             const mappedNodalNumbering = [];
 
@@ -75,23 +77,43 @@ export class meshGeneration {
               const gmshNodes = quadElements[elemIdx];
               const feaScriptNodes = new Array(gmshNodes.length);
 
-              // Simple mapping for linear quad elements (4 nodes)
-              // GMSH:       FEAScript:
-              // 3 --- 2     1 --- 3
-              // |     |     |     |
-              // 0 --- 1     0 --- 2
+              // Check for element type based on number of nodes
+              if (gmshNodes.length === 4) {
+                // Simple mapping for linear quad elements (4 nodes)
+                // GMSH:         FEAScript:
+                // 3 --- 2       1 --- 3
+                // |     |  -->  |     |
+                // 0 --- 1       0 --- 2
 
-              feaScriptNodes[0] = gmshNodes[0]; // 0 -> 0
-              feaScriptNodes[1] = gmshNodes[3]; // 3 -> 1
-              feaScriptNodes[2] = gmshNodes[1]; // 1 -> 2
-              feaScriptNodes[3] = gmshNodes[2]; // 2 -> 3
+                feaScriptNodes[0] = gmshNodes[0]; // 0 -> 0
+                feaScriptNodes[1] = gmshNodes[3]; // 3 -> 1
+                feaScriptNodes[2] = gmshNodes[1]; // 1 -> 2
+                feaScriptNodes[3] = gmshNodes[2]; // 2 -> 3
+              } else if (gmshNodes.length === 9) {
+                // Mapping for quadratic quad elements (9 nodes)
+                // GMSH:         FEAScript:
+                // 3--6--2       2--5--8
+                // |     |       |     |
+                // 7  8  5  -->  1  4  7
+                // |     |       |     |
+                // 0--4--1       0--3--6
+
+                feaScriptNodes[0] = gmshNodes[0]; // 0 -> 0
+                feaScriptNodes[1] = gmshNodes[7]; // 7 -> 1
+                feaScriptNodes[2] = gmshNodes[3]; // 3 -> 2
+                feaScriptNodes[3] = gmshNodes[4]; // 4 -> 3
+                feaScriptNodes[4] = gmshNodes[8]; // 8 -> 4
+                feaScriptNodes[5] = gmshNodes[6]; // 6 -> 5
+                feaScriptNodes[6] = gmshNodes[1]; // 1 -> 6
+                feaScriptNodes[7] = gmshNodes[5]; // 5 -> 7
+                feaScriptNodes[8] = gmshNodes[2]; // 2 -> 8
+              }
 
               mappedNodalNumbering.push(feaScriptNodes);
             }
 
             this.parsedMesh.nodalNumbering = mappedNodalNumbering;
-          } else if (triangleElements && triangleElements.length > 0) {
-            this.parsedMesh.nodalNumbering = triangleElements;
+          } else if (this.parsedMesh.elementTypes[2]) {
           }
 
           debugLog(
@@ -480,7 +502,7 @@ export class meshGeneration {
         /**
          * Quadratic 1D elements with the following nodes representation:
          *
-         *   1 --- 2 --- 3
+         *   1--2--3
          *
          */
         let columnCounter = 0;
@@ -520,11 +542,11 @@ export class meshGeneration {
         /**
          * Quadratic rectangular elements with the following nodes representation:
          *
-         *   2 --- 5 --- 8
-         *   |     |     |
-         *   1 --- 4 --- 7
-         *   |     |     |
-         *   0 --- 3 --- 6
+         *   2--5--8
+         *   |     |
+         *   1  4  7
+         *   |     |
+         *   0--3--6
          *
          */
         for (let elementIndexX = 1; elementIndexX <= numElementsX; elementIndexX++) {
