@@ -213,20 +213,7 @@ export class ThermalBoundaryConditions {
             }
 
             const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-            debugLog(
-              `  - Applied convection to node ${globalNodeIndex + 1} (element ${
-                elementIndex + 1
-              }, local node ${nodeIndex + 1})`
-            );
-            debugLog(
-              `    Adding -h·T∞ = ${
-                -convectionCoeff * extTemp
-              } to residual vector at index ${globalNodeIndex}`
-            );
             residualVector[globalNodeIndex] += -convectionCoeff * extTemp;
-            debugLog(
-              `    Adding heat transfer coefficient h = ${convectionCoeff} to jacobian diagonal at [${globalNodeIndex}][${globalNodeIndex}]`
-            );
             jacobianMatrix[globalNodeIndex][globalNodeIndex] += convectionCoeff;
           });
         }
@@ -240,9 +227,6 @@ export class ThermalBoundaryConditions {
             `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionCoeff} W/(m²·K) and external temperature T∞=${extTemp} K`
           );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
-            debugLog(
-              `  Processing element ${elementIndex + 1}, side ${side} (0=bottom, 1=left, 2=top, 3=right)`
-            );
             if (this.elementOrder === "linear") {
               let gaussPoint1, gaussPoint2, firstNodeIndex, lastNodeIndex, nodeIncrement;
               if (side === 0) {
@@ -252,11 +236,6 @@ export class ThermalBoundaryConditions {
                 firstNodeIndex = 0;
                 lastNodeIndex = 3;
                 nodeIncrement = 2;
-                debugLog(
-                  `  - Bottom side: nodes [${firstNodeIndex}, ${
-                    firstNodeIndex + nodeIncrement
-                  }] (increment: ${nodeIncrement})`
-                );
               } else if (side === 1) {
                 // Nodes at the left side of the reference element
                 gaussPoint1 = 0;
@@ -264,11 +243,6 @@ export class ThermalBoundaryConditions {
                 firstNodeIndex = 0;
                 lastNodeIndex = 2;
                 nodeIncrement = 1;
-                debugLog(
-                  `  - Left side: nodes [${firstNodeIndex}, ${
-                    firstNodeIndex + nodeIncrement
-                  }] (increment: ${nodeIncrement})`
-                );
               } else if (side === 2) {
                 // Nodes at the top side of the reference element
                 gaussPoint1 = gaussPoints[0];
@@ -276,11 +250,6 @@ export class ThermalBoundaryConditions {
                 firstNodeIndex = 1;
                 lastNodeIndex = 4;
                 nodeIncrement = 2;
-                debugLog(
-                  `  - Top side: nodes [${firstNodeIndex}, ${
-                    firstNodeIndex + nodeIncrement
-                  }] (increment: ${nodeIncrement})`
-                );
               } else if (side === 3) {
                 // Nodes at the right side of the reference element
                 gaussPoint1 = 1;
@@ -288,15 +257,7 @@ export class ThermalBoundaryConditions {
                 firstNodeIndex = 2;
                 lastNodeIndex = 4;
                 nodeIncrement = 1;
-                debugLog(
-                  `  - Right side: nodes [${firstNodeIndex}, ${
-                    firstNodeIndex + nodeIncrement
-                  }] (increment: ${nodeIncrement})`
-                );
               }
-              debugLog(
-                `  - Using Gauss point [${gaussPoint1}, ${gaussPoint2}] with weight ${gaussWeights[0]} for numerical integration`
-              );
 
               let basisFunctionsAndDerivatives = basisFunctionsData.getBasisFunctions(
                 gaussPoint1,
@@ -306,34 +267,10 @@ export class ThermalBoundaryConditions {
               let basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
               let basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
 
-              debugLog(
-                `  - Shape function values at Gauss point: [${basisFunction
-                  .map((v) => v.toFixed(4))
-                  .join(", ")}]`
-              );
-              debugLog(
-                `  - Shape function ksi derivatives: [${basisFunctionDerivKsi
-                  .map((v) => v.toFixed(4))
-                  .join(", ")}]`
-              );
-              debugLog(
-                `  - Shape function eta derivatives: [${basisFunctionDerivEta
-                  .map((v) => v.toFixed(4))
-                  .join(", ")}]`
-              );
-
               let xCoordinates = 0;
               let ksiDerivX = 0;
               let etaDerivY = 0;
               const numNodes = this.nop[elementIndex].length;
-
-              debugLog(
-                `  - Element ${elementIndex + 1} has ${numNodes} nodes with global indices: [${this.nop[
-                  elementIndex
-                ]
-                  .map((nodeNum) => nodeNum)
-                  .join(", ")}]`
-              );
 
               for (let nodeIndex = 0; nodeIndex < numNodes; nodeIndex++) {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
@@ -342,99 +279,50 @@ export class ThermalBoundaryConditions {
                 etaDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
               }
 
-              debugLog(
-                `  - Calculated geometry values for Jacobian: xCoord=${xCoordinates.toFixed(
-                  4
-                )}, ksiDerivX=${ksiDerivX.toFixed(4)}, etaDerivY=${etaDerivY.toFixed(4)}`
-              );
-
               for (
                 let localNodeIndex = firstNodeIndex;
                 localNodeIndex < lastNodeIndex;
                 localNodeIndex += nodeIncrement
               ) {
                 let globalNodeIndex = this.nop[elementIndex][localNodeIndex] - 1;
-                debugLog(
-                  `  - Processing local node ${localNodeIndex + 1} -> global node ${globalNodeIndex + 1}`
-                );
-                debugLog(`    Local shape function value: ${basisFunction[localNodeIndex].toFixed(6)}`);
-                debugLog(
-                  `    Before: residualVector[${globalNodeIndex}] = ${residualVector[globalNodeIndex]}`
-                );
 
                 if (side === 0 || side === 2) {
                   // Horizontal boundaries of the domain (assuming a rectangular domain)
-                  const residualContribution =
+                  residualVector[globalNodeIndex] +=
                     -gaussWeights[0] * ksiDerivX * basisFunction[localNodeIndex] * convectionCoeff * extTemp;
-                  debugLog(
-                    `    Adding to residual: ${residualContribution.toFixed(6)} (= -${
-                      gaussWeights[0]
-                    } * ${ksiDerivX.toFixed(4)} * ${basisFunction[localNodeIndex].toFixed(
-                      4
-                    )} * ${convectionCoeff} * ${extTemp})`
-                  );
-                  residualVector[globalNodeIndex] += residualContribution;
 
-                  debugLog(`    Updating jacobian for node ${globalNodeIndex + 1}:`);
                   for (
                     let localNodeIndex2 = firstNodeIndex;
                     localNodeIndex2 < lastNodeIndex;
                     localNodeIndex2 += nodeIncrement
                   ) {
                     let globalNodeIndex2 = this.nop[elementIndex][localNodeIndex2] - 1;
-                    const oldJacobianValue = jacobianMatrix[globalNodeIndex][globalNodeIndex2];
-                    const jacobianContribution =
+                    jacobianMatrix[globalNodeIndex][globalNodeIndex2] +=
                       -gaussWeights[0] *
                       ksiDerivX *
                       basisFunction[localNodeIndex] *
                       basisFunction[localNodeIndex2] *
                       convectionCoeff;
-                    debugLog(
-                      `      jacobian[${globalNodeIndex}][${globalNodeIndex2}]: ${oldJacobianValue} += ${jacobianContribution.toFixed(
-                        6
-                      )}`
-                    );
-                    jacobianMatrix[globalNodeIndex][globalNodeIndex2] += jacobianContribution;
                   }
                 } else if (side === 1 || side === 3) {
                   // Vertical boundaries of the domain (assuming a rectangular domain)
-                  const residualContribution =
+                  residualVector[globalNodeIndex] +=
                     -gaussWeights[0] * etaDerivY * basisFunction[localNodeIndex] * convectionCoeff * extTemp;
-                  debugLog(
-                    `    Adding to residual: ${residualContribution.toFixed(6)} (= -${
-                      gaussWeights[0]
-                    } * ${etaDerivY.toFixed(4)} * ${basisFunction[localNodeIndex].toFixed(
-                      4
-                    )} * ${convectionCoeff} * ${extTemp})`
-                  );
-                  residualVector[globalNodeIndex] += residualContribution;
 
-                  debugLog(`    Updating jacobian for node ${globalNodeIndex + 1}:`);
                   for (
                     let localNodeIndex2 = firstNodeIndex;
                     localNodeIndex2 < lastNodeIndex;
                     localNodeIndex2 += nodeIncrement
                   ) {
                     let globalNodeIndex2 = this.nop[elementIndex][localNodeIndex2] - 1;
-                    const oldJacobianValue = jacobianMatrix[globalNodeIndex][globalNodeIndex2];
-                    const jacobianContribution =
+                    jacobianMatrix[globalNodeIndex][globalNodeIndex2] +=
                       -gaussWeights[0] *
                       etaDerivY *
                       basisFunction[localNodeIndex] *
                       basisFunction[localNodeIndex2] *
                       convectionCoeff;
-                    debugLog(
-                      `      jacobian[${globalNodeIndex}][${globalNodeIndex2}]: ${oldJacobianValue} += ${jacobianContribution.toFixed(
-                        6
-                      )}`
-                    );
-                    jacobianMatrix[globalNodeIndex][globalNodeIndex2] += jacobianContribution;
                   }
                 }
-
-                debugLog(
-                  `    After modification: residualVector[${globalNodeIndex}] = ${residualVector[globalNodeIndex]}`
-                );
               }
             } else if (this.elementOrder === "quadratic") {
               for (let gaussPointIndex = 0; gaussPointIndex < 3; gaussPointIndex++) {
