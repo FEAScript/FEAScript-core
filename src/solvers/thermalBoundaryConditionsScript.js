@@ -213,6 +213,11 @@ export class ThermalBoundaryConditions {
             }
 
             const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+            debugLog(
+              `  - Applied convection boundary condition to node ${globalNodeIndex + 1} (element ${
+                elementIndex + 1
+              }, local node ${nodeIndex + 1})`
+            );
             residualVector[globalNodeIndex] += -convectionCoeff * extTemp;
             jacobianMatrix[globalNodeIndex][globalNodeIndex] += convectionCoeff;
           });
@@ -267,17 +272,32 @@ export class ThermalBoundaryConditions {
               let basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
               let basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
 
-              let xCoordinates = 0;
+              // Calculate boundary Jacobian
               let ksiDerivX = 0;
+              let ksiDerivY = 0;
+              let etaDerivX = 0;
               let etaDerivY = 0;
               const numNodes = this.nop[elementIndex].length;
-
               for (let nodeIndex = 0; nodeIndex < numNodes; nodeIndex++) {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-                xCoordinates += nodesXCoordinates[globalNodeIndex] * basisFunction[nodeIndex];
-                ksiDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
-                etaDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
+
+                // For boundaries along Ksi (horizontal), use Ksi derivatives
+                if (side === 0 || side === 2) {
+                  ksiDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
+                  ksiDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
+                }
+                // For boundaries along Eta (vertical), use Eta derivatives
+                else if (side === 1 || side === 3) {
+                  etaDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
+                  etaDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
+                }
               }
+
+              // Compute boundary Jacobian (length of tangent vector)
+              const detJacobian =
+                side === 0 || side === 2
+                  ? Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2)
+                  : Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
 
               for (
                 let localNodeIndex = firstNodeIndex;
@@ -285,43 +305,28 @@ export class ThermalBoundaryConditions {
                 localNodeIndex += nodeIncrement
               ) {
                 let globalNodeIndex = this.nop[elementIndex][localNodeIndex] - 1;
+                debugLog(
+                  `  - Applied convection boundary condition to node ${globalNodeIndex + 1} (element ${
+                    elementIndex + 1
+                  }, local node ${localNodeIndex + 1})`
+                );
 
-                if (side === 0 || side === 2) {
-                  // Horizontal boundaries of the domain (assuming a rectangular domain)
-                  residualVector[globalNodeIndex] +=
-                    -gaussWeights[0] * ksiDerivX * basisFunction[localNodeIndex] * convectionCoeff * extTemp;
+                // Apply boundary condition with proper Jacobian for all sides
+                residualVector[globalNodeIndex] +=
+                  -gaussWeights[0] * detJacobian * basisFunction[localNodeIndex] * convectionCoeff * extTemp;
 
-                  for (
-                    let localNodeIndex2 = firstNodeIndex;
-                    localNodeIndex2 < lastNodeIndex;
-                    localNodeIndex2 += nodeIncrement
-                  ) {
-                    let globalNodeIndex2 = this.nop[elementIndex][localNodeIndex2] - 1;
-                    jacobianMatrix[globalNodeIndex][globalNodeIndex2] +=
-                      -gaussWeights[0] *
-                      ksiDerivX *
-                      basisFunction[localNodeIndex] *
-                      basisFunction[localNodeIndex2] *
-                      convectionCoeff;
-                  }
-                } else if (side === 1 || side === 3) {
-                  // Vertical boundaries of the domain (assuming a rectangular domain)
-                  residualVector[globalNodeIndex] +=
-                    -gaussWeights[0] * etaDerivY * basisFunction[localNodeIndex] * convectionCoeff * extTemp;
-
-                  for (
-                    let localNodeIndex2 = firstNodeIndex;
-                    localNodeIndex2 < lastNodeIndex;
-                    localNodeIndex2 += nodeIncrement
-                  ) {
-                    let globalNodeIndex2 = this.nop[elementIndex][localNodeIndex2] - 1;
-                    jacobianMatrix[globalNodeIndex][globalNodeIndex2] +=
-                      -gaussWeights[0] *
-                      etaDerivY *
-                      basisFunction[localNodeIndex] *
-                      basisFunction[localNodeIndex2] *
-                      convectionCoeff;
-                  }
+                for (
+                  let localNodeIndex2 = firstNodeIndex;
+                  localNodeIndex2 < lastNodeIndex;
+                  localNodeIndex2 += nodeIncrement
+                ) {
+                  let globalNodeIndex2 = this.nop[elementIndex][localNodeIndex2] - 1;
+                  jacobianMatrix[globalNodeIndex][globalNodeIndex2] +=
+                    -gaussWeights[0] *
+                    detJacobian *
+                    basisFunction[localNodeIndex] *
+                    basisFunction[localNodeIndex2] *
+                    convectionCoeff;
                 }
               }
             } else if (this.elementOrder === "quadratic") {
@@ -363,68 +368,66 @@ export class ThermalBoundaryConditions {
                 let basisFunction = basisFunctionsAndDerivatives.basisFunction;
                 let basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
                 let basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
-                let xCoordinates = 0;
+
+                // Calculate boundary Jacobian
                 let ksiDerivX = 0;
+                let ksiDerivY = 0;
+                let etaDerivX = 0;
                 let etaDerivY = 0;
                 const numNodes = this.nop[elementIndex].length;
                 for (let nodeIndex = 0; nodeIndex < numNodes; nodeIndex++) {
-                  xCoordinates +=
-                    nodesXCoordinates[this.nop[elementIndex][nodeIndex] - 1] * basisFunction[nodeIndex];
-                  ksiDerivX +=
-                    nodesXCoordinates[this.nop[elementIndex][nodeIndex] - 1] *
-                    basisFunctionDerivKsi[nodeIndex];
-                  etaDerivY +=
-                    nodesYCoordinates[this.nop[elementIndex][nodeIndex] - 1] *
-                    basisFunctionDerivEta[nodeIndex];
+                  const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+
+                  // For boundaries along Ksi (horizontal), use Ksi derivatives
+                  if (side === 0 || side === 2) {
+                    ksiDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
+                    ksiDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
+                  }
+                  // For boundaries along Eta (vertical), use Eta derivatives
+                  else if (side === 1 || side === 3) {
+                    etaDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
+                    etaDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
+                  }
                 }
+
+                // Compute boundary Jacobian (length of tangent vector)
+                const detJacobian =
+                  side === 0 || side === 2
+                    ? Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2)
+                    : Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
+
                 for (
                   let localNodeIndex = firstNodeIndex;
                   localNodeIndex < lastNodeIndex;
                   localNodeIndex += nodeIncrement
                 ) {
                   let globalNodeIndex = this.nop[elementIndex][localNodeIndex] - 1;
-                  if (side === 0 || side === 2) {
-                    // Horizontal boundaries of the domain (assuming a rectangular domain)
-                    residualVector[globalNodeIndex] +=
+                  debugLog(
+                    `  - Applied convection boundary condition to node ${globalNodeIndex + 1} (element ${
+                      elementIndex + 1
+                    }, local node ${localNodeIndex + 1})`
+                  );
+
+                  // Apply boundary condition with proper Jacobian for all sides
+                  residualVector[globalNodeIndex] +=
+                    -gaussWeights[gaussPointIndex] *
+                    detJacobian *
+                    basisFunction[localNodeIndex] *
+                    convectionCoeff *
+                    extTemp;
+
+                  for (
+                    let localNodeIndex2 = firstNodeIndex;
+                    localNodeIndex2 < lastNodeIndex;
+                    localNodeIndex2 += nodeIncrement
+                  ) {
+                    let globalNodeIndex2 = this.nop[elementIndex][localNodeIndex2] - 1;
+                    jacobianMatrix[globalNodeIndex][globalNodeIndex2] +=
                       -gaussWeights[gaussPointIndex] *
-                      ksiDerivX *
+                      detJacobian *
                       basisFunction[localNodeIndex] *
-                      convectionCoeff *
-                      extTemp;
-                    for (
-                      let localNodeIndex2 = firstNodeIndex;
-                      localNodeIndex2 < lastNodeIndex;
-                      localNodeIndex2 += nodeIncrement
-                    ) {
-                      let globalNodeIndex2 = this.nop[elementIndex][localNodeIndex2] - 1;
-                      jacobianMatrix[globalNodeIndex][globalNodeIndex2] +=
-                        -gaussWeights[gaussPointIndex] *
-                        ksiDerivX *
-                        basisFunction[localNodeIndex] *
-                        basisFunction[localNodeIndex2] *
-                        convectionCoeff;
-                    }
-                  } else if (side === 1 || side === 3) {
-                    // Vertical boundaries of the domain (assuming a rectangular domain)
-                    residualVector[globalNodeIndex] +=
-                      -gaussWeights[gaussPointIndex] *
-                      etaDerivY *
-                      basisFunction[localNodeIndex] *
-                      convectionCoeff *
-                      extTemp;
-                    for (
-                      let localNodeIndex2 = firstNodeIndex;
-                      localNodeIndex2 < lastNodeIndex;
-                      localNodeIndex2 += nodeIncrement
-                    ) {
-                      let globalNodeIndex2 = this.nop[elementIndex][localNodeIndex2] - 1;
-                      jacobianMatrix[globalNodeIndex][globalNodeIndex2] +=
-                        -gaussWeights[gaussPointIndex] *
-                        etaDerivY *
-                        basisFunction[localNodeIndex] *
-                        basisFunction[localNodeIndex2] *
-                        convectionCoeff;
-                    }
+                      basisFunction[localNodeIndex2] *
+                      convectionCoeff;
                   }
                 }
               }

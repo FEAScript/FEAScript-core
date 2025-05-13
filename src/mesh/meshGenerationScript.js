@@ -66,8 +66,6 @@ export class meshGeneration {
               JSON.stringify(this.parsedMesh.nodalNumbering)
           );
 
-          console.log(this.parsedMesh.elementTypes[3]);
-
           // Check if it has quadElements or triangleElements structure from gmshReader
           if (this.parsedMesh.elementTypes[3] || this.parsedMesh.elementTypes[10]) {
             // Map nodal numbering from GMSH format to FEAScript format for quad elements
@@ -175,7 +173,7 @@ export class meshGeneration {
                       for (let elemIdx = 0; elemIdx < this.parsedMesh.nodalNumbering.length; elemIdx++) {
                         const elemNodes = this.parsedMesh.nodalNumbering[elemIdx];
 
-                        // For linear quadrilateral elements only (4 nodes)
+                        // For linear quadrilateral linear elements (4 nodes)
                         if (elemNodes.length === 4) {
                           // Check if both boundary nodes are in this element
                           if (elemNodes.includes(node1) && elemNodes.includes(node2)) {
@@ -193,6 +191,11 @@ export class meshGeneration {
                             debugLog(
                               `  Node ${node1} is at index ${node1Index}, Node ${node2} is at index ${node2Index} in the element`
                             );
+
+                            // Based on FEAScript linear quadrilateral numbering:
+                            // 1 --- 3
+                            // |     |
+                            // 0 --- 2
 
                             if (
                               (node1Index === 0 && node2Index === 2) ||
@@ -217,6 +220,82 @@ export class meshGeneration {
                               (node1Index === 3 && node2Index === 2)
                             ) {
                               side = 3; // Right side
+                              debugLog(`  These nodes form the RIGHT side (${side}) of element ${elemIdx}`);
+                            }
+
+                            // Add the element and side to the boundary elements array
+                            this.parsedMesh.boundaryElements[prop.tag].push([elemIdx, side]);
+                            debugLog(
+                              `  Added element-side pair [${elemIdx}, ${side}] to boundary tag ${prop.tag}`
+                            );
+                            foundElement = true;
+                            break;
+                          }
+                        } else if (elemNodes.length === 9) {
+                          // For quadratic quadrilateral elements (9 nodes)
+                          // Check if both boundary nodes are in this element
+                          if (elemNodes.includes(node1) && elemNodes.includes(node2)) {
+                            // Find which side of the element these nodes form
+                            let side;
+
+                            const node1Index = elemNodes.indexOf(node1);
+                            const node2Index = elemNodes.indexOf(node2);
+
+                            debugLog(
+                              `  Found element ${elemIdx} containing boundary nodes. Element nodes: [${elemNodes.join(
+                                ", "
+                              )}]`
+                            );
+                            debugLog(
+                              `  Node ${node1} is at index ${node1Index}, Node ${node2} is at index ${node2Index} in the element`
+                            );
+
+                            // Based on FEAScript quadratic quadrilateral numbering:
+                            // 2--5--8
+                            // |     |
+                            // 1  4  7
+                            // |     |
+                            // 0--3--6
+
+                            if (
+                              (node1Index === 0 && node2Index === 6) ||
+                              (node1Index === 6 && node2Index === 0) ||
+                              (node1Index === 0 && node2Index === 3) ||
+                              (node1Index === 3 && node2Index === 0) ||
+                              (node1Index === 3 && node2Index === 6) ||
+                              (node1Index === 6 && node2Index === 3)
+                            ) {
+                              side = 0; // Bottom side (nodes 0, 3, 6)
+                              debugLog(`  These nodes form the BOTTOM side (${side}) of element ${elemIdx}`);
+                            } else if (
+                              (node1Index === 0 && node2Index === 2) ||
+                              (node1Index === 2 && node2Index === 0) ||
+                              (node1Index === 0 && node2Index === 1) ||
+                              (node1Index === 1 && node2Index === 0) ||
+                              (node1Index === 1 && node2Index === 2) ||
+                              (node1Index === 2 && node2Index === 1)
+                            ) {
+                              side = 1; // Left side (nodes 0, 1, 2)
+                              debugLog(`  These nodes form the LEFT side (${side}) of element ${elemIdx}`);
+                            } else if (
+                              (node1Index === 2 && node2Index === 8) ||
+                              (node1Index === 8 && node2Index === 2) ||
+                              (node1Index === 2 && node2Index === 5) ||
+                              (node1Index === 5 && node2Index === 2) ||
+                              (node1Index === 5 && node2Index === 8) ||
+                              (node1Index === 8 && node2Index === 5)
+                            ) {
+                              side = 2; // Top side (nodes 2, 5, 8)
+                              debugLog(`  These nodes form the TOP side (${side}) of element ${elemIdx}`);
+                            } else if (
+                              (node1Index === 6 && node2Index === 8) ||
+                              (node1Index === 8 && node2Index === 6) ||
+                              (node1Index === 6 && node2Index === 7) ||
+                              (node1Index === 7 && node2Index === 6) ||
+                              (node1Index === 7 && node2Index === 8) ||
+                              (node1Index === 8 && node2Index === 7)
+                            ) {
+                              side = 3; // Right side (nodes 6, 7, 8)
                               debugLog(`  These nodes form the RIGHT side (${side}) of element ${elemIdx}`);
                             }
 

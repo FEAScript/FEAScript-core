@@ -221,7 +221,7 @@ const importGmshQuadTri = async (file) => {
         const elementTag = parseInt(parts[0], 10);
         const nodeIndices = parts.slice(1).map((idx) => parseInt(idx, 10));
 
-        if (currentElementBlock.elementType === 1) {
+        if (currentElementBlock.elementType === 1 || currentElementBlock.elementType === 8) {
           const physicalTag = currentElementBlock.tag;
 
           if (!boundaryElementsByTag[physicalTag]) {
@@ -235,11 +235,14 @@ const importGmshQuadTri = async (file) => {
             result.boundaryNodePairs[physicalTag] = [];
           }
           result.boundaryNodePairs[physicalTag].push(nodeIndices);
-        } else if (currentElementBlock.elementType === 2) { // Linear triangle elements (3 nodes)
+        } else if (currentElementBlock.elementType === 2) {
+          // Linear triangle elements (3 nodes)
           result.nodalNumbering.triangleElements.push(nodeIndices);
-        } else if (currentElementBlock.elementType === 3) { // Linear quadrilateral elements (4 nodes)
+        } else if (currentElementBlock.elementType === 3) {
+          // Linear quadrilateral elements (4 nodes)
           result.nodalNumbering.quadElements.push(nodeIndices);
-        } else if (currentElementBlock.elementType === 10) { // Quadratic quadrilateral elements (9 nodes)
+        } else if (currentElementBlock.elementType === 10) {
+          // Quadratic quadrilateral elements (9 nodes)
           result.nodalNumbering.quadElements.push(nodeIndices);
         }
 

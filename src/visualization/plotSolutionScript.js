@@ -124,7 +124,7 @@ export function plotSolution(
         type: "contour",
         contours: {
           coloring: "heatmap",
-          showlabels: true
+          showlabels: false
         },
         //colorscale: 'Viridis',
         colorbar: {
@@ -146,7 +146,7 @@ export function plotSolution(
         type: 'contour',
         contours: {
           coloring: 'heatmap',
-          showlabels: true
+          showlabels: false
         },
         //colorscale: 'Viridis',
         colorbar: {
