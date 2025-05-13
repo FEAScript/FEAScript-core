@@ -272,7 +272,6 @@ export class ThermalBoundaryConditions {
               let basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
               let basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
 
-              // Calculate boundary Jacobian
               let ksiDerivX = 0;
               let ksiDerivY = 0;
               let etaDerivX = 0;
@@ -293,8 +292,8 @@ export class ThermalBoundaryConditions {
                 }
               }
 
-              // Compute boundary Jacobian (length of tangent vector)
-              const detJacobian =
+              // Compute the length of tangent vector
+              const tangentVectorLength =
                 side === 0 || side === 2
                   ? Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2)
                   : Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
@@ -313,7 +312,7 @@ export class ThermalBoundaryConditions {
 
                 // Apply boundary condition with proper Jacobian for all sides
                 residualVector[globalNodeIndex] +=
-                  -gaussWeights[0] * detJacobian * basisFunction[localNodeIndex] * convectionCoeff * extTemp;
+                  -gaussWeights[0] * tangentVectorLength * basisFunction[localNodeIndex] * convectionCoeff * extTemp;
 
                 for (
                   let localNodeIndex2 = firstNodeIndex;
@@ -323,7 +322,7 @@ export class ThermalBoundaryConditions {
                   let globalNodeIndex2 = this.nop[elementIndex][localNodeIndex2] - 1;
                   jacobianMatrix[globalNodeIndex][globalNodeIndex2] +=
                     -gaussWeights[0] *
-                    detJacobian *
+                    tangentVectorLength *
                     basisFunction[localNodeIndex] *
                     basisFunction[localNodeIndex2] *
                     convectionCoeff;
@@ -369,7 +368,6 @@ export class ThermalBoundaryConditions {
                 let basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
                 let basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
 
-                // Calculate boundary Jacobian
                 let ksiDerivX = 0;
                 let ksiDerivY = 0;
                 let etaDerivX = 0;
@@ -390,8 +388,8 @@ export class ThermalBoundaryConditions {
                   }
                 }
 
-                // Compute boundary Jacobian (length of tangent vector)
-                const detJacobian =
+                // Compute the length of tangent vector
+                const tangentVectorLength =
                   side === 0 || side === 2
                     ? Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2)
                     : Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
@@ -411,7 +409,7 @@ export class ThermalBoundaryConditions {
                   // Apply boundary condition with proper Jacobian for all sides
                   residualVector[globalNodeIndex] +=
                     -gaussWeights[gaussPointIndex] *
-                    detJacobian *
+                    tangentVectorLength *
                     basisFunction[localNodeIndex] *
                     convectionCoeff *
                     extTemp;
@@ -424,7 +422,7 @@ export class ThermalBoundaryConditions {
                     let globalNodeIndex2 = this.nop[elementIndex][localNodeIndex2] - 1;
                     jacobianMatrix[globalNodeIndex][globalNodeIndex2] +=
                       -gaussWeights[gaussPointIndex] *
-                      detJacobian *
+                      tangentVectorLength *
                       basisFunction[localNodeIndex] *
                       basisFunction[localNodeIndex2] *
                       convectionCoeff;
