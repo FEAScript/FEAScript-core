@@ -13,17 +13,13 @@ FEAScript is entirely implemented in pure JavaScript and requires only a simple 
 ### Example Usage
 
 ```javascript
-// Import required modules
+// Import FEAScript library
 import { FEAScriptModel, plotSolution } from "https://core.feascript.com/src/index.js";
 
-// Create a new FEAScript model
+// Create and configure model
 const model = new FEAScriptModel();
-
-// Configure the solver
 model.setSolverConfig("solverType"); // e.g., "solidHeatTransfer" for a stationary solid heat transfer case
-
-// Define mesh configuration (assuming a rectangular domain for 2D)
-model.setMeshConfig({
+model.setMeshConfig({ // Define mesh configuration (assuming a rectangular domain for 2D)
   meshDimension: "1D" | "2D", // Mesh dimension
   elementOrder: "linear" | "quadratic", // Element order
   numElementsX: number, // Number of elements in x-direction
@@ -32,16 +28,13 @@ model.setMeshConfig({
   maxY: number, // Domain length in y-direction (for 2D)
 });
 
-// Define boundary conditions
-model.addBoundaryCondition("boundaryIndex", ["conditionType", ...parameters]);
+// Apply boundary conditions
+model.addBoundaryCondition("boundaryIndex", ["conditionType", /* parameters */]);
 
-// Set solver method
-model.setSolverMethod("solverMethod"); // e.g., "lusolve" for LU decomposition
-
-// Solve the problem
+// Solve
 const { solutionVector, nodesCoordinates } = model.solve();
 
-// Visualize results
+// Plot results
 plotSolution(
   solutionVector,
   nodesCoordinates,

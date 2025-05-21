@@ -27,6 +27,15 @@ Thank you for your interest in contributing! FEAScript is in early development, 
 
    where the server will be available at `http://127.0.0.1:8000/`. Static file server npm packages like [serve](https://github.com/vercel/serve#readme) and [Vite](https://vite.dev/) can also be used.
 
+## Branching & Workflow
+
+To contribute a new feature or fix:
+
+- Do not commit directly to `main` or `dev`.
+- Instead, start your work in a feature branch based on the `dev` branch.
+
+**If you are not a member of the repository (e.g., an external contributor), you must first [fork the repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo).** Make your changes in your fork, then submit a Pull Request from your fork's feature branch into the`dev` branch.
+
 ## File Structure Guidelines
 
 All files in the FEAScript-core codebase should follow this structure:
