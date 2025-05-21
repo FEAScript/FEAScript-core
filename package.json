@@ -1,0 +1,44 @@
+{
+  "name": "feascript",
+  "version": "1.0.0",
+  "description": "<img src=\"https://feascript.github.io/FEAScript-website/assets/FEAScriptLogo.png\" width=\"80\" alt=\"FEAScript Logo\">",
+  "main": "src/index.js",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FEAScript/FEAScript-core.git"
+  },
+  "keywords": [
+    "finite element",
+    "simulation",
+    "javascript",
+    "web",
+    "FEA",
+    "FEM",
+    "finite element analysis",
+    "finite element method"
+  ],
+  "author": "Nikolaos Chamakos",
+  "license": "AGPLv3",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/FEAScript/FEAScript-core/issues"
+  },
+  "homepage": "https://github.com/FEAScript/FEAScript-core#readme",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "rollup": "^2.79.2",
+    "rollup-plugin-terser": "^7.0.2",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "rollup-plugin-wasm": "^3.0.0",
+    "typescript": "^5.8.3"
+  }
+}
