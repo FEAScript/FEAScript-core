@@ -13,3 +13,4 @@ export { importGmshQuadTri } from "./readers/gmshReaderScript.js";
 export { logSystem, printVersion } from "./utilities/loggingScript.js";
 export { plotSolution } from "./visualization/plotSolutionScript.js";
 export { FEAScriptWorker } from "./workers/workerScript.js";
+export const VERSION = "0.1.1";
