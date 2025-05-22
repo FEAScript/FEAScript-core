@@ -40,5 +40,8 @@
     "rollup-plugin-typescript2": "^0.36.0",
     "rollup-plugin-wasm": "^3.0.0",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "taichi.js": "^0.0.36"
   }
 }
