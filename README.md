@@ -76,7 +76,7 @@ model.setMeshConfig({
 });
 
 // Apply boundary conditions
-model.addBoundaryCondition("boundaryIndex", ["conditionType" /* parameters */]);
+model.addBoundaryCondition("boundaryIndex", ["conditionType", /* parameters */]);
 
 // Solve
 const { solutionVector, nodesCoordinates } = model.solve();
