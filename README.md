@@ -41,7 +41,7 @@ If you already have a package.json file, manually add `"type": "module"` to enab
 Add this line to your HTML or JavaScript module:
 
 ```javascript
-import { FEAScriptModel, plotSolution } from "https://core.feascript.com/dist/feascript.umd.js";
+import { FEAScriptModel, plotSolution } from "https://core.feascript.com/dist/feascript.esm.js";
 ```
 
 ### Option 3: Download and Use Locally
@@ -60,7 +60,7 @@ import { FEAScriptModel, plotSolution } from "https://core.feascript.com/dist/fe
 
 ```javascript
 // Import FEAScript library
-import { FEAScriptModel, plotSolution } from "https://core.feascript.com/dist/feascript.umd.js";
+import { FEAScriptModel, plotSolution } from "https://core.feascript.com/dist/feascript.esm.js";
 
 // Create and configure model
 const model = new FEAScriptModel();
