@@ -10,60 +10,125 @@
 
 /**
  * Function to solve a system of linear equations using the Jacobi iterative method
- * @param {array} jacobianMatrix - The coefficient matrix (must be square)
- * @param {array} residualVector - The right-hand side vector
- * @param {array} initialGuess - Initial guess for solution vector
- * @param {object} [options] - Options for the solver
- * @param {number} [options.maxIterations=1000] - Maximum number of iterations
- * @param {number} [options.tolerance=1e-6] - Convergence tolerance
+ * This version uses Taichi.js to accelerate the core computation
+ * @param {array} A - The coefficient matrix (must be square)
+ * @param {array} b - The right-hand side vector
+ * @param {array} x0 - Initial guess for solution vector
+ * @param {number} [maxIterations=100] - Maximum number of iterations
+ * @param {number} [tolerance=1e-7] - Convergence tolerance
  * @returns {object} An object containing:
  *  - solutionVector: The solution vector
  *  - iterations: The number of iterations performed
  *  - converged: Boolean indicating whether the method converged
  */
-export function jacobiSolver(jacobianMatrix, residualVector, initialGuess, options = {}) {
-  const { maxIterations = 1000, tolerance = 1e-6 } = options;
-  const n = jacobianMatrix.length; // Size of the square matrix
-  let x = [...initialGuess]; // Current solution (starts with initial guess)
-  let xNew = new Array(n); // Next iteration's solution
-
-  for (let iteration = 0; iteration < maxIterations; iteration++) {
-    // Perform one iteration
-    for (let i = 0; i < n; i++) {
-      let sum = 0;
-      // Calculate sum of jacobianMatrix[i][j] * x[j] for j ≠ i
-      for (let j = 0; j < n; j++) {
-        if (j !== i) {
-          sum += jacobianMatrix[i][j] * x[j];
+export async function jacobiMethod(A, b, x0, maxIterations = 100, tolerance = 1e-7, useFloat64 = true) {
+  // Initialize Taichi for each call to ensure clean state
+  const taichi = await import('taichi.js');
+  await taichi.init();
+  
+  const n = A.length;
+  
+  // Choose appropriate float type based on precision parameter
+  const FloatArray = useFloat64 ? Float64Array : Float32Array;
+  
+  // Declare fields outside try block so they can be referenced in finally
+  let fieldA, fieldB, fieldCurrent, fieldNext, fieldMaxDiff;
+  
+  try {
+    // Create fields with appropriate precision
+    fieldA = taichi.field(FloatArray, [n, n]);
+    fieldB = taichi.field(FloatArray, [n]);
+    fieldCurrent = taichi.field(FloatArray, [n]);    
+    fieldNext = taichi.field(FloatArray, [n]);
+    fieldMaxDiff = taichi.field(FloatArray, [1]);
+    
+    // Set initial values
+    fieldA.set(A.flat());
+    fieldB.set(b);
+    fieldCurrent.set(x0);
+    
+    // Create kernels inline (no caching to prevent memory issues)
+    const updateKernel = taichi.kernel(function(A, b, current, next, n) {
+      for (let i = 0; i < n; i++) {
+        let sum = 0;
+        for (let j = 0; j < n; j++) {
+          if (j !== i) {
+            sum += A[i][j] * current[j];
+          }
+        }
+        next[i] = (b[i] - sum) / A[i][i];
+      }
+    });
+    
+    const diffKernel = taichi.kernel(function(current, next, maxDiff, n) {
+      maxDiff[0] = 0;
+      for (let i = 0; i < n; i++) {
+        const diff = Math.abs(next[i] - current[i]);
+        if (diff > maxDiff[0]) {
+          maxDiff[0] = diff;
         }
       }
-      // Update xNew[i] using the Jacobi formula
-      xNew[i] = (residualVector[i] - sum) / jacobianMatrix[i][i];
+    });
+    
+    const copyKernel = taichi.kernel(function(src, dst, n) {
+      for (let i = 0; i < n; i++) {
+        dst[i] = src[i];
+      }
+    });
+    
+    // Store solution here so we can return it after cleanup
+    let solution;
+    let iterationsCompleted;
+    let hasConverged = false;
+    
+    // Main iteration loop
+    for (let iteration = 0; iteration < maxIterations; iteration++) {
+      // Compute next iteration values
+      updateKernel(fieldA, fieldB, fieldCurrent, fieldNext, n);
+      
+      // Compute max difference directly in Taichi
+      diffKernel(fieldCurrent, fieldNext, fieldMaxDiff, n);
+      const maxDiff = fieldMaxDiff.get()[0];
+      
+      // Copy next values to current using Taichi
+      copyKernel(fieldNext, fieldCurrent, n);
+      
+      // Check for convergence
+      if (maxDiff < tolerance) {
+        solution = Array.from(fieldCurrent.get());
+        iterationsCompleted = iteration + 1;
+        hasConverged = true;
+        break;
+      }
+      
+      // If we're approaching maximum iterations, get the current solution
+      if (iteration === maxIterations - 1) {
+        solution = Array.from(fieldCurrent.get());
+        iterationsCompleted = maxIterations;
+      }
     }
-
-    // Check convergence
-    let maxDiff = 0;
-    for (let i = 0; i < n; i++) {
-      maxDiff = Math.max(maxDiff, Math.abs(xNew[i] - x[i]));
-    }
-
-    // Update x for next iteration
-    x = [...xNew];
-
-    // Successfully converged if maxDiff is less than tolerance
-    if (maxDiff < tolerance) {
-      return {
-        solutionVector: x,
-        iterations: iteration + 1,
-        converged: true,
-      };
+    
+    return {
+      solution: solution,
+      iterations: iterationsCompleted,
+      converged: hasConverged,
+    };
+  } catch (error) {
+    console.error("Error in Jacobi method:", error);
+    throw error;
+  } finally {
+    // Aggressive cleanup - destroy all fields and reset Taichi completely
+    try {
+      if (fieldA) fieldA.destroy();
+      if (fieldB) fieldB.destroy();
+      if (fieldCurrent) fieldCurrent.destroy();
+      if (fieldNext) fieldNext.destroy();
+      if (fieldMaxDiff) fieldMaxDiff.destroy();
+      
+      // Reset Taichi completely
+      taichi.reset();
+    } catch (cleanupError) {
+      console.error("Error during cleanup:", cleanupError);
     }
   }
-
-  // maxIterations were reached without convergence
-  return {
-    solutionVector: x,
-    iterations: maxIterations,
-    converged: false,
-  };
 }
