@@ -1,0 +1,69 @@
+{
+  "name": "feascript",
+  "version": "0.1.1",
+  "description": "A lightweight finite element simulation library built in JavaScript for browser-based physics and engineering simulations",
+  "main": "dist/feascript.cjs.js",
+  "module": "dist/feascript.esm.js",
+  "browser": "dist/feascript.umd.js",
+  "exports": {
+    "import": "./dist/feascript.esm.js",
+    "require": "./dist/feascript.cjs.js"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "types": "dist/types/index.d.ts",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"No tests configured\" && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FEAScript/FEAScript-core.git"
+  },
+  "keywords": [
+    "finite element",
+    "simulation",
+    "javascript",
+    "web",
+    "FEA",
+    "FEM",
+    "finite element analysis",
+    "finite element method"
+  ],
+  "author": "Nikolaos Chamakos <nikoscham@gmail.com> (https://www.npmjs.com/~nikoscham)",
+  "contributors": [
+    {
+      "name": "sridhar-mani",
+      "url": "https://www.npmjs.com/~sridhar-mani"
+    }
+  ],
+  "license": "MIT",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/FEAScript/FEAScript-core/issues"
+  },
+  "homepage": "https://github.com/FEAScript/FEAScript-core#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "mathjs": "^11.12.0",
+    "plotly.js": "^2.27.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@types/estree": "^1.0.7",
+    "mathjs": "^11.12.0",
+    "rollup": "^2.79.2",
+    "rollup-plugin-terser": "^7.0.2",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^5.8.3"
+  }
+}
