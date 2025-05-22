@@ -35,7 +35,7 @@ export default {
     }),
     commonjs(),
     wasm({
-      maxFileSize: 14000000,
+      maxFileSize: MAX_WASM_FILE_SIZE,
     }),
     typescript({
       useTsconfigDeclarationDir: true,
