@@ -11,17 +11,26 @@ export default {
       file: "dist/feascript.cjs.js",
       format: "cjs",
       sourcemap: true,
+      globals: {
+        mathjs: "math",
+      },
     },
     {
       file: "dist/feascript.esm.js",
       format: "esm",
       sourcemap: true,
+      globals: {
+        mathjs: "math",
+      },
     },
     {
       file: "dist/feascript.umd.js",
       format: "umd",
       name: "FEAScript",
       sourcemap: true,
+      globals: {
+        mathjs: "math",
+      },
     },
   ],
   plugins: [
@@ -39,5 +48,5 @@ export default {
     }),
     terser(),
   ],
-  external: [],
+  external: ["mathjs"],
 };

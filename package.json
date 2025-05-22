@@ -1,8 +1,19 @@
 {
   "name": "feascript",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A lightweight finite element simulation library built in JavaScript for browser-based physics and engineering simulations",
-  "main": "src/index.js",
+  "main": "dist/feascript.cjs.js",
+  "module": "dist/feascript.esm.js",
+  "browser": "dist/feascript.umd.js",
+  "exports": {
+    "import": "./dist/feascript.esm.js",
+    "require": "./dist/feascript.cjs.js"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "types": "dist/types/index.d.ts",
   "directories": {
     "example": "examples"
   },
@@ -32,6 +43,9 @@
     "url": "https://github.com/FEAScript/FEAScript-core/issues"
   },
   "homepage": "https://github.com/FEAScript/FEAScript-core#readme",
+  "dependencies": {
+    "mathjs": "^11.12.0"
+  },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-node-resolve": "^16.0.1",
