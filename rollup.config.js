@@ -2,7 +2,6 @@ import typescript from "rollup-plugin-typescript2";
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import { terser } from "rollup-plugin-terser";
-import wasm from "rollup-plugin-wasm";
 
 export default {
   input: "src/index.js",
@@ -34,9 +33,6 @@ export default {
       preferBuiltins: false,
     }),
     commonjs(),
-    wasm({
-      maxFileSize: MAX_WASM_FILE_SIZE,
-    }),
     typescript({
       useTsconfigDeclarationDir: true,
       clean: true,
