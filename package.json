@@ -49,6 +49,9 @@
     "url": "https://github.com/FEAScript/FEAScript-core/issues"
   },
   "homepage": "https://github.com/FEAScript/FEAScript-core#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
     "mathjs": "^11.12.0",
     "plotly.js": "^2.27.0"
