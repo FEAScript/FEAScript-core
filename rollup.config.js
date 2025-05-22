@@ -24,6 +24,7 @@ export default {
       sourcemap: true,
       globals: {
         mathjs: "math",
+        "plotly.js": "Plotly"
       },
     },
   ],
@@ -39,5 +40,5 @@ export default {
     }),
     terser(),
   ],
-  external: ["mathjs"],
+  external: ["mathjs", "plotly.js"],
 };
