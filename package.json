@@ -36,7 +36,13 @@
     "finite element analysis",
     "finite element method"
   ],
-  "author": "Nikolaos Chamakos",
+  "author": "Nikolaos Chamakos <nikoscham@gmail.com> (https://www.npmjs.com/~nikoscham)",
+  "contributors": [
+    {
+      "name": "sridhar-mani",
+      "url": "https://www.npmjs.com/~sridhar-mani"
+    }
+  ],
   "license": "MIT",
   "type": "module",
   "bugs": {
