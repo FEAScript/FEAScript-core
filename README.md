@@ -51,12 +51,7 @@ import { FEAScriptModel, plotSolution } from "https://core.feascript.com/dist/fe
 
 ```html
 <script type="module">
-  // Option A: Import from source directory
-  import { FEAScriptModel, plotSolution } from "./path/to/src/index.js";
-
-  // Option B: Import from distribution bundle
-  import { FEAScriptModel, plotSolution } from "./path/to/feascript.esm.js";
-
+  import { FEAScriptModel, plotSolution } from "./path/to/dist/feascript.esm.js";
   // Your code here
 </script>
 ```
@@ -65,7 +60,7 @@ import { FEAScriptModel, plotSolution } from "https://core.feascript.com/dist/fe
 
 ```javascript
 // Import FEAScript library
-import { FEAScriptModel, plotSolution } from "https://core.feascript.com/src/index.js";
+import { FEAScriptModel, plotSolution } from "https://core.feascript.com/dist/feascript.umd.js";
 
 // Create and configure model
 const model = new FEAScriptModel();
