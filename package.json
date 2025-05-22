@@ -1,7 +1,7 @@
 {
   "name": "feascript",
-  "version": "1.0.0",
-  "description": "<img src=\"https://feascript.github.io/FEAScript-website/assets/FEAScriptLogo.png\" width=\"80\" alt=\"FEAScript Logo\">",
+  "version": "0.1.0",
+  "description": "A lightweight finite element simulation library built in JavaScript for browser-based physics and engineering simulations",
   "main": "src/index.js",
   "directories": {
     "example": "examples"
@@ -26,8 +26,8 @@
     "finite element method"
   ],
   "author": "Nikolaos Chamakos",
-  "license": "AGPLv3",
-  "type": "commonjs",
+  "license": "MIT",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/FEAScript/FEAScript-core/issues"
   },
