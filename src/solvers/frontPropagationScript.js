@@ -7,3 +7,10 @@
 //                                            | |   | |    //
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
+
+// Internal imports
+import { numericalIntegration } from "../methods/numericalIntegrationScript.js";
+import { basisFunctions } from "../mesh/basisFunctionsScript.js";
+import { meshGeneration } from "../mesh/meshGenerationScript.js";
+import { ThermalBoundaryConditions } from "./thermalBoundaryConditionsScript.js";
+import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";

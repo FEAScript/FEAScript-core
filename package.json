@@ -65,5 +65,8 @@
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.36.0",
     "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "feascript": "^0.1.1"
   }
 }
