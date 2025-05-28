@@ -72,6 +72,8 @@ export class FEAScriptModel {
         this.meshConfig,
         this.boundaryConditions
       ));
+    } else if (this.solverConfig === "frontPropagationScript") {
+      basicLog(`Using solver: ${this.solverConfig}`);
     }
     console.timeEnd("assemblyMatrices");
     basicLog("Matrix assembly completed");

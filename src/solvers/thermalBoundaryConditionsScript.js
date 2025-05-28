@@ -293,10 +293,12 @@ export class ThermalBoundaryConditions {
               }
 
               // Compute the length of tangent vector
-              const tangentVectorLength =
-                side === 0 || side === 2
-                  ? Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2)
-                  : Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
+              let tangentVectorLength;
+              if (side === 0 || side === 2) {
+                tangentVectorLength = Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2);
+              } else {
+                tangentVectorLength = Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
+              }
 
               for (
                 let localNodeIndex = firstNodeIndex;
@@ -389,10 +391,12 @@ export class ThermalBoundaryConditions {
                 }
 
                 // Compute the length of tangent vector
-                const tangentVectorLength =
-                  side === 0 || side === 2
-                    ? Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2)
-                    : Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
+                let tangentVectorLength;
+                if (side === 0 || side === 2) {
+                  tangentVectorLength = Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2);
+                } else {
+                  tangentVectorLength = Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
+                }
 
                 for (
                   let localNodeIndex = firstNodeIndex;
