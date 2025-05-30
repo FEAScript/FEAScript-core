@@ -10,12 +10,35 @@
 
 FEAScript is entirely implemented in pure JavaScript and can run in two environments:
 
-1. **In the browser** with a simple HTML page, where all simulations are executed locally without without any installations or using any cloud services
+1. **In the browser** with a simple HTML page, where all simulations are executed locally without any installations or using any cloud services
 2. **Via Node.js** with plain JavaScript files, for server-side simulations
 
 You can use FEAScript in your projects through one of the following methods:
 
-### Option 1: NPM Installation (Node.js)
+### Option 1: Direct Import from CDN (Browser)
+
+Add this to your HTML file:
+
+```html
+<script type="module">
+  import { FEAScriptModel } from "https://core.feascript.com/dist/feascript.esm.js";
+</script>
+```
+
+For browser-based examples and use cases, visit [our website tutorials](https://feascript.com/#tutorials).
+
+### Option 2: Download and Use Locally (Browser)
+
+1. Download the latest release from [GitHub Releases](https://github.com/FEAScript/FEAScript-core/releases)
+2. Include it in your HTML file:
+
+```html
+<script type="module">
+  import { FEAScriptModel } from "./path/to/dist/feascript.esm.js";
+</script>
+```
+
+### Option 3: NPM Installation (Node.js)
 
 ```bash
 # Install FEAScript and its peer dependencies
@@ -37,30 +60,7 @@ echo '{"type":"module"}' > package.json
 
 Explore various Node.js examples and use cases [here](https://github.com/FEAScript/FEAScript-core/tree/main/examples).
 
-### Option 2: Direct Import from CDN (Browser)
-
-Add this to your HTML file:
-
-```html
-<script type="module">
-  import { FEAScriptModel } from "https://core.feascript.com/dist/feascript.esm.js";
-</script>
-```
-
-For browser-based examples and use cases, visit [our website tutorials](https://feascript.com/#tutorials).
-
-### Option 3: Download and Use Locally (Browser)
-
-1. Download the latest release from [GitHub Releases](https://github.com/FEAScript/FEAScript-core/releases)
-2. Include it in your HTML file:
-
-```html
-<script type="module">
-  import { FEAScriptModel } from "./path/to/dist/feascript.esm.js";
-</script>
-```
-
-### Example Usage (Browser)
+## Example Usage (Browser)
 
 ```javascript
 // Import FEAScript library
