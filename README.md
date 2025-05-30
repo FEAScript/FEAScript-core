@@ -13,10 +13,11 @@ FEAScript is entirely implemented in pure JavaScript and can run in two environm
 1. **In the browser** with a simple HTML page, where all simulations are executed locally without any installations or using any cloud services
 2. **Via Node.js** with plain JavaScript files, for server-side simulations
 
-You can use FEAScript in your projects through one of the following methods:
+### Option 1: In the Browser
 
-### Option 1: Direct Import from CDN (Browser)
+You can use FEAScript in browser environments in two ways:
 
+**Direct Import from CDN**:
 Add this to your HTML file:
 
 ```html
@@ -25,10 +26,7 @@ Add this to your HTML file:
 </script>
 ```
 
-For browser-based examples and use cases, visit [our website tutorials](https://feascript.com/#tutorials).
-
-### Option 2: Download and Use Locally (Browser)
-
+**Download and Use Locally**:
 1. Download the latest release from [GitHub Releases](https://github.com/FEAScript/FEAScript-core/releases)
 2. Include it in your HTML file:
 
@@ -38,7 +36,9 @@ For browser-based examples and use cases, visit [our website tutorials](https://
 </script>
 ```
 
-### Option 3: NPM Installation (Node.js)
+For browser-based examples and use cases, visit [our website tutorials](https://feascript.com/#tutorials).
+
+### Option 2: Via Node.js
 
 ```bash
 # Install FEAScript and its peer dependencies
@@ -60,17 +60,24 @@ echo '{"type":"module"}' > package.json
 
 Explore various Node.js examples and use cases [here](https://github.com/FEAScript/FEAScript-core/tree/main/examples).
 
-## Example Usage (Browser)
+## Example Usage
 
+**Browser Import:**
 ```javascript
-// Import FEAScript library
-import { FEAScriptModel, plotSolution } from "https://core.feascript.com/dist/feascript.esm.js";
+// Import FEAScript library in browser
+import { FEAScriptModel } from "https://core.feascript.com/dist/feascript.esm.js";
+```
 
+**Node.js Import:**
+```javascript
+// Import FEAScript library in Node.js
+import { FEAScriptModel } from "feascript";
+```
+```javascript
 // Create and configure model
 const model = new FEAScriptModel();
 model.setSolverConfig("solverType"); // e.g., "solidHeatTransfer" for a stationary solid heat transfer case
 model.setMeshConfig({
-  // Define mesh configuration (assuming a rectangular domain for 2D)
   meshDimension: "1D" | "2D", // Mesh dimension
   elementOrder: "linear" | "quadratic", // Element order
   numElementsX: number, // Number of elements in x-direction
@@ -80,20 +87,11 @@ model.setMeshConfig({
 });
 
 // Apply boundary conditions
-model.addBoundaryCondition("boundaryIndex", ["conditionType" /* parameters */]);
+model.addBoundaryCondition("boundaryIndex", ["conditionType", /* parameters */]);
 
 // Solve
+model.setSolverMethod("linearSolver"); // lusolve (via mathjs) or jacobi
 const { solutionVector, nodesCoordinates } = model.solve();
-
-// Plot results
-plotSolution(
-  solutionVector,
-  nodesCoordinates,
-  model.solverConfig,
-  model.meshConfig.meshDimension,
-  "plotType", // e.g., "contour"
-  "targetDivId" // HTML div ID for plot
-);
 ```
 
 ## Contribute
