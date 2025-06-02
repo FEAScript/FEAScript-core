@@ -10,6 +10,7 @@
 
 // Internal imports
 import { jacobiMethod } from "./methods/jacobiMethodScript.js";
+import { assembleFrontPropagationMat } from "./solvers/frontPropagationScript.js";
 import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
 
@@ -36,9 +37,7 @@ export class FEAScriptModel {
 
   setMeshConfig(meshConfig) {
     this.meshConfig = meshConfig;
-    debugLog(
-      `Mesh config set with dimensions: ${meshConfig.meshDimension}`
-    );
+    debugLog(`Mesh config set with dimensions: ${meshConfig.meshDimension}`);
   }
 
   addBoundaryCondition(boundaryKey, condition) {
@@ -74,6 +73,10 @@ export class FEAScriptModel {
       ));
     } else if (this.solverConfig === "frontPropagationScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
+      ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleFrontPropagationMat(
+        this.meshConfig,
+        this.boundaryConditions
+      ));
     }
     console.timeEnd("assemblyMatrices");
     basicLog("Matrix assembly completed");
