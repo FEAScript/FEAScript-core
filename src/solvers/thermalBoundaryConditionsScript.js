@@ -314,7 +314,11 @@ export class ThermalBoundaryConditions {
 
                 // Apply boundary condition with proper Jacobian for all sides
                 residualVector[globalNodeIndex] +=
-                  -gaussWeights[0] * tangentVectorLength * basisFunction[localNodeIndex] * convectionCoeff * extTemp;
+                  -gaussWeights[0] *
+                  tangentVectorLength *
+                  basisFunction[localNodeIndex] *
+                  convectionCoeff *
+                  extTemp;
 
                 for (
                   let localNodeIndex2 = firstNodeIndex;
