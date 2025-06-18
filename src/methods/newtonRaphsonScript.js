@@ -9,6 +9,7 @@
 //       Website: https://feascript.com/             \__|  //
 
 // Internal imports
+import { euclideanNorm } from "../methods/euclideanNormScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
 
 /**
@@ -26,15 +27,15 @@ export function newtonRaphson(solverConfig, maxIterations = 100, tolerance = 1e-
   let errorNorm = 0;
   let converged = false;
   let iterations = 0;
-  let deltaX = 0;
-  let solution = 0;
+  let deltaX = [];
+  let solution = [];
 
   while (iterations <= maxIterations && !converged) {
     for (i = 0; i < solution.length; i++) {
-      solution[i] = solution[i] + deltaX; // solution[i] or solution[i-1]? - Have to check
+      solution[i] = solution[i] + deltaX[i]; // solution[i] or solution[i-1]? - Have to check
     }
     // Compute Residuals and Jacobian. Then solve the linear system
-    // Calculate errorNorm
+    errorNorm = euclideanNorm(deltaX);
     if (errorNorm <= tolerance) {
       converged = true;
     } else if (errorNorm > 1e5) {
