@@ -13,7 +13,7 @@ This example is available in two Node.js implementations:
 
 ### Instructions
 
-The examples require the `feascript` npm package and its peer dependencies (`mathjs`). They import FEAScript directly from the npm package and run the simulations in a Node.js environment, making them suitable for server-side applications or local development without a browser. To run the examples, follow these instructions:
+The examples require the `feascript` npm package and its peer dependencies (`mathjs`). They import FEAScript directly from the npm package and run the simulations in a Node.js environment, making them suitable for server-side applications or local development without a browser (no WEB APIs here). To run the examples, follow these instructions:
 
 1. **Create package.json with ES module support:**
 

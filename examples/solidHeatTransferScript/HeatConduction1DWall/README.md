@@ -6,7 +6,7 @@ This example demonstrates solving a steady-state heat transfer problem in a 1D d
 
 ### Instructions
 
-The example requires the `feascript` npm package and its peer dependencies (`mathjs`). It imports FEAScript directly from the npm package and runs the simulation in a Node.js environment, making it suitable for server-side applications or local development without a browser. To run the example you should follow these instructions:
+The example requires the `feascript` npm package and its peer dependencies (`mathjs`). It imports FEAScript directly from the npm package and runs the simulation in a Node.js environment, making it suitable for server-side applications or local development without a browser (no WEB APIs here). To run the example you should follow these instructions:
 
 1. **Create package.json with ES module support:**
 
