@@ -14,7 +14,6 @@ import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
 
 /**
  * Function to solve a system of nonlinear equations using the Newton-Raphson method
- * @param {string} solverConfig - Parameter specifying the type of solver
  * @param {number} [maxIterations=100] - Maximum number of iterations
  * @param {number} [tolerance=1e-7] - Convergence tolerance
  * @returns {object} An object containing:
@@ -23,12 +22,15 @@ import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
  *  - converged: Boolean indicating whether the method converged
  */
 
-export function newtonRaphson(solverConfig, maxIterations = 100, tolerance = 1e-7) {
+export function newtonRaphson(computeSystem, context, maxIterations = 100, tolerance = 1e-7) {
   let errorNorm = 0;
   let converged = false;
   let iterations = 0;
   let deltaX = [];
   let solution = [];
+  let jacobianMatrix = [];
+  let residualVector = [];
+  let nodesCoordinates = {};
 
   while (iterations <= maxIterations && !converged) {
     for (i = 0; i < solution.length; i++) {

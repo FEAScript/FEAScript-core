@@ -10,6 +10,7 @@
 
 // Internal imports
 import { jacobiMethod } from "./methods/jacobiMethodScript.js";
+import { newtonRaphson } from "./methods/newtonRaphsonScript.js";
 import { assembleFrontPropagationMat } from "./solvers/frontPropagationScript.js";
 import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
@@ -72,11 +73,19 @@ export class FEAScriptModel {
         this.boundaryConditions
       ));
     } else if (this.solverConfig === "frontPropagationScript") {
+      let eikonalActivationFlag = 0; // Parameterization flag (from 0 to 1)
+      const initialEikonalViscousTerm = 0.1; // Initial viscous term for the front propagation (eikonal) equation
+      let eikonalViscousTerm = 1 - eikonalActivationFlag + initialEikonalViscousTerm; // Viscous term for the front propagation (eikonal) equation
       basicLog(`Using solver: ${this.solverConfig}`);
-      ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleFrontPropagationMat(
-        this.meshConfig,
-        this.boundaryConditions
-      ));
+
+      // Iterations for fully activating Eikonal equation
+      while (eikonalActivationFlag <= 1) {
+        // Newton-Raphson iterations
+        ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleFrontPropagationMat(
+          this.meshConfig,
+          this.boundaryConditions
+        ));
+      }
     }
     console.timeEnd("assemblyMatrices");
     basicLog("Matrix assembly completed");

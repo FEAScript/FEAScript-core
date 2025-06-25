@@ -137,7 +137,7 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions) {
 
     // Loop over Gauss points
     for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
-      // 1D eikonal equation
+      // 1D front propagation (eikonal) equation
       if (meshDimension === "1D") {
         let basisFunctionsAndDerivatives = basisFunctionsData.getBasisFunctions(
           gaussPoints[gaussPointIndex1]
@@ -171,7 +171,7 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions) {
             // jacobianMatrix
           }
         }
-        // 2D eikonal equation
+        // 2D front propagation (eikonal) equation
       } else if (meshDimension === "2D") {
         for (let gaussPointIndex2 = 0; gaussPointIndex2 < gaussPoints.length; gaussPointIndex2++) {
           // Initialise variables for isoparametric mapping
@@ -233,5 +233,4 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions) {
       }
     }
   }
-
 }
