@@ -23,7 +23,7 @@ import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
  *  - residualVector: The assembled residual vector
  *  - nodesCoordinates: Object containing x and y coordinates of nodes
  */
-export function assembleFrontPropagationMat(meshConfig, boundaryConditions) {
+export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eikonalViscousTerm) {
   basicLog("Starting front propagation matrix assembly...");
 
   // Extract mesh details from the configuration object

@@ -22,7 +22,7 @@ import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
  *  - converged: Boolean indicating whether the method converged
  */
 
-export function newtonRaphson(computeSystem, context, maxIterations = 100, tolerance = 1e-7) {
+export function newtonRaphson(assembleMat, context, maxIterations = 100, tolerance = 1e-7) {
   let errorNorm = 0;
   let converged = false;
   let iterations = 0;
@@ -32,11 +32,52 @@ export function newtonRaphson(computeSystem, context, maxIterations = 100, toler
   let residualVector = [];
   let nodesCoordinates = {};
 
+  // Initialize solution and deltaX
+  for (let i = 0; i < residualVector.length; i++) {
+    solution[i] = 0;
+    deltaX[i] = 0;
+  }
+
   while (iterations <= maxIterations && !converged) {
-    for (i = 0; i < solution.length; i++) {
-      solution[i] = solution[i] + deltaX[i]; // solution[i] or solution[i-1]? - Have to check
+    // Update solution
+    for (let i = 0; i < solution.length; i++) {
+      solution[i] = solution[i] + deltaX[i];
     }
-    // Compute Residuals and Jacobian. Then solve the linear system
+
+    // Compute Jacobian and Residual matrices
+    if (assembleMat === "assembleFrontPropagationMat") {
+      // Pass an additional artificial visous parameter for front propagation
+      ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleMat(
+        context.meshConfig,
+        context.boundaryConditions,
+        context.eikonalViscousTerm
+      ));
+    } else {
+      // Standard call for other assembly functions
+      ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleMat(
+        context.meshConfig,
+        context.boundaryConditions
+      ));
+    }
+
+    // Solve the linear system based on the specified solver method
+    basicLog(`Solving system using ${context.solverMethod}...`);
+    if (context.solverMethod === "jacobi") {
+      // Use Jacobi method
+      const initialGuess = new Array(residualVector.length).fill(0);
+      const jacobiResult = jacobiMethod(jacobianMatrix, residualVector, initialGuess, 1000, 1e-6);
+      debugLog(
+        `Used Jacobi solver in Newton-Raphson iteration ${iterations + 1}, converged: ${
+          jacobiResult.converged
+        }`
+      );
+    } else if (context.solverMethod === "lusolve") {
+      // Use LU decomposition method
+      deltaX = math.lusolve(jacobianMatrix, residualVector);
+      debugLog(`Used LU decomposition solver in Newton-Raphson iteration ${iterations + 1}`);
+    }
+
+    // Check convergence
     errorNorm = euclideanNorm(deltaX);
     if (errorNorm <= tolerance) {
       converged = true;
@@ -44,6 +85,18 @@ export function newtonRaphson(computeSystem, context, maxIterations = 100, toler
       errorLog(`Solution not converged. Error norm: ${errorNorm}`);
       break;
     }
+
     iterations++;
   }
+
+  debugLog(`Newton-Raphson ${converged ? "converged" : "did not converge"} in ${iterations} iterations`);
+
+  return {
+    solution,
+    converged,
+    iterations,
+    jacobianMatrix,
+    residualVector,
+    nodesCoordinates,
+  };
 }

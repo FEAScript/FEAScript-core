@@ -73,32 +73,51 @@ export class FEAScriptModel {
         this.boundaryConditions
       ));
     } else if (this.solverConfig === "frontPropagationScript") {
+      basicLog(`Using solver: ${this.solverConfig}`);
       let eikonalActivationFlag = 0; // Parameterization flag (from 0 to 1)
       const initialEikonalViscousTerm = 0.1; // Initial viscous term for the front propagation (eikonal) equation
       let eikonalViscousTerm = 1 - eikonalActivationFlag + initialEikonalViscousTerm; // Viscous term for the front propagation (eikonal) equation
-      basicLog(`Using solver: ${this.solverConfig}`);
 
-      // Iterations for fully activating Eikonal equation
+      // Create context object with all necessary properties
+      const context = {
+        meshConfig: this.meshConfig,
+        boundaryConditions: this.boundaryConditions,
+        eikonalActivationFlag,
+        eikonalViscousTerm,
+        solverMethod: this.solverMethod
+      };
+
       while (eikonalActivationFlag <= 1) {
-        // Newton-Raphson iterations
-        ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleFrontPropagationMat(
-          this.meshConfig,
-          this.boundaryConditions
-        ));
+        // Use Newton-Raphson to iterate
+        const newtonRaphsonResult = newtonRaphson(
+          assembleFrontPropagationMat, // Pass the function reference
+          context,
+          100, // maxIterations
+          1e-7 // tolerance
+        );
+
+        // Extract results
+        jacobianMatrix = newtonRaphsonResult.jacobianMatrix;
+        residualVector = newtonRaphsonResult.residualVector;
+        nodesCoordinates = newtonRaphsonResult.nodesCoordinates;
+        solutionVector = newtonRaphsonResult.solution;
+
+        // Increment eikonalActivationFlag for next step if needed
+        eikonalActivationFlag += 0.1;
       }
     }
     console.timeEnd("assemblyMatrices");
     basicLog("Matrix assembly completed");
 
-    // System solving
+    // Solve the linear system based on the specified solver method
     basicLog(`Solving system using ${this.solverMethod}...`);
     console.time("systemSolving");
     if (this.solverMethod === "lusolve") {
+      // Use LU decomposition method
       solutionVector = math.lusolve(jacobianMatrix, residualVector);
     } else if (this.solverMethod === "jacobi") {
-      // Create initial guess of zeros
+      // Use Jacobi method
       const initialGuess = new Array(residualVector.length).fill(0);
-      // Call Jacobi method with desired max iterations and tolerance
       const jacobiResult = jacobiMethod(jacobianMatrix, residualVector, initialGuess, 1000, 1e-6);
 
       // Log convergence information
