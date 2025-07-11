@@ -11,7 +11,7 @@
 // Internal imports
 import { euclideanNorm } from "../methods/euclideanNormScript.js";
 import { solveLinearSystem } from "../methods/linearSystemScript.js";
-import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
+import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**
  * Function to solve a system of nonlinear equations using the Newton-Raphson method
