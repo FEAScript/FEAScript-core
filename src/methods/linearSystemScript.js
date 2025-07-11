@@ -10,7 +10,7 @@
 
 // Internal imports
 import { jacobiMethod } from "./jacobiMethodScript.js";
-import { basicLog, debugLog } from "../utilities/loggingScript.js";
+import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**
  * Function to solve a system of linear equations using different solver methods
@@ -26,40 +26,43 @@ import { basicLog, debugLog } from "../utilities/loggingScript.js";
  *  - iterations: Number of iterations performed (for iterative methods)
  */
 export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, options = {}) {
-    const { maxIterations = 1000, tolerance = 1e-6 } = options;
-    
-    let solutionVector = [];
-    let converged = true;
-    let iterations = 0;
+  const { maxIterations = 1000, tolerance = 1e-6 } = options;
 
-    // Solve the linear system based on the specified solver method
-    basicLog(`Solving system using ${solverMethod}...`);
-    console.time("systemSolving");
-    
-    if (solverMethod === "lusolve") {
-        // Use LU decomposition method
-        solutionVector = math.lusolve(jacobianMatrix, residualVector);
-    } else if (solverMethod === "jacobi") {
-        // Use Jacobi method
-        const initialGuess = new Array(residualVector.length).fill(0);
-        const jacobiResult = jacobiMethod(jacobianMatrix, residualVector, initialGuess, { maxIterations, tolerance });
+  let solutionVector = [];
+  let converged = true;
+  let iterations = 0;
 
-        // Log convergence information
-        if (jacobiResult.converged) {
-            debugLog(`Jacobi method converged in ${jacobiResult.iterations} iterations`);
-        } else {
-            debugLog(`Jacobi method did not converge after ${jacobiResult.iterations} iterations`);
-        }
+  // Solve the linear system based on the specified solver method
+  basicLog(`Solving system using ${solverMethod}...`);
+  console.time("systemSolving");
 
-        solutionVector = jacobiResult.solution;
-        converged = jacobiResult.converged;
-        iterations = jacobiResult.iterations;
+  if (solverMethod === "lusolve") {
+    // Use LU decomposition method
+    solutionVector = math.lusolve(jacobianMatrix, residualVector);
+  } else if (solverMethod === "jacobi") {
+    // Use Jacobi method
+    const initialGuess = new Array(residualVector.length).fill(0);
+    const jacobiResult = jacobiMethod(jacobianMatrix, residualVector, initialGuess, {
+      maxIterations,
+      tolerance,
+    });
+
+    // Log convergence information
+    if (jacobiResult.converged) {
+      debugLog(`Jacobi method converged in ${jacobiResult.iterations} iterations`);
     } else {
-        throw new Error(`Unknown solver method: ${solverMethod}`);
+      debugLog(`Jacobi method did not converge after ${jacobiResult.iterations} iterations`);
     }
-    
-    console.timeEnd("systemSolving");
-    basicLog("System solved successfully");
 
-    return { solutionVector, converged, iterations };
+    solutionVector = jacobiResult.solution;
+    converged = jacobiResult.converged;
+    iterations = jacobiResult.iterations;
+  } else {
+    errorLog(`Unknown solver method: ${solverMethod}`);
+  }
+
+  console.timeEnd("systemSolving");
+  basicLog("System solved successfully");
+
+  return { solutionVector, converged, iterations };
 }

@@ -14,10 +14,10 @@
  * @returns {number} The Euclidean norm of the vector
  */
 export function euclideanNorm(vector) {
-    let norm = 0;
-    for (let i = 0; i < vector.length; i++) {
-        norm += vector[i] * vector[i];
-    }
-    norm = Math.sqrt(norm);
-    return norm;
+  let norm = 0;
+  for (let i = 0; i < vector.length; i++) {
+    norm += vector[i] * vector[i];
+  }
+  norm = Math.sqrt(norm);
+  return norm;
 }
