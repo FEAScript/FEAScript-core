@@ -54,7 +54,7 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
       debugLog(`Jacobi method did not converge after ${jacobiResult.iterations} iterations`);
     }
 
-    solutionVector = jacobiResult.solution;
+    solutionVector = jacobiResult.solutionVector;
     converged = jacobiResult.converged;
     iterations = jacobiResult.iterations;
   } else {

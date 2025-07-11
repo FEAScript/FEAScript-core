@@ -18,7 +18,7 @@ import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
  * @param {number} [maxIterations=100] - Maximum number of iterations
  * @param {number} [tolerance=1e-7] - Convergence tolerance
  * @returns {object} An object containing:
- *  - solution: The solution vector
+ *  - solutionVector: The solution vector
  *  - iterations: The number of iterations performed
  *  - converged: Boolean indicating whether the method converged
  */
@@ -28,21 +28,21 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
   let converged = false;
   let iterations = 0;
   let deltaX = [];
-  let solution = [];
+  let solutionVector = [];
   let jacobianMatrix = [];
   let residualVector = [];
   let nodesCoordinates = {};
 
   // Initialize solution and deltaX
   for (let i = 0; i < residualVector.length; i++) {
-    solution[i] = 0;
+    solutionVector[i] = 0;
     deltaX[i] = 0;
   }
 
-  while (iterations <= maxIterations && !converged) {
+  while (iterations < maxIterations && !converged) {
     // Update solution
-    for (let i = 0; i < solution.length; i++) {
-      solution[i] = solution[i] + deltaX[i];
+    for (let i = 0; i < solutionVector.length; i++) {
+      solutionVector[i] = solutionVector[i] + deltaX[i];
     }
 
     // Compute Jacobian and Residual matrices
@@ -80,7 +80,7 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
   debugLog(`Newton-Raphson ${converged ? "converged" : "did not converge"} in ${iterations} iterations`);
 
   return {
-    solution,
+    solutionVector,
     converged,
     iterations,
     jacobianMatrix,
