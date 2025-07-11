@@ -10,6 +10,7 @@
 
 // Internal imports
 import { euclideanNorm } from "../methods/euclideanNormScript.js";
+import { solveLinearSystem } from "../methods/linearSystemScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
 
 /**
@@ -46,7 +47,7 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
 
     // Compute Jacobian and Residual matrices
     if (assembleMat === "assembleFrontPropagationMat") {
-      // Pass an additional artificial visous parameter for front propagation
+      // Pass an additional viscous parameter for front propagation
       ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleMat(
         context.meshConfig,
         context.boundaryConditions,
@@ -61,21 +62,8 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
     }
 
     // Solve the linear system based on the specified solver method
-    basicLog(`Solving system using ${context.solverMethod}...`);
-    if (context.solverMethod === "jacobi") {
-      // Use Jacobi method
-      const initialGuess = new Array(residualVector.length).fill(0);
-      const jacobiResult = jacobiMethod(jacobianMatrix, residualVector, initialGuess, 1000, 1e-6);
-      debugLog(
-        `Used Jacobi solver in Newton-Raphson iteration ${iterations + 1}, converged: ${
-          jacobiResult.converged
-        }`
-      );
-    } else if (context.solverMethod === "lusolve") {
-      // Use LU decomposition method
-      deltaX = math.lusolve(jacobianMatrix, residualVector);
-      debugLog(`Used LU decomposition solver in Newton-Raphson iteration ${iterations + 1}`);
-    }
+    const linearSystemResult = solveLinearSystem(context.solverMethod, jacobianMatrix, residualVector);
+    deltaX = linearSystemResult.solutionVector;
 
     // Check convergence
     errorNorm = euclideanNorm(deltaX);

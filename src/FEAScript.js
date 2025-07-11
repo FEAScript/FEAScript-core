@@ -11,6 +11,7 @@
 // Internal imports
 import { jacobiMethod } from "./methods/jacobiMethodScript.js";
 import { newtonRaphson } from "./methods/newtonRaphsonScript.js";
+import { solveLinearSystem } from "./methods/linearSystemScript.js";
 import { assembleFrontPropagationMat } from "./solvers/frontPropagationScript.js";
 import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
@@ -63,15 +64,19 @@ export class FEAScriptModel {
     let solutionVector = [];
     let nodesCoordinates = {};
 
-    // Assembly matrices
-    basicLog("Beginning matrix assembly...");
-    console.time("assemblyMatrices");
+    // Select and execute the appropriate solver based on solverConfig
+    basicLog("Beginning solving process...");
+    console.time("totalSolvingTime");
     if (this.solverConfig === "solidHeatTransferScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
       ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleSolidHeatTransferMat(
         this.meshConfig,
         this.boundaryConditions
       ));
+
+      // Solve the assembled linear system
+      const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
+      solutionVector = linearSystemResult.solutionVector;
     } else if (this.solverConfig === "frontPropagationScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
       let eikonalActivationFlag = 0; // Parameterization flag (from 0 to 1)
@@ -84,7 +89,7 @@ export class FEAScriptModel {
         boundaryConditions: this.boundaryConditions,
         eikonalActivationFlag,
         eikonalViscousTerm,
-        solverMethod: this.solverMethod
+        solverMethod: this.solverMethod,
       };
 
       while (eikonalActivationFlag <= 1) {
@@ -102,35 +107,12 @@ export class FEAScriptModel {
         nodesCoordinates = newtonRaphsonResult.nodesCoordinates;
         solutionVector = newtonRaphsonResult.solution;
 
-        // Increment eikonalActivationFlag for next step if needed
+        // Increment eikonalActivationFlag for next step
         eikonalActivationFlag += 0.1;
       }
     }
-    console.timeEnd("assemblyMatrices");
-    basicLog("Matrix assembly completed");
-
-    // Solve the linear system based on the specified solver method
-    basicLog(`Solving system using ${this.solverMethod}...`);
-    console.time("systemSolving");
-    if (this.solverMethod === "lusolve") {
-      // Use LU decomposition method
-      solutionVector = math.lusolve(jacobianMatrix, residualVector);
-    } else if (this.solverMethod === "jacobi") {
-      // Use Jacobi method
-      const initialGuess = new Array(residualVector.length).fill(0);
-      const jacobiResult = jacobiMethod(jacobianMatrix, residualVector, initialGuess, 1000, 1e-6);
-
-      // Log convergence information
-      if (jacobiResult.converged) {
-        debugLog(`Jacobi method converged in ${jacobiResult.iterations} iterations`);
-      } else {
-        debugLog(`Jacobi method did not converge after ${jacobiResult.iterations} iterations`);
-      }
-
-      solutionVector = jacobiResult.solution;
-    }
-    console.timeEnd("systemSolving");
-    basicLog("System solved successfully");
+    console.timeEnd("totalSolvingTime");
+    basicLog("Solving process completed");
 
     return { solutionVector, nodesCoordinates };
   }
