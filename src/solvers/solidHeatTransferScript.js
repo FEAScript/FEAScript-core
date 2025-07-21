@@ -11,7 +11,7 @@
 // Internal imports
 import { numericalIntegration } from "../methods/numericalIntegrationScript.js";
 import { basisFunctions } from "../mesh/basisFunctionsScript.js";
-import { meshGeneration, Mesh1D, Mesh2D } from "../mesh/meshGenerationScript.js";
+import { Mesh1D, Mesh2D } from "../mesh/meshGenerationScript.js";
 import { ThermalBoundaryConditions } from "./thermalBoundaryConditionsScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
@@ -38,6 +38,8 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     parsedMesh, // The pre-parsed mesh data (if available)
   } = meshConfig;
 
+  // Create a new instance of the Mesh class
+  debugLog("Generating mesh...");
   let mesh
   if(meshDimension === "1D") {
     mesh = new Mesh1D({numElementsX, maxX, elementOrder, parsedMesh})
@@ -48,18 +50,6 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     errorLog(message);
     throw new Error(message);
   }
-
-  // Create a new instance of the meshGeneration class
-  debugLog("Generating mesh...");
-  const meshGenerationData = new meshGeneration({
-    numElementsX,
-    numElementsY,
-    maxX,
-    maxY,
-    meshDimension,
-    elementOrder,
-    parsedMesh, // Pass the parsed mesh to the mesh generator
-  });
 
   // Use the parsed mesh in case it was already passed with Gmsh format
   const nodesCoordinatesAndNumbering = mesh.boundaryElementsProcessed ?  mesh.parsedMesh : mesh.generateMesh();
