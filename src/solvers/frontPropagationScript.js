@@ -11,7 +11,7 @@
 // Internal imports
 import { numericalIntegration } from "../methods/numericalIntegrationScript.js";
 import { basisFunctions } from "../mesh/basisFunctionsScript.js";
-import { meshGeneration } from "../mesh/meshGenerationScript.js";
+import { Mesh1D, Mesh2D } from "../mesh/meshGenerationScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**
@@ -37,20 +37,21 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
     parsedMesh, // The pre-parsed mesh data (if available)
   } = meshConfig;
 
-  // Create a new instance of the meshGeneration class
+  // Create a new instance of the Mesh class
   debugLog("Generating mesh...");
-  const meshGenerationData = new meshGeneration({
-    numElementsX,
-    numElementsY,
-    maxX,
-    maxY,
-    meshDimension,
-    elementOrder,
-    parsedMesh, // Pass the parsed mesh to the mesh generator
-  });
+  let mesh
+  if(meshDimension === "1D") {
+    mesh = new Mesh1D({numElementsX, maxX, elementOrder, parsedMesh})
+  } else if(meshDimension === "2D") {
+    mesh = new Mesh2D({numElementsX, maxX, numElementsY, maxY, elementOrder, parsedMesh})
+  } else {
+    const message = "Mesh dimension must be either '1D' or '2D'.";
+    errorLog(message);
+    throw new Error(message);
+  }
 
-  // Generate the mesh
-  const nodesCoordinatesAndNumbering = meshGenerationData.generateMesh();
+  // Use the parsed mesh in case it was already passed with Gmsh format
+  const nodesCoordinatesAndNumbering = mesh.boundaryElementsProcessed ?  mesh.parsedMesh : mesh.generateMesh();
 
   // Extract nodes coordinates and nodal numbering (NOP) from the mesh data
   let nodesXCoordinates = nodesCoordinatesAndNumbering.nodesXCoordinates;
