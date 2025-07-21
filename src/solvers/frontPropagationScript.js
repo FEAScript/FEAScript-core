@@ -9,8 +9,8 @@
 //       Website: https://feascript.com/             \__|  //
 
 // Internal imports
-import { numericalIntegration } from "../methods/numericalIntegrationScript.js";
-import { basisFunctions } from "../mesh/basisFunctionsScript.js";
+import { NumericalIntegration } from "../methods/numericalIntegrationScript.js";
+import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
 import { Mesh1D, Mesh2D } from "../mesh/meshGenerationScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
@@ -109,14 +109,14 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
     }
   }
 
-  // Initialize the basisFunctions class
-  const basisFunctionsData = new basisFunctions({
+  // Initialize the BasisFunctions class
+  const basisFunctionsData = new BasisFunctions({
     meshDimension,
     elementOrder,
   });
 
-  // Initialize the numericalIntegration class
-  const numIntegrationData = new numericalIntegration({
+  // Initialize the NumericalIntegration class
+  const numIntegrationData = new NumericalIntegration({
     meshDimension,
     elementOrder,
   });

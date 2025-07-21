@@ -11,9 +11,9 @@
 /**
  * Class to handle numerical integration using Gauss quadrature
  */
-export class numericalIntegration {
+export class NumericalIntegration {
   /**
-   * Constructor to initialize the numericalIntegration class
+   * Constructor to initialize the NumericalIntegration class
    * @param {string} meshDimension - The dimension of the mesh
    * @param {string} elementOrder - The order of elements
    */
