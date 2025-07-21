@@ -9,9 +9,9 @@
 //       Website: https://feascript.com/             \__|  //
 
 // Internal imports
-import { NumericalIntegration } from "../methods/numericalIntegrationScript.js";
 import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
 import { Mesh1D, Mesh2D } from "../mesh/meshGenerationScript.js";
+import { NumericalIntegration } from "../methods/numericalIntegrationScript.js";
 import { ThermalBoundaryConditions } from "./thermalBoundaryConditionsScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
@@ -99,7 +99,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
   let etaDerivX; // eta-derivative of xCoordinates (ksi and eta are natural coordinates that vary within a reference element) (only for 2D)
   let ksiDerivY; // ksi-derivative of yCoordinates (only for 2D)
   let etaDerivY; // eta-derivative of yCoordinates (only for 2D)
-  let detJacobian; // The jacobian of the isoparametric mapping
+  let detJacobian; // The Jacobian of the isoparametric mapping
 
   // Initialize jacobianMatrix and residualVector arrays
   for (let nodeIndex = 0; nodeIndex < totalNodes; nodeIndex++) {

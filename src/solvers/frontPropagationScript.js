@@ -9,9 +9,11 @@
 //       Website: https://feascript.com/             \__|  //
 
 // Internal imports
-import { NumericalIntegration } from "../methods/numericalIntegrationScript.js";
+
+import { GenericBoundaryConditions } from "./genericBoundaryConditionsScript.js";
 import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
 import { Mesh1D, Mesh2D } from "../mesh/meshGenerationScript.js";
+import { NumericalIntegration } from "../methods/numericalIntegrationScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**
@@ -98,7 +100,7 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
   let etaDerivX; // eta-derivative of xCoordinates (ksi and eta are natural coordinates that vary within a reference element) (only for 2D)
   let ksiDerivY; // ksi-derivative of yCoordinates (only for 2D)
   let etaDerivY; // eta-derivative of yCoordinates (only for 2D)
-  let detJacobian; // The jacobian of the isoparametric mapping
+  let detJacobian; // The Jacobian of the isoparametric mapping
 
   // Initialize jacobianMatrix and residualVector arrays
   for (let nodeIndex = 0; nodeIndex < totalNodes; nodeIndex++) {
@@ -238,4 +240,27 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
   }
 
   // Create an instance of GenericBoundaryConditions
+  debugLog("Applying generic boundary conditions...");
+  const genericBoundaryConditions = new GenericBoundaryConditions(
+    boundaryConditions,
+    boundaryElements,
+    nop,
+    meshDimension,
+    elementOrder
+  );
+
+  // Impose ConstantValue boundary conditions
+  genericBoundaryConditions.imposeConstantValueBoundaryConditions(residualVector, jacobianMatrix);
+  debugLog("Constant value boundary conditions applied");
+
+  basicLog("Front propagation matrix assembly completed");
+
+  return {
+    jacobianMatrix,
+    residualVector,
+    nodesCoordinates: {
+      nodesXCoordinates,
+      nodesYCoordinates,
+    },
+  };
 }

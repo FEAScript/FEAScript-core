@@ -54,7 +54,7 @@ export class ThermalBoundaryConditions {
               boundarySides[side].forEach((nodeIndex) => {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
                 debugLog(
-                  `  - Applied fixed temperature to node ${globalNodeIndex + 1} (element ${
+                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`
                 );
@@ -75,7 +75,7 @@ export class ThermalBoundaryConditions {
               boundarySides[side].forEach((nodeIndex) => {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
                 debugLog(
-                  `  - Applied fixed temperature to node ${globalNodeIndex + 1} (element ${
+                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`
                 );
@@ -110,7 +110,7 @@ export class ThermalBoundaryConditions {
               boundarySides[side].forEach((nodeIndex) => {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
                 debugLog(
-                  `  - Applied fixed temperature to node ${globalNodeIndex + 1} (element ${
+                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`
                 );
@@ -133,7 +133,7 @@ export class ThermalBoundaryConditions {
               boundarySides[side].forEach((nodeIndex) => {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
                 debugLog(
-                  `  - Applied fixed temperature to node ${globalNodeIndex + 1} (element ${
+                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`
                 );
@@ -264,10 +264,7 @@ export class ThermalBoundaryConditions {
                 nodeIncrement = 1;
               }
 
-              let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
-                gaussPoint1,
-                gaussPoint2
-              );
+              let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoint1, gaussPoint2);
               let basisFunction = basisFunctionsAndDerivatives.basisFunction;
               let basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
               let basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
@@ -366,10 +363,7 @@ export class ThermalBoundaryConditions {
                   lastNodeIndex = 9;
                   nodeIncrement = 1;
                 }
-                let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
-                  gaussPoint1,
-                  gaussPoint2
-                );
+                let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoint1, gaussPoint2);
                 let basisFunction = basisFunctionsAndDerivatives.basisFunction;
                 let basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
                 let basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
