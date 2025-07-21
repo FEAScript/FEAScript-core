@@ -165,10 +165,12 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
         for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
           let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
           // residualVector
+          // To perform residualVector calculation here
 
           for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
             let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
             // jacobianMatrix
+            // To perform jacobianMatrix calculation here
           }
         }
         // 2D front propagation (eikonal) equation
