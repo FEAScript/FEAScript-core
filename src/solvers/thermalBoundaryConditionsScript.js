@@ -161,7 +161,7 @@ export class ThermalBoundaryConditions {
    * @param {array} gaussWeights - Array of Gauss weights for numerical integration
    * @param {array} nodesXCoordinates - Array of x-coordinates of nodes
    * @param {array} nodesYCoordinates - Array of y-coordinates of nodes
-   * @param {object} basisFunctionsData - Object containing basis functions and their derivatives
+   * @param {object} basisFunctions - Object containing basis functions and their derivatives
    */
   imposeConvectionBoundaryConditions(
     residualVector,
@@ -170,7 +170,7 @@ export class ThermalBoundaryConditions {
     gaussWeights,
     nodesXCoordinates,
     nodesYCoordinates,
-    basisFunctionsData
+    basisFunctions
   ) {
     basicLog("Applying convection boundary conditions (Robin type)");
     // Extract convection parameters from boundary conditions
@@ -264,7 +264,7 @@ export class ThermalBoundaryConditions {
                 nodeIncrement = 1;
               }
 
-              let basisFunctionsAndDerivatives = basisFunctionsData.getBasisFunctions(
+              let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
                 gaussPoint1,
                 gaussPoint2
               );
@@ -366,7 +366,7 @@ export class ThermalBoundaryConditions {
                   lastNodeIndex = 9;
                   nodeIncrement = 1;
                 }
-                let basisFunctionsAndDerivatives = basisFunctionsData.getBasisFunctions(
+                let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
                   gaussPoint1,
                   gaussPoint2
                 );

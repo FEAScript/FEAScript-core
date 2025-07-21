@@ -111,19 +111,19 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
   }
 
   // Initialize the BasisFunctions class
-  const basisFunctionsData = new BasisFunctions({
+  const basisFunctions = new BasisFunctions({
     meshDimension,
     elementOrder,
   });
 
   // Initialize the NumericalIntegration class
-  const numIntegrationData = new NumericalIntegration({
+  const numericalIntegration = new NumericalIntegration({
     meshDimension,
     elementOrder,
   });
 
   // Calculate Gauss points and weights
-  let gaussPointsAndWeights = numIntegrationData.getGaussPointsAndWeights();
+  let gaussPointsAndWeights = numericalIntegration.getGaussPointsAndWeights();
   gaussPoints = gaussPointsAndWeights.gaussPoints;
   gaussWeights = gaussPointsAndWeights.gaussWeights;
 
@@ -141,7 +141,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
       // 1D solid heat transfer
       if (meshDimension === "1D") {
-        let basisFunctionsAndDerivatives = basisFunctionsData.getBasisFunctions(
+        let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
           gaussPoints[gaussPointIndex1]
         );
         basisFunction = basisFunctionsAndDerivatives.basisFunction;
@@ -180,7 +180,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
       } else if (meshDimension === "2D") {
         for (let gaussPointIndex2 = 0; gaussPointIndex2 < gaussPoints.length; gaussPointIndex2++) {
           // Initialise variables for isoparametric mapping
-          let basisFunctionsAndDerivatives = basisFunctionsData.getBasisFunctions(
+          let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
             gaussPoints[gaussPointIndex1],
             gaussPoints[gaussPointIndex2]
           );
@@ -262,7 +262,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     gaussWeights,
     nodesXCoordinates,
     nodesYCoordinates,
-    basisFunctionsData
+    basisFunctions
   );
   debugLog("Convection boundary conditions applied");
 

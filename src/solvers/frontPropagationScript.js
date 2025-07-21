@@ -39,11 +39,11 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
 
   // Create a new instance of the Mesh class
   debugLog("Generating mesh...");
-  let mesh
-  if(meshDimension === "1D") {
-    mesh = new Mesh1D({numElementsX, maxX, elementOrder, parsedMesh})
-  } else if(meshDimension === "2D") {
-    mesh = new Mesh2D({numElementsX, maxX, numElementsY, maxY, elementOrder, parsedMesh})
+  let mesh;
+  if (meshDimension === "1D") {
+    mesh = new Mesh1D({ numElementsX, maxX, elementOrder, parsedMesh });
+  } else if (meshDimension === "2D") {
+    mesh = new Mesh2D({ numElementsX, maxX, numElementsY, maxY, elementOrder, parsedMesh });
   } else {
     const message = "Mesh dimension must be either '1D' or '2D'.";
     errorLog(message);
@@ -51,7 +51,7 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
   }
 
   // Use the parsed mesh in case it was already passed with Gmsh format
-  const nodesCoordinatesAndNumbering = mesh.boundaryElementsProcessed ?  mesh.parsedMesh : mesh.generateMesh();
+  const nodesCoordinatesAndNumbering = mesh.boundaryElementsProcessed ? mesh.parsedMesh : mesh.generateMesh();
 
   // Extract nodes coordinates and nodal numbering (NOP) from the mesh data
   let nodesXCoordinates = nodesCoordinatesAndNumbering.nodesXCoordinates;
@@ -110,19 +110,19 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
   }
 
   // Initialize the BasisFunctions class
-  const basisFunctionsData = new BasisFunctions({
+  const basisFunctions = new BasisFunctions({
     meshDimension,
     elementOrder,
   });
 
   // Initialize the NumericalIntegration class
-  const numIntegrationData = new NumericalIntegration({
+  const numericalIntegration = new NumericalIntegration({
     meshDimension,
     elementOrder,
   });
 
   // Calculate Gauss points and weights
-  let gaussPointsAndWeights = numIntegrationData.getGaussPointsAndWeights();
+  let gaussPointsAndWeights = numericalIntegration.getGaussPointsAndWeights();
   gaussPoints = gaussPointsAndWeights.gaussPoints;
   gaussWeights = gaussPointsAndWeights.gaussWeights;
 
@@ -140,7 +140,7 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
     for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
       // 1D front propagation (eikonal) equation
       if (meshDimension === "1D") {
-        let basisFunctionsAndDerivatives = basisFunctionsData.getBasisFunctions(
+        let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
           gaussPoints[gaussPointIndex1]
         );
         basisFunction = basisFunctionsAndDerivatives.basisFunction;
@@ -178,7 +178,7 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
       } else if (meshDimension === "2D") {
         for (let gaussPointIndex2 = 0; gaussPointIndex2 < gaussPoints.length; gaussPointIndex2++) {
           // Initialise variables for isoparametric mapping
-          let basisFunctionsAndDerivatives = basisFunctionsData.getBasisFunctions(
+          let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
             gaussPoints[gaussPointIndex1],
             gaussPoints[gaussPointIndex2]
           );
@@ -236,4 +236,6 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
       }
     }
   }
+
+  // Create an instance of GenericBoundaryConditions
 }
