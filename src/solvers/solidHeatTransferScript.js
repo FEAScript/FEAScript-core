@@ -11,7 +11,7 @@
 // Internal imports
 import { numericalIntegration } from "../methods/numericalIntegrationScript.js";
 import { basisFunctions } from "../mesh/basisFunctionsScript.js";
-import { meshGeneration } from "../mesh/meshGenerationScript.js";
+import { meshGeneration, Mesh1D, Mesh2D } from "../mesh/meshGenerationScript.js";
 import { ThermalBoundaryConditions } from "./thermalBoundaryConditionsScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
@@ -38,6 +38,17 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     parsedMesh, // The pre-parsed mesh data (if available)
   } = meshConfig;
 
+  let mesh
+  if(meshDimension === "1D") {
+    mesh = new Mesh1D({numElementsX, maxX, elementOrder, parsedMesh})
+  } else if(meshDimension === "2D") {
+    mesh = new Mesh2D({numElementsX, maxX, numElementsY, maxY, elementOrder, parsedMesh})
+  } else {
+    const message = "Mesh dimension must be either '1D' or '2D'.";
+    errorLog(message);
+    throw new Error(message);
+  }
+
   // Create a new instance of the meshGeneration class
   debugLog("Generating mesh...");
   const meshGenerationData = new meshGeneration({
@@ -50,9 +61,9 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     parsedMesh, // Pass the parsed mesh to the mesh generator
   });
 
-  // Generate the mesh
-  const nodesCoordinatesAndNumbering = meshGenerationData.generateMesh();
-
+  // Use the parsed mesh in case it was already passed with Gmsh format
+  const nodesCoordinatesAndNumbering = mesh.boundaryElementsProcessed ?  mesh.parsedMesh : mesh.generateMesh();
+  
   // Extract nodes coordinates and nodal numbering (NOP) from the mesh data
   let nodesXCoordinates = nodesCoordinatesAndNumbering.nodesXCoordinates;
   let nodesYCoordinates = nodesCoordinatesAndNumbering.nodesYCoordinates;
@@ -60,7 +71,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
   let totalNodesY = nodesCoordinatesAndNumbering.totalNodesY;
   let nop = nodesCoordinatesAndNumbering.nodalNumbering;
   let boundaryElements = nodesCoordinatesAndNumbering.boundaryElements;
-
+  
   // Check the mesh type
   const isParsedMesh = parsedMesh !== undefined && parsedMesh !== null;
 
