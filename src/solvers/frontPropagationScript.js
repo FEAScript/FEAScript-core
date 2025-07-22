@@ -201,7 +201,6 @@ export function assembleFrontPropagationMat(
           etaDerivX = 0;
           ksiDerivY = 0;
           etaDerivY = 0;
-          detJacobian = 0;
           solutionDerivX = 0;
           solutionDerivY = 0;
 
@@ -219,8 +218,8 @@ export function assembleFrontPropagationMat(
               nodesYCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
             etaDerivY +=
               nodesYCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivEta[localNodeIndex];
-            detJacobian = meshDimension === "2D" ? ksiDerivX * etaDerivY - etaDerivX * ksiDerivY : ksiDerivX;
           }
+          detJacobian = ksiDerivX * etaDerivY - etaDerivX * ksiDerivY;
 
           // Compute x & y-derivatives of basis functions and x & y-derivatives of the solution
           for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
@@ -260,7 +259,7 @@ export function assembleFrontPropagationMat(
                 basisFunctionDerivY[localNodeIndex1] *
                 solutionDerivY;
             // residualVector - Eikonal term: Add the eikonal equation contribution
-            if (eikonalActivationFlag != 0) {
+            if (eikonalActivationFlag !== 0) {
               residualVector[localToGlobalMap1] +=
                 eikonalActivationFlag *
                 (gaussWeights[gaussPointIndex1] *
@@ -275,7 +274,7 @@ export function assembleFrontPropagationMat(
             }
             for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
               let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
-              // jjacobianMatrix - Viscous term: Add the Jacobian contribution from the diffusion term
+              // jacobianMatrix - Viscous term: Add the Jacobian contribution from the diffusion term
               jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
                 eikonalViscousTerm *
                 gaussWeights[gaussPointIndex1] *
@@ -284,7 +283,7 @@ export function assembleFrontPropagationMat(
                 (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] +
                   basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
               // jacobianMatrix - Eikonal term: Add the Jacobian contribution from the eikonal equation
-              if (eikonalActivationFlag != 0) {
+              if (eikonalActivationFlag !== 0) {
                 jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
                   eikonalActivationFlag *
                   (-(

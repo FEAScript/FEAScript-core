@@ -40,18 +40,18 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
 
   // Create a new instance of the Mesh class
   debugLog("Generating mesh...");
-  let mesh
-  if(meshDimension === "1D") {
-    mesh = new Mesh1D({numElementsX, maxX, elementOrder, parsedMesh})
-  } else if(meshDimension === "2D") {
-    mesh = new Mesh2D({numElementsX, maxX, numElementsY, maxY, elementOrder, parsedMesh})
+  let mesh;
+  if (meshDimension === "1D") {
+    mesh = new Mesh1D({ numElementsX, maxX, elementOrder, parsedMesh });
+  } else if (meshDimension === "2D") {
+    mesh = new Mesh2D({ numElementsX, maxX, numElementsY, maxY, elementOrder, parsedMesh });
   } else {
     errorLog("Mesh dimension must be either '1D' or '2D'.");
   }
 
   // Use the parsed mesh in case it was already passed with Gmsh format
-  const nodesCoordinatesAndNumbering = mesh.boundaryElementsProcessed ?  mesh.parsedMesh : mesh.generateMesh();
-  
+  const nodesCoordinatesAndNumbering = mesh.boundaryElementsProcessed ? mesh.parsedMesh : mesh.generateMesh();
+
   // Extract nodes coordinates and nodal numbering (NOP) from the mesh data
   let nodesXCoordinates = nodesCoordinatesAndNumbering.nodesXCoordinates;
   let nodesYCoordinates = nodesCoordinatesAndNumbering.nodesYCoordinates;
@@ -59,7 +59,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
   let totalNodesY = nodesCoordinatesAndNumbering.totalNodesY;
   let nop = nodesCoordinatesAndNumbering.nodalNumbering;
   let boundaryElements = nodesCoordinatesAndNumbering.boundaryElements;
-  
+
   // Check the mesh type
   const isParsedMesh = parsedMesh !== undefined && parsedMesh !== null;
 
@@ -139,22 +139,19 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
       // 1D solid heat transfer
       if (meshDimension === "1D") {
-        let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
-          gaussPoints[gaussPointIndex1]
-        );
+        let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoints[gaussPointIndex1]);
         basisFunction = basisFunctionsAndDerivatives.basisFunction;
         basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
         xCoordinates = 0;
         ksiDerivX = 0;
-        detJacobian = 0;
 
         // Isoparametric mapping
         for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
           xCoordinates += nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunction[localNodeIndex];
           ksiDerivX +=
             nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
-          detJacobian = ksiDerivX;
         }
+        detJacobian = ksiDerivX;
 
         // Compute x-derivative of basis functions
         for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
@@ -191,7 +188,6 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
           etaDerivX = 0;
           ksiDerivY = 0;
           etaDerivY = 0;
-          detJacobian = 0;
 
           // Isoparametric mapping
           for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
@@ -207,8 +203,8 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
               nodesYCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
             etaDerivY +=
               nodesYCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivEta[localNodeIndex];
-            detJacobian = meshDimension === "2D" ? ksiDerivX * etaDerivY - etaDerivX * ksiDerivY : ksiDerivX;
           }
+          detJacobian = ksiDerivX * etaDerivY - etaDerivX * ksiDerivY;
 
           // Compute x-derivative and y-derivative of basis functions
           for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
