@@ -20,13 +20,23 @@ import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
  * Function to assemble the front propagation matrix
  * @param {object} meshConfig - Object containing computational mesh details
  * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
+ * @param {array} solutionVector - The solution vector for non-linear equations
+ * @param {number} eikonalActivationFlag - Activation parameter for the eikonal equation (ranges from 0 to 1)
  * @returns {object} An object containing:
  *  - jacobianMatrix: The assembled Jacobian matrix
  *  - residualVector: The assembled residual vector
  *  - nodesCoordinates: Object containing x and y coordinates of nodes
  */
-export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eikonalViscousTerm) {
+export function assembleFrontPropagationMat(
+  meshConfig,
+  boundaryConditions,
+  solutionVector,
+  eikonalActivationFlag
+) {
   basicLog("Starting front propagation matrix assembly...");
+
+  const initialEikonalViscousTerm = 0.1; // Initial viscous term for the front propagation (eikonal) equation
+  let eikonalViscousTerm = 1 - eikonalActivationFlag + initialEikonalViscousTerm; // Viscous term for the front propagation (eikonal) equation
 
   // Extract mesh details from the configuration object
   const {
@@ -47,9 +57,7 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
   } else if (meshDimension === "2D") {
     mesh = new Mesh2D({ numElementsX, maxX, numElementsY, maxY, elementOrder, parsedMesh });
   } else {
-    const message = "Mesh dimension must be either '1D' or '2D'.";
-    errorLog(message);
-    throw new Error(message);
+    errorLog("Mesh dimension must be either '1D' or '2D'.");
   }
 
   // Use the parsed mesh in case it was already passed with Gmsh format
@@ -101,6 +109,8 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
   let ksiDerivY; // ksi-derivative of yCoordinates (only for 2D)
   let etaDerivY; // eta-derivative of yCoordinates (only for 2D)
   let detJacobian; // The Jacobian of the isoparametric mapping
+  let solutionDerivX; // The x-derivative of the solution
+  let solutionDerivY; // The y-derivative of the solution
 
   // Initialize jacobianMatrix and residualVector arrays
   for (let nodeIndex = 0; nodeIndex < totalNodes; nodeIndex++) {
@@ -142,9 +152,7 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
     for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
       // 1D front propagation (eikonal) equation
       if (meshDimension === "1D") {
-        let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
-          gaussPoints[gaussPointIndex1]
-        );
+        let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoints[gaussPointIndex1]);
         basisFunction = basisFunctionsAndDerivatives.basisFunction;
         basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
         xCoordinates = 0;
@@ -194,6 +202,8 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
           ksiDerivY = 0;
           etaDerivY = 0;
           detJacobian = 0;
+          solutionDerivX = 0;
+          solutionDerivY = 0;
 
           // Isoparametric mapping
           for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
@@ -212,26 +222,88 @@ export function assembleFrontPropagationMat(meshConfig, boundaryConditions, eiko
             detJacobian = meshDimension === "2D" ? ksiDerivX * etaDerivY - etaDerivX * ksiDerivY : ksiDerivX;
           }
 
-          // Compute x-derivative and y-derivative of basis functions
+          // Compute x & y-derivatives of basis functions and x & y-derivatives of the solution
           for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+            // The x-derivative of the n basis function
             basisFunctionDerivX[localNodeIndex] =
               (etaDerivY * basisFunctionDerivKsi[localNodeIndex] -
                 ksiDerivY * basisFunctionDerivEta[localNodeIndex]) /
-              detJacobian; // The x-derivative of the n basis function
+              detJacobian;
+            // The y-derivative of the n basis function
             basisFunctionDerivY[localNodeIndex] =
               (ksiDerivX * basisFunctionDerivEta[localNodeIndex] -
                 etaDerivX * basisFunctionDerivKsi[localNodeIndex]) /
-              detJacobian; // The y-derivative of the n basis function
+              detJacobian;
+            // The x-derivative of the solution
+            solutionDerivX +=
+              solutionVector[localToGlobalMap[localNodeIndex]] * basisFunctionDerivX[localNodeIndex];
+            // The y-derivative of the solution
+            solutionDerivY +=
+              solutionVector[localToGlobalMap[localNodeIndex]] * basisFunctionDerivY[localNodeIndex];
           }
 
           // Computation of Galerkin's residuals and Jacobian matrix
           for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
             let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
-            // residualVector
-
+            // residualVector - Viscous term: Add diffusion contribution to stabilize the solution
+            residualVector[localToGlobalMap1] +=
+              eikonalViscousTerm *
+                gaussWeights[gaussPointIndex1] *
+                gaussWeights[gaussPointIndex2] *
+                detJacobian *
+                basisFunctionDerivX[localNodeIndex1] *
+                solutionDerivX +
+              eikonalViscousTerm *
+                gaussWeights[gaussPointIndex1] *
+                gaussWeights[gaussPointIndex2] *
+                detJacobian *
+                basisFunctionDerivY[localNodeIndex1] *
+                solutionDerivY;
+            // residualVector - Eikonal term: Add the eikonal equation contribution
+            if (eikonalActivationFlag != 0) {
+              residualVector[localToGlobalMap1] +=
+                eikonalActivationFlag *
+                (gaussWeights[gaussPointIndex1] *
+                  gaussWeights[gaussPointIndex2] *
+                  detJacobian *
+                  basisFunction[localNodeIndex1] *
+                  Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2) -
+                  gaussWeights[gaussPointIndex1] *
+                    gaussWeights[gaussPointIndex2] *
+                    detJacobian *
+                    basisFunction[localNodeIndex1]);
+            }
             for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
               let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
-              //jacobianMatrix
+              // jjacobianMatrix - Viscous term: Add the Jacobian contribution from the diffusion term
+              jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
+                eikonalViscousTerm *
+                gaussWeights[gaussPointIndex1] *
+                gaussWeights[gaussPointIndex2] *
+                detJacobian *
+                (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] +
+                  basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
+              // jacobianMatrix - Eikonal term: Add the Jacobian contribution from the eikonal equation
+              if (eikonalActivationFlag != 0) {
+                jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
+                  eikonalActivationFlag *
+                  (-(
+                    (detJacobian *
+                      solutionDerivX *
+                      basisFunction[localNodeIndex1] *
+                      gaussWeights[gaussPointIndex1] *
+                      gaussWeights[gaussPointIndex2]) /
+                    Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2)
+                  ) *
+                    basisFunctionDerivX[localNodeIndex2] -
+                    ((detJacobian *
+                      solutionDerivY *
+                      basisFunction[localNodeIndex1] *
+                      gaussWeights[gaussPointIndex1] *
+                      gaussWeights[gaussPointIndex2]) /
+                      Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2)) *
+                      basisFunctionDerivY[localNodeIndex2]);
+              }
             }
           }
         }

@@ -51,7 +51,8 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
       ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleMat(
         context.meshConfig,
         context.boundaryConditions,
-        context.eikonalViscousTerm
+        solutionVector, // The solution vector is required in the case of a non-linear equation
+        context.eikonalActivationFlag
       ));
     } else {
       // Standard call for other assembly functions

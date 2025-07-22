@@ -63,6 +63,7 @@ export class FEAScriptModel {
     let residualVector = [];
     let solutionVector = [];
     let nodesCoordinates = {};
+    let eikonalActivationFlag = 0; // Activation parameter for the eikonal equation (ranges from 0 to 1)
 
     // Select and execute the appropriate solver based on solverConfig
     basicLog("Beginning solving process...");
@@ -79,16 +80,12 @@ export class FEAScriptModel {
       solutionVector = linearSystemResult.solutionVector;
     } else if (this.solverConfig === "frontPropagationScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
-      let eikonalActivationFlag = 0; // Parameterization flag (from 0 to 1)
-      const initialEikonalViscousTerm = 0.1; // Initial viscous term for the front propagation (eikonal) equation
-      let eikonalViscousTerm = 1 - eikonalActivationFlag + initialEikonalViscousTerm; // Viscous term for the front propagation (eikonal) equation
 
       // Create context object with all necessary properties
       const context = {
         meshConfig: this.meshConfig,
         boundaryConditions: this.boundaryConditions,
         eikonalActivationFlag,
-        eikonalViscousTerm,
         solverMethod: this.solverMethod,
       };
 

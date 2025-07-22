@@ -46,9 +46,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
   } else if(meshDimension === "2D") {
     mesh = new Mesh2D({numElementsX, maxX, numElementsY, maxY, elementOrder, parsedMesh})
   } else {
-    const message = "Mesh dimension must be either '1D' or '2D'.";
-    errorLog(message);
-    throw new Error(message);
+    errorLog("Mesh dimension must be either '1D' or '2D'.");
   }
 
   // Use the parsed mesh in case it was already passed with Gmsh format
@@ -214,14 +212,16 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
 
           // Compute x-derivative and y-derivative of basis functions
           for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+            // The x-derivative of the n basis function
             basisFunctionDerivX[localNodeIndex] =
               (etaDerivY * basisFunctionDerivKsi[localNodeIndex] -
                 ksiDerivY * basisFunctionDerivEta[localNodeIndex]) /
-              detJacobian; // The x-derivative of the n basis function
+              detJacobian;
+            // The y-derivative of the n basis function
             basisFunctionDerivY[localNodeIndex] =
               (ksiDerivX * basisFunctionDerivEta[localNodeIndex] -
                 etaDerivX * basisFunctionDerivKsi[localNodeIndex]) /
-              detJacobian; // The y-derivative of the n basis function
+              detJacobian;
           }
 
           // Computation of Galerkin's residuals and Jacobian matrix
