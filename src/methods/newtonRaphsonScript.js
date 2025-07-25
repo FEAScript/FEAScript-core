@@ -33,6 +33,14 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
   let residualVector = [];
   let nodesCoordinates = {};
 
+  // Make a preliminary call to get the system size
+  ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleMat(
+    context.meshConfig,
+    context.boundaryConditions,
+    [], // Empty array for first call
+    context.eikonalActivationFlag
+  ));
+
   // Initialize solution and deltaX
   for (let i = 0; i < residualVector.length; i++) {
     solutionVector[i] = 0;
@@ -46,7 +54,7 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
     }
 
     // Compute Jacobian and Residual matrices
-    if (assembleMat === "assembleFrontPropagationMat") {
+    if (assembleMat.name === "assembleFrontPropagationMat") {
       // Pass an additional viscous parameter for front propagation
       ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleMat(
         context.meshConfig,
@@ -78,7 +86,7 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
     iterations++;
   }
 
-  debugLog(`Newton-Raphson ${converged ? "converged" : "did not converge"} in ${iterations} iterations`);
+  debugLog(`Newton-Raphson ${converged ? "converged" : "did not converge"} in ${iterations} iterations with error norm ${errorNorm.toExponential(4)}`);
 
   return {
     solutionVector,

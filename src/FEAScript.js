@@ -90,21 +90,17 @@ export class FEAScriptModel {
       };
 
       while (eikonalActivationFlag <= 1) {
-        // Use Newton-Raphson to iterate
-        const newtonRaphsonResult = newtonRaphson(
-          assembleFrontPropagationMat, // Pass the function reference
-          context,
-          100, // maxIterations
-          1e-7 // tolerance
-        );
+        // Update the context object with current eikonalActivationFlag
+        context.eikonalActivationFlag = eikonalActivationFlag;
+        const newtonRaphsonResult = newtonRaphson(assembleFrontPropagationMat, context, 100, 1e-7);
 
         // Extract results
         jacobianMatrix = newtonRaphsonResult.jacobianMatrix;
         residualVector = newtonRaphsonResult.residualVector;
         nodesCoordinates = newtonRaphsonResult.nodesCoordinates;
-        solutionVector = newtonRaphsonResult.solution;
+        solutionVector = newtonRaphsonResult.solutionVector;
 
-        // Increment eikonalActivationFlag for next step
+        // Increment for next iteration
         eikonalActivationFlag += 0.1;
       }
     }

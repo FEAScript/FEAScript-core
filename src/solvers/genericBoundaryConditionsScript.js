@@ -45,9 +45,7 @@ export class GenericBoundaryConditions {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
         if (this.boundaryConditions[boundaryKey][0] === "constantValue") {
           const value = this.boundaryConditions[boundaryKey][1];
-          debugLog(
-            `Boundary ${boundaryKey}: Applying constant value of ${value} (Dirichlet condition)`
-          );
+          debugLog(`Boundary ${boundaryKey}: Applying constant value of ${value} (Dirichlet condition)`);
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
             if (this.elementOrder === "linear") {
               const boundarySides = {
@@ -99,9 +97,7 @@ export class GenericBoundaryConditions {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
         if (this.boundaryConditions[boundaryKey][0] === "constantValue") {
           const value = this.boundaryConditions[boundaryKey][1];
-          debugLog(
-            `Boundary ${boundaryKey}: Applying constant value of ${value} K (Dirichlet condition)`
-          );
+          debugLog(`Boundary ${boundaryKey}: Applying constant value of ${value} (Dirichlet condition)`);
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
             if (this.elementOrder === "linear") {
               const boundarySides = {

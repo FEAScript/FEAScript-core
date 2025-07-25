@@ -239,6 +239,9 @@ export function assembleFrontPropagationMat(
             // The y-derivative of the solution
             solutionDerivY +=
               solutionVector[localToGlobalMap[localNodeIndex]] * basisFunctionDerivY[localNodeIndex];
+
+            console.log(basisFunctionDerivY[localNodeIndex]);
+            console.log(solutionVector[localToGlobalMap[localNodeIndex]]);
           }
 
           // Computation of Galerkin's residuals and Jacobian matrix
@@ -276,7 +279,7 @@ export function assembleFrontPropagationMat(
               let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
               // jacobianMatrix - Viscous term: Add the Jacobian contribution from the diffusion term
               jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
-                eikonalViscousTerm *
+                -eikonalViscousTerm *
                 gaussWeights[gaussPointIndex1] *
                 gaussWeights[gaussPointIndex2] *
                 detJacobian *
@@ -323,6 +326,12 @@ export function assembleFrontPropagationMat(
   // Impose ConstantValue boundary conditions
   genericBoundaryConditions.imposeConstantValueBoundaryConditions(residualVector, jacobianMatrix);
   debugLog("Constant value boundary conditions applied");
+
+  // Print all residuals
+  //debugLog("Residuals at each node:");
+  //for (let i = 0; i < residualVector.length; i++) {
+  //  debugLog(`Node ${i}: ${residualVector[i].toExponential(6)}`);
+  //}
 
   basicLog("Front propagation matrix assembly completed");
 
