@@ -62,8 +62,11 @@ export class FEAScriptModel {
     let jacobianMatrix = [];
     let residualVector = [];
     let solutionVector = [];
+    let initialSolution = [];
     let nodesCoordinates = {};
+    let eikonalExteralIterations = 30;
     let eikonalActivationFlag = 0; // Activation parameter for the eikonal equation (ranges from 0 to 1)
+    let iterations;
 
     // Select and execute the appropriate solver based on solverConfig
     basicLog("Beginning solving process...");
@@ -87,11 +90,18 @@ export class FEAScriptModel {
         boundaryConditions: this.boundaryConditions,
         eikonalActivationFlag,
         solverMethod: this.solverMethod,
+        initialSolution
       };
 
       while (eikonalActivationFlag <= 1) {
         // Update the context object with current eikonalActivationFlag
         context.eikonalActivationFlag = eikonalActivationFlag;
+
+        // Pass the previous solution as initial guess
+        if (solutionVector.length > 0) {
+          context.initialSolution = [...solutionVector];
+        }
+
         const newtonRaphsonResult = newtonRaphson(assembleFrontPropagationMat, context, 100, 1e-7);
 
         // Extract results
@@ -99,9 +109,10 @@ export class FEAScriptModel {
         residualVector = newtonRaphsonResult.residualVector;
         nodesCoordinates = newtonRaphsonResult.nodesCoordinates;
         solutionVector = newtonRaphsonResult.solutionVector;
+        iterations = newtonRaphsonResult.iterations;
 
         // Increment for next iteration
-        eikonalActivationFlag += 0.1;
+        eikonalActivationFlag += 1 / eikonalExteralIterations;
       }
     }
     console.timeEnd("totalSolvingTime");

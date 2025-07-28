@@ -41,10 +41,40 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
     context.eikonalActivationFlag
   ));
 
-  // Initialize solution and deltaX
+  // Initialize deltaX
   for (let i = 0; i < residualVector.length; i++) {
-    solutionVector[i] = 0;
     deltaX[i] = 0;
+  }
+
+  // Initialize solution
+  if (context.initialSolution && context.initialSolution.length > 0) {
+    // Check if initialSolution has the correct length
+    if (context.initialSolution.length === residualVector.length) {
+      // Check for NaN values in the initial solution
+      const hasNaN = context.initialSolution.some(value => isNaN(value));
+      
+      if (!hasNaN) {
+        debugLog(`Using provided initial solution for Newton-Raphson solver`);
+        for (let i = 0; i < residualVector.length; i++) {
+          solutionVector[i] = context.initialSolution[i];
+        }
+      } else {
+        errorLog("Initial solution contains NaN values! Using zeros instead.");
+        for (let i = 0; i < residualVector.length; i++) {
+          solutionVector[i] = 0;
+        }
+      }
+    } else {
+      errorLog(`Initial solution length (${context.initialSolution.length}) doesn't match residual vector length (${residualVector.length}). Using zeros.`);
+      for (let i = 0; i < residualVector.length; i++) {
+        solutionVector[i] = 0;
+      }
+    }
+  } else {
+    debugLog("No initial solution provided. Starting with zeros.");
+    for (let i = 0; i < residualVector.length; i++) {
+      solutionVector[i] = 0;
+    }
   }
 
   while (iterations < maxIterations && !converged) {
@@ -76,9 +106,13 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
 
     // Check convergence
     errorNorm = euclideanNorm(deltaX);
+
+    // Norm for each iteration
+    basicLog(`Newton-Raphson Iteration ${iterations + 1}: Error norm = ${errorNorm.toExponential(4)}`);
+
     if (errorNorm <= tolerance) {
       converged = true;
-    } else if (errorNorm > 1e5) {
+    } else if (errorNorm > 1e2) {
       errorLog(`Solution not converged. Error norm: ${errorNorm}`);
       break;
     }
@@ -86,7 +120,11 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
     iterations++;
   }
 
-  debugLog(`Newton-Raphson ${converged ? "converged" : "did not converge"} in ${iterations} iterations with error norm ${errorNorm.toExponential(4)}`);
+  debugLog(
+    `Newton-Raphson ${
+      converged ? "converged" : "did not converge"
+    } in ${iterations} iterations with error norm ${errorNorm.toExponential(4)}`
+  );
 
   return {
     solutionVector,

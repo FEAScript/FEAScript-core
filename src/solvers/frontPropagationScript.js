@@ -35,8 +35,10 @@ export function assembleFrontPropagationMat(
 ) {
   basicLog("Starting front propagation matrix assembly...");
 
-  const initialEikonalViscousTerm = 0.1; // Initial viscous term for the front propagation (eikonal) equation
+  const initialEikonalViscousTerm = 1; // Initial viscous term for the front propagation (eikonal) equation
   let eikonalViscousTerm = 1 - eikonalActivationFlag + initialEikonalViscousTerm; // Viscous term for the front propagation (eikonal) equation
+  console.log("eikonalViscousTerm:", eikonalViscousTerm);
+  console.log("eikonalActivationFlag:", eikonalActivationFlag);
 
   // Extract mesh details from the configuration object
   const {
@@ -240,8 +242,8 @@ export function assembleFrontPropagationMat(
             solutionDerivY +=
               solutionVector[localToGlobalMap[localNodeIndex]] * basisFunctionDerivY[localNodeIndex];
 
-            console.log(basisFunctionDerivY[localNodeIndex]);
-            console.log(solutionVector[localToGlobalMap[localNodeIndex]]);
+            //console.log(basisFunctionDerivY[localNodeIndex]);
+            //console.log(solutionVector[localToGlobalMap[localNodeIndex]]);
           }
 
           // Computation of Galerkin's residuals and Jacobian matrix
@@ -295,7 +297,7 @@ export function assembleFrontPropagationMat(
                       basisFunction[localNodeIndex1] *
                       gaussWeights[gaussPointIndex1] *
                       gaussWeights[gaussPointIndex2]) /
-                    Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2)
+                    Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2 + 1e-8)
                   ) *
                     basisFunctionDerivX[localNodeIndex2] -
                     ((detJacobian *
@@ -303,7 +305,7 @@ export function assembleFrontPropagationMat(
                       basisFunction[localNodeIndex1] *
                       gaussWeights[gaussPointIndex1] *
                       gaussWeights[gaussPointIndex2]) /
-                      Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2)) *
+                      Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2 + 1e-8)) *
                       basisFunctionDerivY[localNodeIndex2]);
               }
             }
@@ -314,7 +316,7 @@ export function assembleFrontPropagationMat(
   }
 
   // Create an instance of GenericBoundaryConditions
-  debugLog("Applying generic boundary conditions...");
+  basicLog("Applying generic boundary conditions...");
   const genericBoundaryConditions = new GenericBoundaryConditions(
     boundaryConditions,
     boundaryElements,
@@ -325,13 +327,13 @@ export function assembleFrontPropagationMat(
 
   // Impose ConstantValue boundary conditions
   genericBoundaryConditions.imposeConstantValueBoundaryConditions(residualVector, jacobianMatrix);
-  debugLog("Constant value boundary conditions applied");
+  basicLog("Constant value boundary conditions applied");
 
   // Print all residuals
-  //debugLog("Residuals at each node:");
-  //for (let i = 0; i < residualVector.length; i++) {
-  //  debugLog(`Node ${i}: ${residualVector[i].toExponential(6)}`);
-  //}
+  debugLog("Residuals at each node:");
+  for (let i = 0; i < residualVector.length; i++) {
+    debugLog(`Node ${i}: ${residualVector[i].toExponential(6)}`);
+  }
 
   basicLog("Front propagation matrix assembly completed");
 

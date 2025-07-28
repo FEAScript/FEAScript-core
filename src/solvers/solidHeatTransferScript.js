@@ -241,7 +241,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
   }
 
   // Create an instance of ThermalBoundaryConditions
-  debugLog("Applying thermal boundary conditions...");
+  basicLog("Applying thermal boundary conditions...");
   const thermalBoundaryConditions = new ThermalBoundaryConditions(
     boundaryConditions,
     boundaryElements,
@@ -260,11 +260,11 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     nodesYCoordinates,
     basisFunctions
   );
-  debugLog("Convection boundary conditions applied");
+  basicLog("Convection boundary conditions applied");
 
   // Impose ConstantTemp boundary conditions
   thermalBoundaryConditions.imposeConstantTempBoundaryConditions(residualVector, jacobianMatrix);
-  debugLog("Constant temperature boundary conditions applied");
+  basicLog("Constant temperature boundary conditions applied");
 
   basicLog("Solid heat transfer matrix assembly completed");
 
