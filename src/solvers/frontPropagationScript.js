@@ -35,8 +35,8 @@ export function assembleFrontPropagationMat(
 ) {
   basicLog("Starting front propagation matrix assembly...");
 
-  const initialEikonalViscousTerm = 1; // Initial viscous term for the front propagation (eikonal) equation
-  let eikonalViscousTerm = 1 - eikonalActivationFlag + initialEikonalViscousTerm; // Viscous term for the front propagation (eikonal) equation
+  const baseEikonalViscousTerm = 1e-3; // Base viscous term that remains when eikonal equation is fully activated
+  let eikonalViscousTerm = 1 - eikonalActivationFlag + baseEikonalViscousTerm; // Viscous term for the front propagation (eikonal) equation
   console.log("eikonalViscousTerm:", eikonalViscousTerm);
   console.log("eikonalActivationFlag:", eikonalActivationFlag);
 
@@ -52,6 +52,7 @@ export function assembleFrontPropagationMat(
   } = meshConfig;
 
   // Create a new instance of the Mesh class
+  // TODO: The mesh generation step should be moved outside of the assembleFrontPropagationMat function so that not performed in every Newton-Raphson iteration
   debugLog("Generating mesh...");
   let mesh;
   if (meshDimension === "1D") {
@@ -241,9 +242,6 @@ export function assembleFrontPropagationMat(
             // The y-derivative of the solution
             solutionDerivY +=
               solutionVector[localToGlobalMap[localNodeIndex]] * basisFunctionDerivY[localNodeIndex];
-
-            //console.log(basisFunctionDerivY[localNodeIndex]);
-            //console.log(solutionVector[localToGlobalMap[localNodeIndex]]);
           }
 
           // Computation of Galerkin's residuals and Jacobian matrix

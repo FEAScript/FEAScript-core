@@ -64,9 +64,9 @@ export class FEAScriptModel {
     let solutionVector = [];
     let initialSolution = [];
     let nodesCoordinates = {};
-    let eikonalExteralIterations = 30;
-    let eikonalActivationFlag = 0; // Activation parameter for the eikonal equation (ranges from 0 to 1)
-    let iterations;
+    let eikonalExteralIterations = 10; // Number of incremental steps to gradually activate the eikonal term - Used in frontPropagationScript
+    let eikonalActivationFlag = 0; // Activation parameter for the eikonal equation (ranges from 0 to 1) - Used in frontPropagationScript
+    let newtonRaphsonIterations;
 
     // Select and execute the appropriate solver based on solverConfig
     basicLog("Beginning solving process...");
@@ -90,7 +90,7 @@ export class FEAScriptModel {
         boundaryConditions: this.boundaryConditions,
         eikonalActivationFlag,
         solverMethod: this.solverMethod,
-        initialSolution
+        initialSolution,
       };
 
       while (eikonalActivationFlag <= 1) {
@@ -102,14 +102,14 @@ export class FEAScriptModel {
           context.initialSolution = [...solutionVector];
         }
 
-        const newtonRaphsonResult = newtonRaphson(assembleFrontPropagationMat, context, 100, 1e-7);
+        const newtonRaphsonResult = newtonRaphson(assembleFrontPropagationMat, context, 100, 1e-4);
 
         // Extract results
         jacobianMatrix = newtonRaphsonResult.jacobianMatrix;
         residualVector = newtonRaphsonResult.residualVector;
         nodesCoordinates = newtonRaphsonResult.nodesCoordinates;
         solutionVector = newtonRaphsonResult.solutionVector;
-        iterations = newtonRaphsonResult.iterations;
+        newtonRaphsonIterations = newtonRaphsonResult.iterations;
 
         // Increment for next iteration
         eikonalActivationFlag += 1 / eikonalExteralIterations;

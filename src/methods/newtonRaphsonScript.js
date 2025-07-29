@@ -12,18 +12,19 @@
 import { euclideanNorm } from "../methods/euclideanNormScript.js";
 import { solveLinearSystem } from "../methods/linearSystemScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+import { calculateSystemSize } from "../utilities/helperFunctionsScript.js";
 
 /**
  * Function to solve a system of nonlinear equations using the Newton-Raphson method
  * @param {number} [maxIterations=100] - Maximum number of iterations
- * @param {number} [tolerance=1e-7] - Convergence tolerance
+ * @param {number} [tolerance=1e-4] - Convergence tolerance
  * @returns {object} An object containing:
  *  - solutionVector: The solution vector
  *  - iterations: The number of iterations performed
  *  - converged: Boolean indicating whether the method converged
  */
 
-export function newtonRaphson(assembleMat, context, maxIterations = 100, tolerance = 1e-7) {
+export function newtonRaphson(assembleMat, context, maxIterations = 100, tolerance = 1e-4) {
   let errorNorm = 0;
   let converged = false;
   let iterations = 0;
@@ -33,57 +34,27 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
   let residualVector = [];
   let nodesCoordinates = {};
 
-  // Make a preliminary call to get the system size
-  ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleMat(
-    context.meshConfig,
-    context.boundaryConditions,
-    [], // Empty array for first call
-    context.eikonalActivationFlag
-  ));
+  // Calculate system size directly from meshConfig
+  let totalNodes = calculateSystemSize(context.meshConfig);
 
-  // Initialize deltaX
-  for (let i = 0; i < residualVector.length; i++) {
+  // Initialize arrays with proper size
+  for (let i = 0; i < totalNodes; i++) {
     deltaX[i] = 0;
+    solutionVector[i] = 0;
   }
 
-  // Initialize solution
-  if (context.initialSolution && context.initialSolution.length > 0) {
-    // Check if initialSolution has the correct length
-    if (context.initialSolution.length === residualVector.length) {
-      // Check for NaN values in the initial solution
-      const hasNaN = context.initialSolution.some(value => isNaN(value));
-      
-      if (!hasNaN) {
-        debugLog(`Using provided initial solution for Newton-Raphson solver`);
-        for (let i = 0; i < residualVector.length; i++) {
-          solutionVector[i] = context.initialSolution[i];
-        }
-      } else {
-        errorLog("Initial solution contains NaN values! Using zeros instead.");
-        for (let i = 0; i < residualVector.length; i++) {
-          solutionVector[i] = 0;
-        }
-      }
-    } else {
-      errorLog(`Initial solution length (${context.initialSolution.length}) doesn't match residual vector length (${residualVector.length}). Using zeros.`);
-      for (let i = 0; i < residualVector.length; i++) {
-        solutionVector[i] = 0;
-      }
-    }
-  } else {
-    debugLog("No initial solution provided. Starting with zeros.");
-    for (let i = 0; i < residualVector.length; i++) {
-      solutionVector[i] = 0;
-    }
+  // Initialize solution from context if available
+  if (context.initialSolution && context.initialSolution.length === totalNodes) {
+    solutionVector = [...context.initialSolution];
   }
 
   while (iterations < maxIterations && !converged) {
     // Update solution
     for (let i = 0; i < solutionVector.length; i++) {
-      solutionVector[i] = solutionVector[i] + deltaX[i];
+      solutionVector[i] = Number(solutionVector[i]) + Number(deltaX[i]);
     }
 
-    // Compute Jacobian and Residual matrices
+    // Compute Jacobian and residual matrices
     if (assembleMat.name === "assembleFrontPropagationMat") {
       // Pass an additional viscous parameter for front propagation
       ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleMat(
@@ -119,12 +90,6 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
 
     iterations++;
   }
-
-  debugLog(
-    `Newton-Raphson ${
-      converged ? "converged" : "did not converge"
-    } in ${iterations} iterations with error norm ${errorNorm.toExponential(4)}`
-  );
 
   return {
     solutionVector,
