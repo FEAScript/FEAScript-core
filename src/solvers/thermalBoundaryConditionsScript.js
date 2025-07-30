@@ -54,7 +54,7 @@ export class ThermalBoundaryConditions {
               boundarySides[side].forEach((nodeIndex) => {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
                 debugLog(
-                  `  - Applied fixed temperature to node ${globalNodeIndex + 1} (element ${
+                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`
                 );
@@ -75,7 +75,7 @@ export class ThermalBoundaryConditions {
               boundarySides[side].forEach((nodeIndex) => {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
                 debugLog(
-                  `  - Applied fixed temperature to node ${globalNodeIndex + 1} (element ${
+                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`
                 );
@@ -110,7 +110,7 @@ export class ThermalBoundaryConditions {
               boundarySides[side].forEach((nodeIndex) => {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
                 debugLog(
-                  `  - Applied fixed temperature to node ${globalNodeIndex + 1} (element ${
+                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`
                 );
@@ -133,7 +133,7 @@ export class ThermalBoundaryConditions {
               boundarySides[side].forEach((nodeIndex) => {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
                 debugLog(
-                  `  - Applied fixed temperature to node ${globalNodeIndex + 1} (element ${
+                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`
                 );
@@ -161,7 +161,7 @@ export class ThermalBoundaryConditions {
    * @param {array} gaussWeights - Array of Gauss weights for numerical integration
    * @param {array} nodesXCoordinates - Array of x-coordinates of nodes
    * @param {array} nodesYCoordinates - Array of y-coordinates of nodes
-   * @param {object} basisFunctionsData - Object containing basis functions and their derivatives
+   * @param {object} basisFunctions - Object containing basis functions and their derivatives
    */
   imposeConvectionBoundaryConditions(
     residualVector,
@@ -170,7 +170,7 @@ export class ThermalBoundaryConditions {
     gaussWeights,
     nodesXCoordinates,
     nodesYCoordinates,
-    basisFunctionsData
+    basisFunctions
   ) {
     basicLog("Applying convection boundary conditions (Robin type)");
     // Extract convection parameters from boundary conditions
@@ -264,10 +264,7 @@ export class ThermalBoundaryConditions {
                 nodeIncrement = 1;
               }
 
-              let basisFunctionsAndDerivatives = basisFunctionsData.getBasisFunctions(
-                gaussPoint1,
-                gaussPoint2
-              );
+              let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoint1, gaussPoint2);
               let basisFunction = basisFunctionsAndDerivatives.basisFunction;
               let basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
               let basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
@@ -293,10 +290,12 @@ export class ThermalBoundaryConditions {
               }
 
               // Compute the length of tangent vector
-              const tangentVectorLength =
-                side === 0 || side === 2
-                  ? Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2)
-                  : Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
+              let tangentVectorLength;
+              if (side === 0 || side === 2) {
+                tangentVectorLength = Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2);
+              } else {
+                tangentVectorLength = Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
+              }
 
               for (
                 let localNodeIndex = firstNodeIndex;
@@ -312,7 +311,11 @@ export class ThermalBoundaryConditions {
 
                 // Apply boundary condition with proper Jacobian for all sides
                 residualVector[globalNodeIndex] +=
-                  -gaussWeights[0] * tangentVectorLength * basisFunction[localNodeIndex] * convectionCoeff * extTemp;
+                  -gaussWeights[0] *
+                  tangentVectorLength *
+                  basisFunction[localNodeIndex] *
+                  convectionCoeff *
+                  extTemp;
 
                 for (
                   let localNodeIndex2 = firstNodeIndex;
@@ -360,10 +363,7 @@ export class ThermalBoundaryConditions {
                   lastNodeIndex = 9;
                   nodeIncrement = 1;
                 }
-                let basisFunctionsAndDerivatives = basisFunctionsData.getBasisFunctions(
-                  gaussPoint1,
-                  gaussPoint2
-                );
+                let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoint1, gaussPoint2);
                 let basisFunction = basisFunctionsAndDerivatives.basisFunction;
                 let basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
                 let basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
@@ -389,10 +389,12 @@ export class ThermalBoundaryConditions {
                 }
 
                 // Compute the length of tangent vector
-                const tangentVectorLength =
-                  side === 0 || side === 2
-                    ? Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2)
-                    : Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
+                let tangentVectorLength;
+                if (side === 0 || side === 2) {
+                  tangentVectorLength = Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2);
+                } else {
+                  tangentVectorLength = Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
+                }
 
                 for (
                   let localNodeIndex = firstNodeIndex;

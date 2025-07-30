@@ -14,9 +14,9 @@ import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 /**
  * Class to handle basis functions and their derivatives based on element configuration
  */
-export class basisFunctions {
+export class BasisFunctions {
   /**
-   * Constructor to initialize the basisFunctions class
+   * Constructor to initialize the BasisFunctions class
    * @param {string} meshDimension - The dimension of the mesh
    * @param {string} elementOrder - The order of elements
    */

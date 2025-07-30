@@ -2,15 +2,43 @@
 
 # FEAScript-core
 
-[FEAScript](https://feascript.com/) is a lightweight finite element simulation library built in JavaScript. It empowers users to create and execute browser-based simulations for physics and engineering applications. This is the core library of FEAScript.
+[FEAScript](https://feascript.com/) is a lightweight finite element simulation library built in JavaScript. It empowers users to create and execute simulations for physics and engineering applications in both browser-based and server-side environments. This is the core library of FEAScript.
 
 > 🚧 **FEAScript is currently under heavy development.** Functionality and interfaces may change rapidly as new features and enhancements are introduced. 🚧
 
 ## Installation
 
-FEAScript is entirely implemented in pure JavaScript and requires only a simple HTML page to operate. All simulations are executed locally in your browser, without the need for any cloud services. You can use FEAScript in your projects through one of the following methods:
+FEAScript is entirely implemented in pure JavaScript and can run in two environments:
 
-### Option 1: NPM Installation
+1. **In the browser** with a simple HTML page, where all simulations are executed locally without any installations or using any cloud services
+2. **Via Node.js** with plain JavaScript files, for server-side simulations
+
+### Option 1: In the Browser
+
+You can use FEAScript in browser environments in two ways:
+
+**Direct Import from CDN**:
+Add this to your HTML file:
+
+```html
+<script type="module">
+  import { FEAScriptModel } from "https://core.feascript.com/dist/feascript.esm.js";
+</script>
+```
+
+**Download and Use Locally**:
+1. Download the latest release from [GitHub Releases](https://github.com/FEAScript/FEAScript-core/releases)
+2. Include it in your HTML file:
+
+```html
+<script type="module">
+  import { FEAScriptModel } from "./path/to/dist/feascript.esm.js";
+</script>
+```
+
+For browser-based examples and use cases, visit [our website tutorials](https://feascript.com/#tutorials).
+
+### Option 2: Via Node.js
 
 ```bash
 # Install FEAScript and its peer dependencies
@@ -20,53 +48,36 @@ npm install feascript mathjs plotly.js
 Then import it in your JavaScript/TypeScript file:
 
 ```javascript
-// ES Modules
-import { FEAScriptModel, plotSolution } from "feascript";
-
-// CommonJS
-const { FEAScriptModel, plotSolution } = require("feascript");
+import { FEAScriptModel } from "feascript";
 ```
 
-**Important:** FEAScript is built as an ES module. If you're starting a new project, make sure to configure it to use ES modules by running:
+**Important:** FEAScript is built as an ES module. If you're starting a completely new project (outside this repository), make sure to configure it to use ES modules by (when running examples from within this repository, this step is not needed as the root package.json already has the proper configuration):
 
 ```bash
 # Create package.json with type=module for ES modules support
 echo '{"type":"module"}' > package.json
 ```
 
-If you already have a package.json file, manually add `"type": "module"` to enable ES modules in your project.
+Explore various Node.js examples and use cases [here](https://github.com/FEAScript/FEAScript-core/tree/main/examples).
 
-### Option 2: Direct Import from CDN
+## Example Usage
 
-Add this line to your HTML or JavaScript module:
-
+**Browser Import:**
 ```javascript
-import { FEAScriptModel, plotSolution } from "https://core.feascript.com/dist/feascript.esm.js";
+// Import FEAScript library in browser
+import { FEAScriptModel } from "https://core.feascript.com/dist/feascript.esm.js";
 ```
 
-### Option 3: Download and Use Locally
-
-1. Download the latest release from [GitHub Releases](https://github.com/FEAScript/FEAScript-core/releases)
-2. Include it in your project:
-
-```html
-<script type="module">
-  import { FEAScriptModel, plotSolution } from "./path/to/dist/feascript.esm.js";
-  // Your code here
-</script>
-```
-
-### Example Usage
-
+**Node.js Import:**
 ```javascript
-// Import FEAScript library
-import { FEAScriptModel, plotSolution } from "https://core.feascript.com/dist/feascript.esm.js";
-
+// Import FEAScript library in Node.js
+import { FEAScriptModel } from "feascript";
+```
+```javascript
 // Create and configure model
 const model = new FEAScriptModel();
 model.setSolverConfig("solverType"); // e.g., "solidHeatTransfer" for a stationary solid heat transfer case
 model.setMeshConfig({
-  // Define mesh configuration (assuming a rectangular domain for 2D)
   meshDimension: "1D" | "2D", // Mesh dimension
   elementOrder: "linear" | "quadratic", // Element order
   numElementsX: number, // Number of elements in x-direction
@@ -79,20 +90,9 @@ model.setMeshConfig({
 model.addBoundaryCondition("boundaryIndex", ["conditionType", /* parameters */]);
 
 // Solve
+model.setSolverMethod("linearSolver"); // lusolve (via mathjs) or jacobi
 const { solutionVector, nodesCoordinates } = model.solve();
-
-// Plot results
-plotSolution(
-  solutionVector,
-  nodesCoordinates,
-  model.solverConfig,
-  model.meshConfig.meshDimension,
-  "plotType", // e.g., "contour"
-  "targetDivId" // HTML div ID for plot
-);
 ```
-
-Explore various examples and use cases of FEAScript [here](https://github.com/FEAScript/FEAScript-core/tree/main/examples).
 
 ## Contribute
 

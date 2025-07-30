@@ -73,9 +73,12 @@ export function plotSolution(
     const uniqueYCoords = new Set(nodesYCoordinates).size;
     
     // Extract scalar values from solution vector
-    let zValues = Array.isArray(solutionVector[0]) 
-      ? solutionVector.map(val => val[0]) 
-      : solutionVector;
+    let zValues;
+    if (Array.isArray(solutionVector[0])) {
+      zValues = solutionVector.map(val => val[0]);
+    } else {
+      zValues = solutionVector;
+    }
     
     // Common sizing parameters for both plot types
     let maxWindowWidth = Math.min(window.innerWidth, 700);

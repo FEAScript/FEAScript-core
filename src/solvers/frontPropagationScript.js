@@ -9,23 +9,36 @@
 //       Website: https://feascript.com/             \__|  //
 
 // Internal imports
+
+import { GenericBoundaryConditions } from "./genericBoundaryConditionsScript.js";
 import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
 import { Mesh1D, Mesh2D } from "../mesh/meshGenerationScript.js";
 import { NumericalIntegration } from "../methods/numericalIntegrationScript.js";
-import { ThermalBoundaryConditions } from "./thermalBoundaryConditionsScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**
- * Function to assemble the solid heat transfer matrix
+ * Function to assemble the front propagation matrix
  * @param {object} meshConfig - Object containing computational mesh details
  * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
+ * @param {array} solutionVector - The solution vector for non-linear equations
+ * @param {number} eikonalActivationFlag - Activation parameter for the eikonal equation (ranges from 0 to 1)
  * @returns {object} An object containing:
  *  - jacobianMatrix: The assembled Jacobian matrix
  *  - residualVector: The assembled residual vector
  *  - nodesCoordinates: Object containing x and y coordinates of nodes
  */
-export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
-  basicLog("Starting solid heat transfer matrix assembly...");
+export function assembleFrontPropagationMat(
+  meshConfig,
+  boundaryConditions,
+  solutionVector,
+  eikonalActivationFlag
+) {
+  basicLog("Starting front propagation matrix assembly...");
+
+  const baseEikonalViscousTerm = 1e-2; // Base viscous term that remains when eikonal equation is fully activated
+  let eikonalViscousTerm = 1 - eikonalActivationFlag + baseEikonalViscousTerm; // Viscous term for the front propagation (eikonal) equation
+  basicLog(`eikonalViscousTerm: ${eikonalViscousTerm}`);
+  basicLog(`eikonalActivationFlag: ${eikonalActivationFlag}`);
 
   // Extract mesh details from the configuration object
   const {
@@ -39,6 +52,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
   } = meshConfig;
 
   // Create a new instance of the Mesh class
+  // TODO: The mesh generation step should be moved outside of the assembleFrontPropagationMat function so that not performed in every Newton-Raphson iteration
   debugLog("Generating mesh...");
   let mesh;
   if (meshDimension === "1D") {
@@ -98,6 +112,8 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
   let ksiDerivY; // ksi-derivative of yCoordinates (only for 2D)
   let etaDerivY; // eta-derivative of yCoordinates (only for 2D)
   let detJacobian; // The Jacobian of the isoparametric mapping
+  let solutionDerivX; // The x-derivative of the solution
+  let solutionDerivY; // The y-derivative of the solution
 
   // Initialize jacobianMatrix and residualVector arrays
   for (let nodeIndex = 0; nodeIndex < totalNodes; nodeIndex++) {
@@ -137,21 +153,22 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
 
     // Loop over Gauss points
     for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
-      // 1D solid heat transfer
+      // 1D front propagation (eikonal) equation
       if (meshDimension === "1D") {
         let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoints[gaussPointIndex1]);
         basisFunction = basisFunctionsAndDerivatives.basisFunction;
         basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
         xCoordinates = 0;
         ksiDerivX = 0;
+        detJacobian = 0;
 
         // Isoparametric mapping
         for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
           xCoordinates += nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunction[localNodeIndex];
           ksiDerivX +=
             nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
+          detJacobian = ksiDerivX;
         }
-        detJacobian = ksiDerivX;
 
         // Compute x-derivative of basis functions
         for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
@@ -161,17 +178,16 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
         // Computation of Galerkin's residuals and Jacobian matrix
         for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
           let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
-          // residualVector is zero for this case
+          // residualVector
+          // To perform residualVector calculation here
 
           for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
             let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
-            jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
-              -gaussWeights[gaussPointIndex1] *
-              detJacobian *
-              (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2]);
+            // jacobianMatrix
+            // To perform jacobianMatrix calculation here
           }
         }
-        // 2D solid heat transfer
+        // 2D front propagation (eikonal) equation
       } else if (meshDimension === "2D") {
         for (let gaussPointIndex2 = 0; gaussPointIndex2 < gaussPoints.length; gaussPointIndex2++) {
           // Initialise variables for isoparametric mapping
@@ -188,6 +204,8 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
           etaDerivX = 0;
           ksiDerivY = 0;
           etaDerivY = 0;
+          solutionDerivX = 0;
+          solutionDerivY = 0;
 
           // Isoparametric mapping
           for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
@@ -206,7 +224,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
           }
           detJacobian = ksiDerivX * etaDerivY - etaDerivX * ksiDerivY;
 
-          // Compute x-derivative and y-derivative of basis functions
+          // Compute x & y-derivatives of basis functions and x & y-derivatives of the solution
           for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
             // The x-derivative of the n basis function
             basisFunctionDerivX[localNodeIndex] =
@@ -218,21 +236,76 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
               (ksiDerivX * basisFunctionDerivEta[localNodeIndex] -
                 etaDerivX * basisFunctionDerivKsi[localNodeIndex]) /
               detJacobian;
+            // The x-derivative of the solution
+            solutionDerivX +=
+              solutionVector[localToGlobalMap[localNodeIndex]] * basisFunctionDerivX[localNodeIndex];
+            // The y-derivative of the solution
+            solutionDerivY +=
+              solutionVector[localToGlobalMap[localNodeIndex]] * basisFunctionDerivY[localNodeIndex];
           }
 
           // Computation of Galerkin's residuals and Jacobian matrix
           for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
             let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
-            // residualVector is zero for this case
-
+            // residualVector - Viscous term: Add diffusion contribution to stabilize the solution
+            residualVector[localToGlobalMap1] +=
+              eikonalViscousTerm *
+                gaussWeights[gaussPointIndex1] *
+                gaussWeights[gaussPointIndex2] *
+                detJacobian *
+                basisFunctionDerivX[localNodeIndex1] *
+                solutionDerivX +
+              eikonalViscousTerm *
+                gaussWeights[gaussPointIndex1] *
+                gaussWeights[gaussPointIndex2] *
+                detJacobian *
+                basisFunctionDerivY[localNodeIndex1] *
+                solutionDerivY;
+            // residualVector - Eikonal term: Add the eikonal equation contribution
+            if (eikonalActivationFlag !== 0) {
+              residualVector[localToGlobalMap1] +=
+                eikonalActivationFlag *
+                (gaussWeights[gaussPointIndex1] *
+                  gaussWeights[gaussPointIndex2] *
+                  detJacobian *
+                  basisFunction[localNodeIndex1] *
+                  Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2) -
+                  gaussWeights[gaussPointIndex1] *
+                    gaussWeights[gaussPointIndex2] *
+                    detJacobian *
+                    basisFunction[localNodeIndex1]);
+            }
             for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
               let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
+              // jacobianMatrix - Viscous term: Add the Jacobian contribution from the diffusion term
               jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
-                -gaussWeights[gaussPointIndex1] *
+                -eikonalViscousTerm *
+                gaussWeights[gaussPointIndex1] *
                 gaussWeights[gaussPointIndex2] *
                 detJacobian *
                 (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] +
                   basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
+              // jacobianMatrix - Eikonal term: Add the Jacobian contribution from the eikonal equation
+              if (eikonalActivationFlag !== 0) {
+                jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
+                  eikonalActivationFlag *
+                  (-(
+                    (detJacobian *
+                      solutionDerivX *
+                      basisFunction[localNodeIndex1] *
+                      gaussWeights[gaussPointIndex1] *
+                      gaussWeights[gaussPointIndex2]) /
+                    Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2 + 1e-8)
+                  ) *
+                    basisFunctionDerivX[localNodeIndex2] -
+                    ((detJacobian *
+                      solutionDerivY *
+                      basisFunction[localNodeIndex1] *
+                      gaussWeights[gaussPointIndex1] *
+                      gaussWeights[gaussPointIndex2]) /
+                      Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2 + 1e-8)) *
+                      basisFunctionDerivY[localNodeIndex2]);
+              }
             }
           }
         }
@@ -240,9 +313,9 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     }
   }
 
-  // Create an instance of ThermalBoundaryConditions
-  basicLog("Applying thermal boundary conditions...");
-  const thermalBoundaryConditions = new ThermalBoundaryConditions(
+  // Create an instance of GenericBoundaryConditions
+  basicLog("Applying generic boundary conditions...");
+  const genericBoundaryConditions = new GenericBoundaryConditions(
     boundaryConditions,
     boundaryElements,
     nop,
@@ -250,23 +323,17 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     elementOrder
   );
 
-  // Impose Convection boundary conditions
-  thermalBoundaryConditions.imposeConvectionBoundaryConditions(
-    residualVector,
-    jacobianMatrix,
-    gaussPoints,
-    gaussWeights,
-    nodesXCoordinates,
-    nodesYCoordinates,
-    basisFunctions
-  );
-  basicLog("Convection boundary conditions applied");
+  // Impose ConstantValue boundary conditions
+  genericBoundaryConditions.imposeConstantValueBoundaryConditions(residualVector, jacobianMatrix);
+  basicLog("Constant value boundary conditions applied");
 
-  // Impose ConstantTemp boundary conditions
-  thermalBoundaryConditions.imposeConstantTempBoundaryConditions(residualVector, jacobianMatrix);
-  basicLog("Constant temperature boundary conditions applied");
+  // Print all residuals
+  debugLog("Residuals at each node:");
+  for (let i = 0; i < residualVector.length; i++) {
+    debugLog(`Node ${i}: ${residualVector[i].toExponential(6)}`);
+  }
 
-  basicLog("Solid heat transfer matrix assembly completed");
+  basicLog("Front propagation matrix assembly completed");
 
   return {
     jacobianMatrix,

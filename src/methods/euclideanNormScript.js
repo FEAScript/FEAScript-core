@@ -8,9 +8,16 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
-export { FEAScriptModel } from "./FEAScript.js";
-export { importGmshQuadTri } from "./readers/gmshReaderScript.js";
-export { logSystem, printVersion } from "./utilities/loggingScript.js";
-export { plotSolution } from "./visualization/plotSolutionScript.js";
-export { FEAScriptWorker } from "./workers/workerScript.js";
-export const VERSION = "0.1.2";
+/**
+ * Function to calculate the Euclidean norm of a vector
+ * @param {array} vector - The input vector
+ * @returns {number} The Euclidean norm of the vector
+ */
+export function euclideanNorm(vector) {
+  let norm = 0;
+  for (let i = 0; i < vector.length; i++) {
+    norm += vector[i] * vector[i];
+  }
+  norm = Math.sqrt(norm);
+  return norm;
+}

@@ -10,6 +10,9 @@
 
 // Internal imports
 import { jacobiMethod } from "./methods/jacobiMethodScript.js";
+import { newtonRaphson } from "./methods/newtonRaphsonScript.js";
+import { solveLinearSystem } from "./methods/linearSystemScript.js";
+import { assembleFrontPropagationMat } from "./solvers/frontPropagationScript.js";
 import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
 
@@ -36,9 +39,7 @@ export class FEAScriptModel {
 
   setMeshConfig(meshConfig) {
     this.meshConfig = meshConfig;
-    debugLog(
-      `Mesh config set with dimensions: ${meshConfig.meshDimension}`
-    );
+    debugLog(`Mesh config set with dimensions: ${meshConfig.meshDimension}`);
   }
 
   addBoundaryCondition(boundaryKey, condition) {
@@ -61,43 +62,61 @@ export class FEAScriptModel {
     let jacobianMatrix = [];
     let residualVector = [];
     let solutionVector = [];
+    let initialSolution = [];
     let nodesCoordinates = {};
+    let eikonalExteralIterations = 5; // Number of incremental steps to gradually activate the eikonal term - Used in frontPropagationScript
+    let eikonalActivationFlag = 0; // Activation parameter for the eikonal equation (ranges from 0 to 1) - Used in frontPropagationScript
+    let newtonRaphsonIterations;
 
-    // Assembly matrices
-    basicLog("Beginning matrix assembly...");
-    console.time("assemblyMatrices");
+    // Select and execute the appropriate solver based on solverConfig
+    basicLog("Beginning solving process...");
+    console.time("totalSolvingTime");
     if (this.solverConfig === "solidHeatTransferScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
       ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleSolidHeatTransferMat(
         this.meshConfig,
         this.boundaryConditions
       ));
-    }
-    console.timeEnd("assemblyMatrices");
-    basicLog("Matrix assembly completed");
 
-    // System solving
-    basicLog(`Solving system using ${this.solverMethod}...`);
-    console.time("systemSolving");
-    if (this.solverMethod === "lusolve") {
-      solutionVector = math.lusolve(jacobianMatrix, residualVector);
-    } else if (this.solverMethod === "jacobi") {
-      // Create initial guess of zeros
-      const initialGuess = new Array(residualVector.length).fill(0);
-      // Call Jacobi method with desired max iterations and tolerance
-      const jacobiResult = jacobiMethod(jacobianMatrix, residualVector, initialGuess, 1000, 1e-6);
+      // Solve the assembled linear system
+      const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
+      solutionVector = linearSystemResult.solutionVector;
+    } else if (this.solverConfig === "frontPropagationScript") {
+      basicLog(`Using solver: ${this.solverConfig}`);
 
-      // Log convergence information
-      if (jacobiResult.converged) {
-        debugLog(`Jacobi method converged in ${jacobiResult.iterations} iterations`);
-      } else {
-        debugLog(`Jacobi method did not converge after ${jacobiResult.iterations} iterations`);
+      // Create context object with all necessary properties
+      const context = {
+        meshConfig: this.meshConfig,
+        boundaryConditions: this.boundaryConditions,
+        eikonalActivationFlag,
+        solverMethod: this.solverMethod,
+        initialSolution,
+      };
+
+      while (eikonalActivationFlag <= 1) {
+        // Update the context object with current eikonalActivationFlag
+        context.eikonalActivationFlag = eikonalActivationFlag;
+
+        // Pass the previous solution as initial guess
+        if (solutionVector.length > 0) {
+          context.initialSolution = [...solutionVector];
+        }
+
+        const newtonRaphsonResult = newtonRaphson(assembleFrontPropagationMat, context, 100, 1e-4);
+
+        // Extract results
+        jacobianMatrix = newtonRaphsonResult.jacobianMatrix;
+        residualVector = newtonRaphsonResult.residualVector;
+        nodesCoordinates = newtonRaphsonResult.nodesCoordinates;
+        solutionVector = newtonRaphsonResult.solutionVector;
+        newtonRaphsonIterations = newtonRaphsonResult.iterations;
+
+        // Increment for next iteration
+        eikonalActivationFlag += 1 / eikonalExteralIterations;
       }
-
-      solutionVector = jacobiResult.solution;
     }
-    console.timeEnd("systemSolving");
-    basicLog("System solved successfully");
+    console.timeEnd("totalSolvingTime");
+    basicLog("Solving process completed");
 
     return { solutionVector, nodesCoordinates };
   }
