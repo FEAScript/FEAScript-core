@@ -31,7 +31,7 @@ export function assembleFrontPropagationMat(
   meshConfig,
   boundaryConditions,
   solutionVector,
-  eikonalActivationFlag
+  eikonalActivationFlag = 0
 ) {
   basicLog("Starting front propagation matrix assembly...");
 
