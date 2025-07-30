@@ -35,10 +35,10 @@ export function assembleFrontPropagationMat(
 ) {
   basicLog("Starting front propagation matrix assembly...");
 
-  const baseEikonalViscousTerm = 1e-3; // Base viscous term that remains when eikonal equation is fully activated
+  const baseEikonalViscousTerm = 1e-2; // Base viscous term that remains when eikonal equation is fully activated
   let eikonalViscousTerm = 1 - eikonalActivationFlag + baseEikonalViscousTerm; // Viscous term for the front propagation (eikonal) equation
-  console.log("eikonalViscousTerm:", eikonalViscousTerm);
-  console.log("eikonalActivationFlag:", eikonalActivationFlag);
+  basicLog(`eikonalViscousTerm: ${eikonalViscousTerm}`);
+  basicLog(`eikonalActivationFlag: ${eikonalActivationFlag}`);
 
   // Extract mesh details from the configuration object
   const {

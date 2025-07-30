@@ -79,7 +79,7 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
     errorNorm = euclideanNorm(deltaX);
 
     // Norm for each iteration
-    basicLog(`Newton-Raphson Iteration ${iterations + 1}: Error norm = ${errorNorm.toExponential(4)}`);
+    basicLog(`Newton-Raphson iteration ${iterations + 1}: Error norm = ${errorNorm.toExponential(4)}`);
 
     if (errorNorm <= tolerance) {
       converged = true;

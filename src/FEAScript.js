@@ -64,7 +64,7 @@ export class FEAScriptModel {
     let solutionVector = [];
     let initialSolution = [];
     let nodesCoordinates = {};
-    let eikonalExteralIterations = 10; // Number of incremental steps to gradually activate the eikonal term - Used in frontPropagationScript
+    let eikonalExteralIterations = 5; // Number of incremental steps to gradually activate the eikonal term - Used in frontPropagationScript
     let eikonalActivationFlag = 0; // Activation parameter for the eikonal equation (ranges from 0 to 1) - Used in frontPropagationScript
     let newtonRaphsonIterations;
 

@@ -583,30 +583,31 @@ export class Mesh2D extends Mesh {
           nodesYCoordinates[nnode + nodeIndexY] = nodesYCoordinates[nnode] + (nodeIndexY * deltaY) / 2;
         }
       }
-
-      // Generate nodal numbering (NOP) array
-      const nodalNumbering = this.generate2DNodalNumbering(
-        this.numElementsX,
-        this.numElementsY,
-        totalNodesY,
-        this.elementOrder
-      );
-      // Find boundary elements
-      const boundaryElements = this.findBoundaryElements();
-
-      debugLog("Generated node X coordinates: " + JSON.stringify(nodesXCoordinates));
-      debugLog("Generated node Y coordinates: " + JSON.stringify(nodesYCoordinates));
-
-      // Return x and y coordinates of nodes, total nodes, NOP array, and boundary elements
-      return {
-        nodesXCoordinates,
-        nodesYCoordinates,
-        totalNodesX,
-        totalNodesY,
-        nodalNumbering,
-        boundaryElements,
-      };
     }
+
+    // Generate nodal numbering (NOP) array
+    const nodalNumbering = this.generate2DNodalNumbering(
+      this.numElementsX,
+      this.numElementsY,
+      totalNodesY,
+      this.elementOrder
+    );
+    
+    // Find boundary elements
+    const boundaryElements = this.findBoundaryElements();
+
+    debugLog("Generated node X coordinates: " + JSON.stringify(nodesXCoordinates));
+    debugLog("Generated node Y coordinates: " + JSON.stringify(nodesYCoordinates));
+
+    // Return statement
+    return {
+      nodesXCoordinates,
+      nodesYCoordinates,
+      totalNodesX,
+      totalNodesY,
+      nodalNumbering,
+      boundaryElements,
+    };
   }
 
   /**
