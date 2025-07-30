@@ -90,7 +90,7 @@ export class FEAScriptModel {
       const context = {
         meshConfig: this.meshConfig,
         boundaryConditions: this.boundaryConditions,
-        eikonalActivationFlag,
+        eikonalActivationFlag: eikonalActivationFlag,
         solverMethod: this.solverMethod,
         initialSolution,
       };
