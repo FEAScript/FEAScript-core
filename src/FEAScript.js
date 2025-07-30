@@ -65,7 +65,6 @@ export class FEAScriptModel {
     let initialSolution = [];
     let nodesCoordinates = {};
     let eikonalExteralIterations = 5; // Number of incremental steps to gradually activate the eikonal term - Used in frontPropagationScript
-    let eikonalActivationFlag = 0; // Activation parameter for the eikonal equation (ranges from 0 to 1) - Used in frontPropagationScript
     let newtonRaphsonIterations;
 
     // Select and execute the appropriate solver based on solverConfig
@@ -84,11 +83,14 @@ export class FEAScriptModel {
     } else if (this.solverConfig === "frontPropagationScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
 
+      // Initialize eikonalActivationFlag
+      let eikonalActivationFlag = 0;
+
       // Create context object with all necessary properties
       const context = {
         meshConfig: this.meshConfig,
         boundaryConditions: this.boundaryConditions,
-        eikonalActivationFlag,
+        eikonalActivationFlag: eikonalActivationFlag,
         solverMethod: this.solverMethod,
         initialSolution,
       };

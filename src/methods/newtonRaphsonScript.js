@@ -55,21 +55,12 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
     }
 
     // Compute Jacobian and residual matrices
-    if (assembleMat.name === "assembleFrontPropagationMat") {
-      // Pass an additional viscous parameter for front propagation
-      ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleMat(
-        context.meshConfig,
-        context.boundaryConditions,
-        solutionVector, // The solution vector is required in the case of a non-linear equation
-        context.eikonalActivationFlag
-      ));
-    } else {
-      // Standard call for other assembly functions
-      ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleMat(
-        context.meshConfig,
-        context.boundaryConditions
-      ));
-    }
+    ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleMat(
+      context.meshConfig,
+      context.boundaryConditions,
+      solutionVector, // The solution vector is required in the case of a non-linear equation
+      context.eikonalActivationFlag
+    ));
 
     // Solve the linear system based on the specified solver method
     const linearSystemResult = solveLinearSystem(context.solverMethod, jacobianMatrix, residualVector);
