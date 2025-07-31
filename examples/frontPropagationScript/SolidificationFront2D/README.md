@@ -26,4 +26,4 @@ This example requires the `feascript` npm package and its peer dependencies (`ma
    node SolidificationFront2D.js
    ```
 
-**Note:** For detailed information on the model setup, boundary conditions, and simulation results, refer to the comments in the JavaScript files and the corresponding standard [tutorial] (https://feascript.com/tutorials/SolidificationFront2D.html).
+**Note:** For detailed information on the model setup, boundary conditions, and simulation results, refer to the comments in the JavaScript files and the corresponding standard [tutorial](https://feascript.com/tutorials/SolidificationFront2D.html).
