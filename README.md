@@ -1,6 +1,7 @@
 <img src="https://feascript.github.io/FEAScript-website/assets/FEAScriptLogo.png" width="80" alt="FEAScript Logo">
 
 # FEAScript-core
+[![npm version](https://img.shields.io/npm/v/feascript)](https://www.npmjs.com/package/feascript)
 
 [FEAScript](https://feascript.com/) is a lightweight finite element simulation library built in JavaScript. It empowers users to create and execute simulations for physics and engineering applications in both browser-based and server-side environments. This is the core library of FEAScript.
 
@@ -41,7 +42,7 @@ For browser-based examples and use cases, visit [our website tutorials](https://
 ### Option 2: Via Node.js
 
 ```bash
-# Install FEAScript and its peer dependencies
+# Install FEAScript and its peer dependencies from npm
 npm install feascript mathjs plotly.js
 ```
 
