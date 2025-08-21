@@ -21,7 +21,7 @@
  *  - iterations: The number of iterations performed
  *  - converged: Boolean indicating whether the method converged
  */
-export function jacobiMethod(jacobianMatrix, residualVector, initialGuess, options = {}) {
+export function jacobiSolver(jacobianMatrix, residualVector, initialGuess, options = {}) {
   const { maxIterations = 1000, tolerance = 1e-6 } = options;
   const n = jacobianMatrix.length; // Size of the square matrix
   let x = [...initialGuess]; // Current solution (starts with initial guess)
