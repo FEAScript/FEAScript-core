@@ -10,7 +10,7 @@
 
 // Internal imports
 import { euclideanNorm } from "../methods/euclideanNormScript.js";
-import { solveLinearSystem } from "../methods/linearSystemScript.js";
+import { solveLinearSystem } from "./linearSystemSolverScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 import { calculateSystemSize } from "../utilities/helperFunctionsScript.js";
 
