@@ -43,7 +43,7 @@ You can use FEAScript in browser environments in two ways:
 </script>
 ```
 
-You can Download the latest release from [GitHub Releases](https://github.com/FEAScript/FEAScript-core/releases). Explore various browser-based examples and use cases in our [website](https://feascript.com/#tutorials).
+You can download the latest stable release from [GitHub Releases](https://github.com/FEAScript/FEAScript-core/releases). Explore various browser-based examples and use cases in our [website](https://feascript.com/#tutorials).
 
 ### Option 2: Via Node.js
 
