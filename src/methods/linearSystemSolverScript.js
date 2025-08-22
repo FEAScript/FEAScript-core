@@ -9,7 +9,7 @@
 //       Website: https://feascript.com/             \__|  //
 
 // Internal imports
-import { jacobiMethod } from "./jacobiMethodScript.js";
+import { jacobiSolver } from "./jacobiSolverScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**
@@ -42,21 +42,21 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
   } else if (solverMethod === "jacobi") {
     // Use Jacobi method
     const initialGuess = new Array(residualVector.length).fill(0);
-    const jacobiResult = jacobiMethod(jacobianMatrix, residualVector, initialGuess, {
+    const jacobiSolverResult = jacobiSolver(jacobianMatrix, residualVector, initialGuess, {
       maxIterations,
       tolerance,
     });
 
     // Log convergence information
-    if (jacobiResult.converged) {
-      debugLog(`Jacobi method converged in ${jacobiResult.iterations} iterations`);
+    if (jacobiSolverResult.converged) {
+      debugLog(`Jacobi method converged in ${jacobiSolverResult.iterations} iterations`);
     } else {
-      debugLog(`Jacobi method did not converge after ${jacobiResult.iterations} iterations`);
+      debugLog(`Jacobi method did not converge after ${jacobiSolverResult.iterations} iterations`);
     }
 
-    solutionVector = jacobiResult.solutionVector;
-    converged = jacobiResult.converged;
-    iterations = jacobiResult.iterations;
+    solutionVector = jacobiSolverResult.solutionVector;
+    converged = jacobiSolverResult.converged;
+    iterations = jacobiSolverResult.iterations;
   } else {
     errorLog(`Unknown solver method: ${solverMethod}`);
   }

@@ -40,11 +40,11 @@ To contribute a new feature or fix:
 
 All files in the FEAScript-core codebase should follow this structure:
 
-1. **Banner**: All files start with the FEAScript ASCII art banner
+1. **Banner**: All files start with the FEAScript ASCII art banner.
 2. **Imports**:
-   - External imports (from npm packages) first, alphabetically ordered
-   - Internal imports next, grouped by module/folder
-3. **Classes/Functions**: Implementation with proper JSDoc comments
+   - External imports (from npm packages) first, alphabetically ordered.
+   - Internal imports next, grouped by module/folder.
+3. **Classes/Functions**: Implementation with proper JSDoc comments.
 
 Example:
 
@@ -88,3 +88,14 @@ export class MyClass {
   }
 }
 ```
+
+## File Naming Convention
+
+All JavaScript source files in FEAScript end with the suffix `Script` before the `.js` extension (e.g., `loggingScript.js`, `meshGenerationScript.js`, `newtonRaphsonScript.js`). This is an explicit, project‑level stylistic choice to:
+
+- Visually distinguish internal FEAScript modules from third‑party or external library files.
+- Keep historical and stylistic consistency across the codebase.
+
+Exceptions:
+- Public entry file: `index.js` (standard entry point convention).
+- Core model file: `FEAScript.js` (matches the library name; appending "Script" would be redundant).
