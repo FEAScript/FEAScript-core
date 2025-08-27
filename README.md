@@ -8,17 +8,9 @@
 
 > 🚧 **FEAScript is currently under heavy development.** Functionality and interfaces may change rapidly as new features and enhancements are introduced. 🚧
 
-## Ways to Use FEAScript
-
-FEAScript offers two main approaches to creating simulations:
-
-1. **[JavaScript API](#javascript-api)** – For developers comfortable with coding, providing full programmatic control in browsers, Node.js, or interactive notebooks.
-2. **[Visual Editor (FEAScript Platform)](#visual-editor-feascript-platform)** – For users who prefer a no-code approach, offering a block-based visual interface built with [Blockly](https://developers.google.com/blockly).
-
-Each approach is explained in detail below.
-
 ## Contents
 
+- [Ways to Use FEAScript](#ways-to-use-feascript)
 - [JavaScript API](#javascript-api)
   - [Use FEAScript in the Browser](#use-feascript-in-the-browser)
   - [Use FEAScript with Node.js](#use-feascript-with-nodejs)
@@ -27,6 +19,15 @@ Each approach is explained in detail below.
 - [Quick Example](#quick-example)
 - [Contributing](#contributing)
 - [License](#license)
+
+## Ways to Use FEAScript
+
+FEAScript offers two main approaches to creating simulations:
+
+1. **[JavaScript API](#javascript-api)** – For developers comfortable with coding, providing full programmatic control in browsers, Node.js, or interactive notebooks.
+2. **[Visual Editor (FEAScript Platform)](#visual-editor-feascript-platform)** – For users who prefer a no-code approach, offering a block-based visual interface built with [Blockly](https://developers.google.com/blockly).
+
+Each approach is explained in detail below.
 
 ## JavaScript API
 
@@ -40,23 +41,23 @@ The JavaScript API is the core programmatic interface for FEAScript. Written ent
 
 You can use FEAScript in browser environments in two ways:
 
-**Import from Hosted ESM Build:**
+- **Import from Hosted ESM Build:**
 
-```html
-<script type="module">
-  import { FEAScriptModel } from "https://core.feascript.com/dist/feascript.esm.js";
-</script>
-```
+  ```html
+  <script type="module">
+    import { FEAScriptModel } from "https://core.feascript.com/dist/feascript.esm.js";
+  </script>
+  ```
 
-**Download and Use Locally:**
+- **Download and Use Locally:**
 
-You can download the latest stable release from [GitHub Releases](https://github.com/FEAScript/FEAScript-core/releases).
+  You can download the latest stable release from [GitHub Releases](https://github.com/FEAScript/FEAScript-core/releases).
 
-```html
-<script type="module">
-  import { FEAScriptModel } from "./path/to/dist/feascript.esm.js";
-</script>
-```
+  ```html
+  <script type="module">
+    import { FEAScriptModel } from "./path/to/dist/feascript.esm.js";
+  </script>
+  ```
 
 👉 Explore various browser-based examples and use cases on our [website](https://feascript.com/#tutorials).
 
