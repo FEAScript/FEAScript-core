@@ -15,7 +15,7 @@ global.math = math;
 // Import FEAScript library
 import { FEAScriptModel, logSystem, VERSION } from "feascript";
 
-console.log('FEAScript Version:', VERSION);
+console.log("FEAScript Version:", VERSION);
 
 // Create a new FEAScript model
 const model = new FEAScriptModel();
@@ -42,6 +42,6 @@ model.setSolverMethod("lusolve");
 const { solutionVector, nodesCoordinates } = model.solve();
 
 // Print results to console
-console.log("Solution vector:", solutionVector);
-console.log("Node coordinates:", nodesCoordinates);
 console.log(`Number of nodes: ${nodesCoordinates.nodesXCoordinates.length}`);
+console.log("Node coordinates:", nodesCoordinates);
+console.log("Solution vector:", solutionVector);

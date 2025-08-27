@@ -46,6 +46,6 @@ model.setSolverMethod("lusolve");
 const { solutionVector, nodesCoordinates } = model.solve();
 
 // Print results to console
-console.log("Solution vector:", solutionVector);
-console.log("Node coordinates:", nodesCoordinates);
 console.log(`Number of nodes in mesh: ${nodesCoordinates.nodesXCoordinates.length}`);
+console.log("Node coordinates:", nodesCoordinates);
+console.log("Solution vector:", solutionVector);
