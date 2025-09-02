@@ -9,7 +9,7 @@
 //       Website: https://feascript.com/             \__|  //
 
 // Internal imports
-import { jacobiMethod } from "./methods/jacobiMethodScript.js";
+import { solveLinearSystem } from "./methods/linearSystemSolverScript.js";
 import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
 
@@ -79,23 +79,20 @@ export class FEAScriptModel {
     // System solving
     basicLog(`Solving system using ${this.solverMethod}...`);
     console.time("systemSolving");
-    if (this.solverMethod === "lusolve") {
-      solutionVector = math.lusolve(jacobianMatrix, residualVector);
-    } else if (this.solverMethod === "jacobi") {
-      // Create initial guess of zeros
-      const initialGuess = new Array(residualVector.length).fill(0);
-      // Call Jacobi method with desired max iterations and tolerance
-      const jacobiResult = jacobiMethod(jacobianMatrix, residualVector, initialGuess, 1000, 1e-6);
-
-      // Log convergence information
-      if (jacobiResult.converged) {
-        debugLog(`Jacobi method converged in ${jacobiResult.iterations} iterations`);
+    
+    // Use the centralized linear system solver
+    const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
+    solutionVector = linearSystemResult.solutionVector;
+    
+    // Log convergence information for iterative methods
+    if (linearSystemResult.iterations !== undefined) {
+      if (linearSystemResult.converged) {
+        debugLog(`${this.solverMethod} method converged in ${linearSystemResult.iterations} iterations`);
       } else {
-        debugLog(`Jacobi method did not converge after ${jacobiResult.iterations} iterations`);
+        debugLog(`${this.solverMethod} method did not converge after ${linearSystemResult.iterations} iterations`);
       }
-
-      solutionVector = jacobiResult.solution;
     }
+    
     console.timeEnd("systemSolving");
     basicLog("System solved successfully");
 
