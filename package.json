@@ -42,6 +42,7 @@
     "typescript": "^5.8.3"
   },
   "dependencies": {
+    "mathjs": "^14.6.0",
     "taichi.js": "^0.0.36"
   }
 }

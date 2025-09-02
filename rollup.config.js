@@ -11,17 +11,20 @@ export default {
       file: "dist/feascript.cjs.js",
       format: "cjs",
       sourcemap: true,
+      inlineDynamicImports: true,
     },
     {
       file: "dist/feascript.esm.js",
       format: "esm",
       sourcemap: true,
+      inlineDynamicImports: true,
     },
     {
       file: "dist/feascript.umd.js",
       format: "umd",
       name: "FEAScript",
       sourcemap: true,
+      inlineDynamicImports: true,
     },
   ],
   plugins: [
