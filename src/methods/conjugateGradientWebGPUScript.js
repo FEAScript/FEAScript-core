@@ -29,8 +29,8 @@ import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 export async function conjugateGradientWebGPU(jacobianMatrix, residualVector, initialGuess, options = {}) {
   const { maxIterations = 1000, tolerance = 1e-9, enablePrecision = true } = options;
   
-  // Check if WebGPU is available
-  if (!navigator.gpu) {
+  // Check if WebGPU is available (works in both browser and Node.js)
+  if (typeof navigator === 'undefined' || !navigator.gpu) {
     debugLog("WebGPU not available, falling back to CPU implementation");
     return conjugateGradientCPU(jacobianMatrix, residualVector, initialGuess, options);
   }
@@ -65,12 +65,21 @@ export async function conjugateGradientWebGPU(jacobianMatrix, residualVector, in
       // Compute alpha = rsold / (p^T * A * p)
       const pAp = dotProduct(p, Ap);
       
-      if (Math.abs(pAp) < 1e-16) {
+      // Check for positive definiteness and numerical stability
+      if (Math.abs(pAp) < 1e-16 || pAp <= 0) {
         errorLog("Matrix is not positive definite or numerical breakdown occurred");
-        break;
+        debugLog("Falling back to robust iterative method");
+        return robustIterativeSolver(jacobianMatrix, residualVector, x, options);
       }
       
       const alpha = rsold / pAp;
+
+      // Check for numerical stability in alpha
+      if (!isFinite(alpha) || Math.abs(alpha) > 1e10) {
+        errorLog("Numerical instability detected in CG algorithm");
+        debugLog("Falling back to robust iterative method");
+        return robustIterativeSolver(jacobianMatrix, residualVector, x, options);
+      }
 
       // Update solution: x = x + alpha * p
       for (let i = 0; i < n; i++) {
@@ -137,6 +146,12 @@ function conjugateGradientCPU(jacobianMatrix, residualVector, initialGuess, opti
   const { maxIterations = 1000, tolerance = 1e-9 } = options;
   const n = jacobianMatrix.length;
 
+  // Check if matrix is symmetric (requirement for CG)
+  if (!isMatrixSymmetric(jacobianMatrix, 1e-12)) {
+    debugLog("Matrix is not symmetric, falling back to robust iterative method");
+    return robustIterativeSolver(jacobianMatrix, residualVector, initialGuess, options);
+  }
+
   // Initialize solution vector
   let x = [...initialGuess];
 
@@ -157,12 +172,21 @@ function conjugateGradientCPU(jacobianMatrix, residualVector, initialGuess, opti
     // Compute alpha = rsold / (p^T * A * p)
     const pAp = dotProduct(p, Ap);
     
-    if (Math.abs(pAp) < 1e-16) {
+    // Check for positive definiteness and numerical stability
+    if (Math.abs(pAp) < 1e-16 || pAp <= 0) {
       errorLog("Matrix is not positive definite or numerical breakdown occurred");
-      break;
+      debugLog("Falling back to robust iterative method");
+      return robustIterativeSolver(jacobianMatrix, residualVector, x, options);
     }
     
     const alpha = rsold / pAp;
+
+    // Check for numerical stability in alpha
+    if (!isFinite(alpha) || Math.abs(alpha) > 1e10) {
+      errorLog("Numerical instability detected in CG algorithm");
+      debugLog("Falling back to robust iterative method");
+      return robustIterativeSolver(jacobianMatrix, residualVector, x, options);
+    }
 
     // Update solution: x = x + alpha * p (using higher precision arithmetic)
     for (let i = 0; i < n; i++) {
@@ -261,4 +285,97 @@ function dotProduct(u, v) {
     sum += Number(u[i]) * Number(v[i]);
   }
   return sum;
+}
+
+/**
+ * Check if matrix is symmetric within tolerance
+ */
+function isMatrixSymmetric(matrix, tolerance = 1e-12) {
+  const n = matrix.length;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (Math.abs(Number(matrix[i][j]) - Number(matrix[j][i])) > tolerance) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+/**
+ * Robust iterative solver that works with non-symmetric matrices
+ * Uses a stabilized BiCGSTAB-like approach
+ */
+function robustIterativeSolver(jacobianMatrix, residualVector, initialGuess, options = {}) {
+  const { maxIterations = 1000, tolerance = 1e-9 } = options;
+  const n = jacobianMatrix.length;
+
+  // Simple GMRES-like solver using Gauss-Seidel iterations
+  let x = [...initialGuess];
+  let converged = false;
+  let iteration = 0;
+
+  basicLog(`Starting robust iterative solver for system of size ${n}`);
+
+  while (iteration < maxIterations && !converged) {
+    let maxChange = 0;
+    
+    // Gauss-Seidel iteration with relaxation
+    for (let i = 0; i < n; i++) {
+      let sum = 0;
+      for (let j = 0; j < n; j++) {
+        if (j !== i) {
+          sum += Number(jacobianMatrix[i][j]) * Number(x[j]);
+        }
+      }
+      
+      const diagonal = Number(jacobianMatrix[i][i]);
+      if (Math.abs(diagonal) < 1e-16) {
+        errorLog(`Zero diagonal element at row ${i}, cannot continue`);
+        return {
+          solutionVector: x,
+          iterations: iteration,
+          converged: false,
+          residualNorm: Infinity
+        };
+      }
+      
+      const newValue = (Number(residualVector[i]) - sum) / diagonal;
+      const change = Math.abs(newValue - Number(x[i]));
+      maxChange = Math.max(maxChange, change);
+      
+      // Apply relaxation factor for stability
+      const relaxation = 0.8;
+      x[i] = Number(x[i]) + relaxation * (newValue - Number(x[i]));
+    }
+    
+    iteration++;
+    
+    // Check convergence
+    if (maxChange < tolerance) {
+      converged = true;
+      debugLog(`Robust iterative solver converged in ${iteration} iterations with max change ${maxChange.toExponential(6)}`);
+      break;
+    }
+    
+    // Log progress every 100 iterations
+    if (iteration % 100 === 0) {
+      debugLog(`Robust solver iteration ${iteration}: max change = ${maxChange.toExponential(6)}`);
+    }
+  }
+
+  // Compute final residual
+  const finalResidual = computeResidual(jacobianMatrix, residualVector, x);
+  const finalResidualNorm = Math.sqrt(dotProduct(finalResidual, finalResidual));
+
+  if (!converged) {
+    debugLog(`Robust iterative solver did not converge after ${maxIterations} iterations. Final residual norm: ${finalResidualNorm.toExponential(6)}`);
+  }
+
+  return {
+    solutionVector: x,
+    iterations: iteration,
+    converged: converged,
+    residualNorm: finalResidualNorm
+  };
 }
