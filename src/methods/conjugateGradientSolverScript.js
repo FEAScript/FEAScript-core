@@ -8,6 +8,8 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
+import { euclideanNorm } from "../utilities/helperFunctionsScript.js";
+
 /**
  * Function to solve a system of linear equations using the Conjugate Gradient iterative method
  * This implementation uses Taichi.js for WebGPU acceleration with high precision (Float64)

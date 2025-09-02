@@ -8,11 +8,9 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
-import { jacobiMethod } from "./jacobiMethodScript.js";
-
 /**
  * Function to solve a system of linear equations using the Jacobi iterative method
- * This is a wrapper around the Taichi.js-based jacobiMethod for interface consistency
+ * This version provides high precision and consistent interface
  * @param {array} jacobianMatrix - The coefficient matrix (must be square)
  * @param {array} residualVector - The right-hand side vector
  * @param {array} initialGuess - Initial guess for solution vector
@@ -26,31 +24,47 @@ import { jacobiMethod } from "./jacobiMethodScript.js";
  */
 export function jacobiSolver(jacobianMatrix, residualVector, initialGuess, options = {}) {
   const { maxIterations = 1000, tolerance = 1e-6 } = options;
-  
-  try {
-    // Call the Taichi.js-based Jacobi method with high precision
-    // Note: We need to handle the async nature properly
-    const result = jacobiMethod(
-      jacobianMatrix, 
-      residualVector, 
-      initialGuess, 
-      maxIterations, 
-      tolerance,
-      true // Use Float64 for better precision
-    );
-    
-    // If result is a Promise, we need to handle it differently
-    if (result instanceof Promise) {
-      throw new Error("Jacobi solver cannot handle async operations in this context. Use jacobiMethod directly for async operations.");
+  const n = jacobianMatrix.length; // Size of the square matrix
+  let x = [...initialGuess]; // Current solution (starts with initial guess)
+  let xNew = new Array(n); // Next iteration's solution
+
+  for (let iteration = 0; iteration < maxIterations; iteration++) {
+    // Perform one iteration
+    for (let i = 0; i < n; i++) {
+      let sum = 0;
+      // Calculate sum of jacobianMatrix[i][j] * x[j] for j ≠ i
+      for (let j = 0; j < n; j++) {
+        if (j !== i) {
+          sum += jacobianMatrix[i][j] * x[j];
+        }
+      }
+      // Update xNew[i] using the Jacobi formula
+      xNew[i] = (residualVector[i] - sum) / jacobianMatrix[i][i];
     }
-    
-    return {
-      solutionVector: result.solution,
-      iterations: result.iterations,
-      converged: result.converged,
-    };
-  } catch (error) {
-    console.error("Error in Jacobi solver:", error);
-    throw error;
+
+    // Check convergence
+    let maxDiff = 0;
+    for (let i = 0; i < n; i++) {
+      maxDiff = Math.max(maxDiff, Math.abs(xNew[i] - x[i]));
+    }
+
+    // Update x for next iteration
+    x = [...xNew];
+
+    // Successfully converged if maxDiff is less than tolerance
+    if (maxDiff < tolerance) {
+      return {
+        solutionVector: x,
+        iterations: iteration + 1,
+        converged: true,
+      };
+    }
   }
+
+  // maxIterations were reached without convergence
+  return {
+    solutionVector: x,
+    iterations: maxIterations,
+    converged: false,
+  };
 }
