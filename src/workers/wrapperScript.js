@@ -107,9 +107,9 @@ class workerWrapper {
    * @returns {object} Returns the solution result, including the solution vector, node coordinates, solver configuration, and mesh dimension.
    * @throws Will throw an error if the solve operation fails.
    */
-  solve() {
+  async solve() {
     try {
-      const result = this.model.solve();
+      const result = await this.model.solve();
 
       return {
         solutionVector: result.solutionVector,

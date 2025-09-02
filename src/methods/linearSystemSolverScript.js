@@ -10,11 +10,12 @@
 
 // Internal imports
 import { jacobiSolver } from "./jacobiSolverScript.js";
+import { conjugateGradientWebGPU } from "./conjugateGradientWebGPUScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**
  * Function to solve a system of linear equations using different solver methods
- * @param {string} solverMethod - The solver method to use ("lusolve" or "jacobi")
+ * @param {string} solverMethod - The solver method to use ("lusolve", "jacobi", or "conjugate-gradient-webgpu")
  * @param {Array} jacobianMatrix - The coefficient matrix
  * @param {Array} residualVector - The right-hand side vector
  * @param {object} [options] - Additional options for the solver
@@ -25,7 +26,7 @@ import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
  *  - converged: Boolean indicating whether the method converged (for iterative methods)
  *  - iterations: Number of iterations performed (for iterative methods)
  */
-export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, options = {}) {
+export async function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, options = {}) {
   const { maxIterations = 1000, tolerance = 1e-6 } = options;
 
   let solutionVector = [];
@@ -57,6 +58,29 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
     solutionVector = jacobiSolverResult.solutionVector;
     converged = jacobiSolverResult.converged;
     iterations = jacobiSolverResult.iterations;
+  } else if (solverMethod === "conjugate-gradient-webgpu") {
+    // Use WebGPU-accelerated Conjugate Gradient method
+    const initialGuess = new Array(residualVector.length).fill(0);
+    
+    // Use higher precision tolerance for conjugate gradient
+    const cgTolerance = Math.min(tolerance, 1e-9);
+    
+    const cgResult = await conjugateGradientWebGPU(jacobianMatrix, residualVector, initialGuess, {
+      maxIterations,
+      tolerance: cgTolerance,
+      enablePrecision: true,
+    });
+
+    // Log convergence information
+    if (cgResult.converged) {
+      debugLog(`WebGPU Conjugate Gradient method converged in ${cgResult.iterations} iterations with residual norm ${cgResult.residualNorm.toExponential(6)}`);
+    } else {
+      debugLog(`WebGPU Conjugate Gradient method did not converge after ${cgResult.iterations} iterations. Final residual norm: ${cgResult.residualNorm.toExponential(6)}`);
+    }
+
+    solutionVector = cgResult.solutionVector;
+    converged = cgResult.converged;
+    iterations = cgResult.iterations;
   } else {
     errorLog(`Unknown solver method: ${solverMethod}`);
   }

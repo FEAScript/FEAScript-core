@@ -24,7 +24,7 @@ import { calculateSystemSize } from "../utilities/helperFunctionsScript.js";
  *  - converged: Boolean indicating whether the method converged
  */
 
-export function newtonRaphson(assembleMat, context, maxIterations = 100, tolerance = 1e-4) {
+export async function newtonRaphson(assembleMat, context, maxIterations = 100, tolerance = 1e-4) {
   let errorNorm = 0;
   let converged = false;
   let iterations = 0;
@@ -63,7 +63,7 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
     ));
 
     // Solve the linear system based on the specified solver method
-    const linearSystemResult = solveLinearSystem(context.solverMethod, jacobianMatrix, residualVector);
+    const linearSystemResult = await solveLinearSystem(context.solverMethod, jacobianMatrix, residualVector);
     deltaX = linearSystemResult.solutionVector;
 
     // Check convergence

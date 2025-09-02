@@ -51,7 +51,7 @@ export class FEAScriptModel {
     debugLog(`Solver method set to: ${solverMethod}`);
   }
 
-  solve() {
+  async solve() {
     if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
       const error = "Solver config, mesh config, and boundary conditions must be set before solving.";
       console.error(error);
@@ -77,7 +77,7 @@ export class FEAScriptModel {
       ));
 
       // Solve the assembled linear system
-      const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
+      const linearSystemResult = await solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
       solutionVector = linearSystemResult.solutionVector;
     } else if (this.solverConfig === "frontPropagationScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
@@ -103,7 +103,7 @@ export class FEAScriptModel {
           context.initialSolution = [...solutionVector];
         }
 
-        const newtonRaphsonResult = newtonRaphson(assembleFrontPropagationMat, context, 100, 1e-4);
+        const newtonRaphsonResult = await newtonRaphson(assembleFrontPropagationMat, context, 100, 1e-4);
 
         // Extract results
         jacobianMatrix = newtonRaphsonResult.jacobianMatrix;
