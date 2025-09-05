@@ -6,7 +6,7 @@
 
 [FEAScript](https://feascript.com/) is a lightweight finite element simulation library built in JavaScript. It empowers users to create and execute simulations for physics and engineering applications in both browser-based and server-side environments. This is the core library of FEAScript.
 
-> 🚧 **FEAScript is currently under heavy development.** Functionality and interfaces may change rapidly as new features and enhancements are introduced. 🚧
+> 🚧 **FEAScript is currently under heavy development.** Functionality and interfaces may change rapidly as new features and enhancements are introduced.
 
 ## Contents
 
@@ -14,9 +14,10 @@
 - [JavaScript API](#javascript-api)
   - [Use FEAScript in the Browser](#use-feascript-in-the-browser)
   - [Use FEAScript with Node.js](#use-feascript-with-nodejs)
-  - [Use FEAScript with Online Notebooks](#use-feascript-with-online-notebooks)
+  - [Use FEAScript with Scribbler](#use-feascript-with-scribbler)
 - [Visual Editor (FEAScript Platform)](#visual-editor-feascript-platform)
 - [Quick Example](#quick-example)
+- [Support FEAScript](#support-feascript)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -35,7 +36,7 @@ The JavaScript API is the core programmatic interface for FEAScript. Written ent
 
 1. **[In the browser](#use-feascript-in-the-browser)** – Use FEAScript in a simple HTML page where simulations run locally without installations or cloud services.
 2. **[With Node.js](#use-feascript-with-nodejs)** – Use FEAScript in server-side JavaScript applications or CLI tools.
-3. **[With Online Notebooks](#use-feascript-with-online-notebooks)** – Try FEAScript in interactive JavaScript notebook environments with built-in visualization, such as [Scribbler](https://scribbler.live/).
+3. **[With Scribbler](#use-feascript-with-scribbler)** – Use FEAScript in the [Scribbler](https://scribbler.live/) interactive JavaScript notebook environment.
 
 ### Use FEAScript in the Browser
 
@@ -86,7 +87,7 @@ When running examples from within this repository, this step is not needed as th
 
 👉 Explore various Node.js examples and use cases [here](https://github.com/FEAScript/FEAScript-core/tree/main/examples).
 
-### Use FEAScript with Online Notebooks
+### Use FEAScript with Scribbler
 
 FEAScript works well in interactive JavaScript notebook environments, where you can write code, visualize results inline, and share your work with others. [Scribbler](https://scribbler.live/) is one such platform that comes with preloaded scientific libraries, making it an excellent choice for FEAScript simulations.
 
@@ -113,7 +114,7 @@ Here is a minimal browser-based example using the JavaScript API. Adapt paths, s
     // Import FEAScript library
     import { FEAScriptModel } from "https://core.feascript.com/dist/feascript.esm.js";
 
-    window.addEventListener("DOMContentLoaded", async () => {
+    window.addEventListener("DOMContentLoaded", () => {
       // Create a new FEAScript model
       const model = new FEAScriptModel();
 
@@ -146,6 +147,16 @@ Here is a minimal browser-based example using the JavaScript API. Adapt paths, s
 - "solverType" should be replaced with an actual solver type such as "solidHeatTransferScript" for heat conduction problems
 - "conditionType" should be replaced with an actual boundary condition type such as "constantTemp"
 - "boundaryIndex" should be replaced with a string identifying the boundary
+
+## Support FEAScript
+
+> 💖 **If you find FEAScript useful, please consider supporting its development through a donation:**
+
+<a href="https://liberapay.com/FEAScript/donate">
+  <img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg">
+</a>
+
+Your support helps ensure the continued development and maintenance of this project.
 
 ## Contributing
 

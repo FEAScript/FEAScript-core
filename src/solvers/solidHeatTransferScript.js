@@ -39,6 +39,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
   } = meshConfig;
 
   // Create a new instance of the Mesh class
+  // TODO: The mesh generation step should be moved outside of the assembleSolidHeatTransferMat function
   debugLog("Generating mesh...");
   let mesh;
   if (meshDimension === "1D") {
