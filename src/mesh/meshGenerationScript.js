@@ -118,7 +118,7 @@ export class Mesh {
 
         this.parsedMesh.nodalNumbering = mappedNodalNumbering;
       } else if (this.parsedMesh.elementTypes[2]) {
-        debugLog("Element type is neither triangle nor quad; mapping for this type is not implemented yet.");
+        errorLog("Element type is neither triangle nor quad; mapping for this type is not implemented yet.");
       }
 
       debugLog(

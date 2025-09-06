@@ -14,7 +14,7 @@ import { NumericalIntegration } from "../methods/numericalIntegrationScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**
- * Prepares the mesh for finite element analysis
+ * Function to prepare the mesh for finite element analysis
  * @param {object} meshConfig - Object containing computational mesh details
  * @returns {object} An object containing all mesh-related data
  */
@@ -74,7 +74,7 @@ export function prepareMesh(meshConfig) {
 }
 
 /**
- * Initializes the FEA matrices and numerical tools
+ * Function to initialize the FEA matrices and numerical tools
  * @param {object} meshData - Object containing mesh data from prepareMesh()
  * @returns {object} An object containing initialized matrices and numerical tools
  */
@@ -127,7 +127,7 @@ export function initializeFEA(meshData) {
 }
 
 /**
- * Performs isoparametric mapping for 1D elements
+ * Function to perform isoparametric mapping for 1D elements
  * @param {object} params - Parameters for the mapping
  * @returns {object} An object containing the mapped data
  */
@@ -158,7 +158,7 @@ export function performIsoparametricMapping1D(params) {
 }
 
 /**
- * Performs isoparametric mapping for 2D elements
+ * Function to perform isoparametric mapping for 2D elements
  * @param {object} params - Parameters for the mapping
  * @returns {object} An object containing the mapped data
  */
