@@ -12,7 +12,6 @@
 import { euclideanNorm } from "../methods/euclideanNormScript.js";
 import { solveLinearSystem } from "./linearSystemSolverScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
-import { calculateSystemSize } from "../utilities/helperFunctionsScript.js";
 
 /**
  * Function to solve a system of nonlinear equations using the Newton-Raphson method
@@ -34,8 +33,8 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
   let residualVector = [];
   let nodesCoordinates = {};
 
-  // Calculate system size directly from meshConfig
-  let totalNodes = calculateSystemSize(context.meshConfig);
+  // Calculate system size from meshData instead of meshConfig
+  let totalNodes = context.meshData.nodesXCoordinates.length;
 
   // Initialize arrays with proper size
   for (let i = 0; i < totalNodes; i++) {
@@ -56,7 +55,7 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
 
     // Compute Jacobian and residual matrices
     ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleMat(
-      context.meshConfig,
+      context.meshData,
       context.boundaryConditions,
       solutionVector, // The solution vector is required in the case of a non-linear equation
       context.eikonalActivationFlag

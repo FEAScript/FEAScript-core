@@ -20,17 +20,17 @@ import { basicLog, debugLog } from "../utilities/loggingScript.js";
 
 /**
  * Function to assemble the front propagation matrix
- * @param {object} meshConfig - Object containing computational mesh details
+ * @param {object} meshData - Object containing prepared mesh data
  * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
  * @param {array} solutionVector - The solution vector for non-linear equations
- * @param {number} eikonalActivationFlag - Activation parameter for the eikonal equation (ranges from 0 to 1)
- * @returns {object} An object containing:
+ * @param {number} eikonalActivationFlag - Activation parameter for the eikonal equation
+ * @returns {object}  An object containing:
  *  - jacobianMatrix: The assembled Jacobian matrix
  *  - residualVector: The assembled residual vector
  *  - nodesCoordinates: Object containing x and y coordinates of nodes
  */
 export function assembleFrontPropagationMat(
-  meshConfig,
+  meshData,
   boundaryConditions,
   solutionVector,
   eikonalActivationFlag
@@ -43,10 +43,16 @@ export function assembleFrontPropagationMat(
   basicLog(`eikonalViscousTerm: ${eikonalViscousTerm}`);
   basicLog(`eikonalActivationFlag: ${eikonalActivationFlag}`);
 
-  // Prepare the mesh
-  const meshData = prepareMesh(meshConfig);
-  const { nodesXCoordinates, nodesYCoordinates, nop, boundaryElements, totalElements, meshDimension } =
-    meshData;
+  // Extract mesh data
+  const {
+    nodesXCoordinates,
+    nodesYCoordinates,
+    nop,
+    boundaryElements,
+    totalElements,
+    meshDimension,
+    elementOrder,
+  } = meshData;
 
   // Initialize FEA components
   const feaData = initializeFEA(meshData);

@@ -11,6 +11,7 @@
 // Internal imports
 import { newtonRaphson } from "./methods/newtonRaphsonScript.js";
 import { solveLinearSystem } from "./methods/linearSystemSolverScript.js";
+import { prepareMesh } from "./mesh/meshUtilsScript.js";
 import { assembleFrontPropagationMat } from "./solvers/frontPropagationScript.js";
 import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
@@ -63,8 +64,13 @@ export class FEAScriptModel {
     let solutionVector = [];
     let initialSolution = [];
     let nodesCoordinates = {};
-    let eikonalExteralIterations = 5; // Number of incremental steps to gradually activate the eikonal term - Used in frontPropagationScript
+    let eikonalExteralIterations = 5; // Number of incremental steps to gradually activate the eikonal term (used in assembleFrontPropagationMat)
     let newtonRaphsonIterations;
+
+    // Prepare the mesh
+    basicLog("Preparing mesh...");
+    const meshData = prepareMesh(this.meshConfig);
+    basicLog("Mesh preparation completed");
 
     // Select and execute the appropriate solver based on solverConfig
     basicLog("Beginning solving process...");
@@ -72,7 +78,7 @@ export class FEAScriptModel {
     if (this.solverConfig === "solidHeatTransferScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
       ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleSolidHeatTransferMat(
-        this.meshConfig,
+        meshData,
         this.boundaryConditions
       ));
 
@@ -87,7 +93,7 @@ export class FEAScriptModel {
 
       // Create context object with all necessary properties
       const context = {
-        meshConfig: this.meshConfig,
+        meshData: meshData,
         boundaryConditions: this.boundaryConditions,
         eikonalActivationFlag: eikonalActivationFlag,
         solverMethod: this.solverMethod,

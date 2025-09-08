@@ -20,20 +20,26 @@ import { basicLog, debugLog } from "../utilities/loggingScript.js";
 
 /**
  * Function to assemble the solid heat transfer matrix
- * @param {object} meshConfig - Object containing computational mesh details
+ * @param {object} meshData - Object containing prepared mesh data
  * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
  * @returns {object} An object containing:
  *  - jacobianMatrix: The assembled Jacobian matrix
  *  - residualVector: The assembled residual vector
  *  - nodesCoordinates: Object containing x and y coordinates of nodes
  */
-export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
+export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
   basicLog("Starting solid heat transfer matrix assembly...");
 
-  // Prepare the mesh
-  const meshData = prepareMesh(meshConfig);
-  const { nodesXCoordinates, nodesYCoordinates, nop, boundaryElements, totalElements, meshDimension } =
-    meshData;
+  // Extract mesh data
+  const {
+    nodesXCoordinates,
+    nodesYCoordinates,
+    nop,
+    boundaryElements,
+    totalElements,
+    meshDimension,
+    elementOrder,
+  } = meshData;
 
   // Initialize FEA components
   const feaData = initializeFEA(meshData);
