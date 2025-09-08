@@ -144,7 +144,7 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
     boundaryElements,
     nop,
     meshDimension,
-    meshData.elementOrder
+    elementOrder
   );
 
   // Impose Convection boundary conditions

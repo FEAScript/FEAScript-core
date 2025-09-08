@@ -152,7 +152,7 @@ export function assembleFrontPropagationMat(
           for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
             let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
 
-            // residualVector - Viscous term: Add diffusion contribution to stabilize the solution
+            // residualVector: Viscous term contribution (to stabilize the solution)
             residualVector[localToGlobalMap1] +=
               eikonalViscousTerm *
                 gaussWeights[gaussPointIndex1] *
@@ -167,7 +167,7 @@ export function assembleFrontPropagationMat(
                 basisFunctionDerivY[localNodeIndex1] *
                 solutionDerivY;
 
-            // residualVector - Eikonal term: Add the eikonal equation contribution
+            // residualVector: Eikonal equation contribution
             if (eikonalActivationFlag !== 0) {
               residualVector[localToGlobalMap1] +=
                 eikonalActivationFlag *
@@ -185,7 +185,7 @@ export function assembleFrontPropagationMat(
             for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
               let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
 
-              // jacobianMatrix - Viscous term: Add the Jacobian contribution from the diffusion term
+              // jacobianMatrix: Viscous term contribution
               jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
                 -eikonalViscousTerm *
                 gaussWeights[gaussPointIndex1] *
@@ -194,7 +194,7 @@ export function assembleFrontPropagationMat(
                 (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] +
                   basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
 
-              // jacobianMatrix - Eikonal term: Add the Jacobian contribution from the eikonal equation
+              // jacobianMatrix: Eikonal equation contribution
               if (eikonalActivationFlag !== 0) {
                 jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
                   eikonalActivationFlag *
@@ -229,7 +229,7 @@ export function assembleFrontPropagationMat(
     boundaryElements,
     nop,
     meshDimension,
-    meshData.elementOrder
+    elementOrder
   );
 
   // Impose ConstantValue boundary conditions
