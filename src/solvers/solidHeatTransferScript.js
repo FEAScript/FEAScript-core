@@ -14,7 +14,7 @@ import {
   initializeFEA,
   performIsoparametricMapping1D,
   performIsoparametricMapping2D,
-} from "../mesh/meshUtils.js";
+} from "../mesh/meshUtilsScript.js";
 import { ThermalBoundaryConditions } from "./thermalBoundaryConditionsScript.js";
 import { basicLog, debugLog } from "../utilities/loggingScript.js";
 
