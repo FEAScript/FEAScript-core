@@ -10,7 +10,6 @@
 
 // Internal imports
 import {
-  prepareMesh,
   initializeFEA,
   performIsoparametricMapping1D,
   performIsoparametricMapping2D,
@@ -42,7 +41,7 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
   } = meshData;
 
   // Initialize FEA components
-  const feaData = initializeFEA(meshData);
+  const FEAData = initializeFEA(meshData);
   const {
     residualVector,
     jacobianMatrix,
@@ -51,7 +50,7 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
     gaussPoints,
     gaussWeights,
     numNodes,
-  } = feaData;
+  } = FEAData;
 
   // Matrix assembly
   for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {

@@ -11,7 +11,6 @@
 // Internal imports
 import { GenericBoundaryConditions } from "./genericBoundaryConditionsScript.js";
 import {
-  prepareMesh,
   initializeFEA,
   performIsoparametricMapping1D,
   performIsoparametricMapping2D,
@@ -55,7 +54,7 @@ export function assembleFrontPropagationMat(
   } = meshData;
 
   // Initialize FEA components
-  const feaData = initializeFEA(meshData);
+  const FEAData = initializeFEA(meshData);
   const {
     residualVector,
     jacobianMatrix,
@@ -64,7 +63,7 @@ export function assembleFrontPropagationMat(
     gaussPoints,
     gaussWeights,
     numNodes,
-  } = feaData;
+  } = FEAData;
 
   // Matrix assembly
   for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {

@@ -1,3 +1,13 @@
+import {
+  prepareMesh,
+  initializeFEA,
+  performIsoparametricMapping1D,
+  performIsoparametricMapping2D,
+} from "../mesh/meshUtilsScript.js";
+import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
+import { ThermalBoundaryConditions } from "../solvers/thermalBoundaryConditionsScript.js";
+import { basicLog, debugLog } from "../utilities/loggingScript.js";
+
 // Constants
 const nemax = 1600;
 const nnmax = 6724;
@@ -58,6 +68,9 @@ const fb1 = {
   qq: Array(nmax).fill(0),
   ecpiv: Array(2000000).fill(0),
 };
+
+// Instantiate shared basis functions handler (biquadratic 2D)
+const basisFunctionsLib = new BasisFunctions({ meshDimension: "2D", elementOrder: "quadratic" });
 
 // Main program logic
 function main() {
@@ -176,61 +189,13 @@ function xycoord() {
   }
 }
 
-// Basis functions
-function tsfun(x, y) {
-  const tsfn = {
-    phi: Array(9).fill(0),
-    phic: Array(9).fill(0),
-    phie: Array(9).fill(0),
-  };
-
-  const l1 = (c) => 2 * c * c - 3 * c + 1;
-  const l2 = (c) => -4 * c * c + 4 * c;
-  const l3 = (c) => 2 * c * c - c;
-  const dl1 = (c) => 4 * c - 3;
-  const dl2 = (c) => -8 * c + 4;
-  const dl3 = (c) => 4 * c - 1;
-
-  tsfn.phi[0] = l1(x) * l1(y);
-  tsfn.phi[1] = l1(x) * l2(y);
-  tsfn.phi[2] = l1(x) * l3(y);
-  tsfn.phi[3] = l2(x) * l1(y);
-  tsfn.phi[4] = l2(x) * l2(y);
-  tsfn.phi[5] = l2(x) * l3(y);
-  tsfn.phi[6] = l3(x) * l1(y);
-  tsfn.phi[7] = l3(x) * l2(y);
-  tsfn.phi[8] = l3(x) * l3(y);
-
-  tsfn.phic[0] = l1(y) * dl1(x);
-  tsfn.phic[1] = l2(y) * dl1(x);
-  tsfn.phic[2] = l3(y) * dl1(x);
-  tsfn.phic[3] = l1(y) * dl2(x);
-  tsfn.phic[4] = l2(y) * dl2(x);
-  tsfn.phic[5] = l3(y) * dl2(x);
-  tsfn.phic[6] = l1(y) * dl3(x);
-  tsfn.phic[7] = l2(y) * dl3(x);
-  tsfn.phic[8] = l3(y) * dl3(x);
-
-  tsfn.phie[0] = l1(x) * dl1(y);
-  tsfn.phie[1] = l1(x) * dl2(y);
-  tsfn.phie[2] = l1(x) * dl3(y);
-  tsfn.phie[3] = l2(x) * dl1(y);
-  tsfn.phie[4] = l2(x) * dl2(y);
-  tsfn.phie[5] = l2(x) * dl3(y);
-  tsfn.phie[6] = l3(x) * dl1(y);
-  tsfn.phie[7] = l3(x) * dl2(y);
-  tsfn.phie[8] = l3(x) * dl3(y);
-
-  return tsfn;
-}
-
 // Element stiffness matrix and residuals
 function abfind() {
   let ngl = Array(9).fill(0);
   let tphx = Array(9).fill(0);
   let tphy = Array(9).fill(0);
 
-  // Initialize stiffness matrix
+  // Zero element matrix
   for (let i = 0; i < 9; i++) {
     for (let j = 0; j < 9; j++) {
       fabf1.estifm[i][j] = 0;
@@ -241,68 +206,75 @@ function abfind() {
     ngl[i] = Math.abs(block1.nop[fabf1.nell - 1][i]);
   }
 
+  // 3x3 Gauss integration (uses existing gauss.gp in [0,1])
   for (let j = 0; j < 3; j++) {
     for (let k = 0; k < 3; k++) {
-      let ts = tsfun(gauss.gp[j], gauss.gp[k]);
-      let x1 = 0,
-        x2 = 0,
-        y1 = 0,
-        y2 = 0;
+      const { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta } =
+        basisFunctionsLib.getBasisFunctions(gauss.gp[j], gauss.gp[k]);
+
+      const localToGlobalMap = ngl.map((g) => g - 1);
+
+      const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = performIsoparametricMapping2D({
+        basisFunction,
+        basisFunctionDerivKsi,
+        basisFunctionDerivEta,
+        nodesXCoordinates: block1.xpt,
+        nodesYCoordinates: block1.ypt,
+        localToGlobalMap,
+        numNodes: 9,
+      });
 
       for (let n = 0; n < 9; n++) {
-        x1 += block1.xpt[ngl[n] - 1] * ts.phic[n];
-        x2 += block1.xpt[ngl[n] - 1] * ts.phie[n];
-        y1 += block1.ypt[ngl[n] - 1] * ts.phic[n];
-        y2 += block1.ypt[ngl[n] - 1] * ts.phie[n];
-      }
-
-      let dett = x1 * y2 - x2 * y1;
-
-      for (let i = 0; i < 9; i++) {
-        tphx[i] = (y2 * ts.phic[i] - y1 * ts.phie[i]) / dett;
-        tphy[i] = (x1 * ts.phie[i] - x2 * ts.phic[i]) / dett;
+        tphx[n] = basisFunctionDerivX[n];
+        tphy[n] = basisFunctionDerivY[n];
       }
 
       for (let l = 0; l < 9; l++) {
         for (let m = 0; m < 9; m++) {
-          fabf1.estifm[l][m] -= gauss.w[j] * gauss.w[k] * dett * (tphx[l] * tphx[m] + tphy[l] * tphy[m]);
+          fabf1.estifm[l][m] -=
+            gauss.w[j] * gauss.w[k] * detJacobian * (tphx[l] * tphx[m] + tphy[l] * tphy[m]);
         }
       }
     }
   }
 
+  // Natural boundary contributions (top / lateral)
   if (block1.ntop[fabf1.nell - 1] !== 1 && block1.nlat[fabf1.nell - 1] !== 1) return;
 
   if (block1.ntop[fabf1.nell - 1] === 1) {
-    for (let k1 = 0; k1 < 3; k1++) {
-      let ts = tsfun(gauss.gp[k1], 1);
-      let x = 0,
-        x1 = 0;
+    // eta = 1 edge
+    for (let gpi = 0; gpi < 3; gpi++) {
+      const { basisFunction, basisFunctionDerivKsi } = basisFunctionsLib.getBasisFunctions(gauss.gp[gpi], 1);
 
+      let x = 0,
+        dx_dksi = 0;
       for (let n = 0; n < 9; n++) {
-        x += block1.xpt[ngl[n] - 1] * ts.phi[n];
-        x1 += block1.xpt[ngl[n] - 1] * ts.phic[n];
+        x += block1.xpt[ngl[n] - 1] * basisFunction[n];
+        dx_dksi += block1.xpt[ngl[n] - 1] * basisFunctionDerivKsi[n];
       }
 
-      for (let k11 of [2, 5, 8]) {
-        block1.r1[ngl[k11] - 1] -= gauss.w[k1] * x1 * ts.phi[k11] * x;
+      // Nodes on top edge in local (quadratic) ordering: 2,5,8
+      for (let idx of [2, 5, 8]) {
+        block1.r1[ngl[idx] - 1] -= gauss.w[gpi] * dx_dksi * basisFunction[idx] * x;
       }
     }
   }
 
   if (block1.nlat[fabf1.nell - 1] === 1) {
-    for (let k2 = 0; k2 < 3; k2++) {
-      let ts = tsfun(1, gauss.gp[k2]);
-      let y = 0,
-        y2 = 0;
+    // ksi = 1 edge
+    for (let gpi = 0; gpi < 3; gpi++) {
+      const { basisFunction, basisFunctionDerivEta } = basisFunctionsLib.getBasisFunctions(1, gauss.gp[gpi]);
 
+      let y = 0,
+        dy_deta = 0;
       for (let n = 0; n < 9; n++) {
-        y += block1.ypt[ngl[n] - 1] * ts.phi[n];
-        y2 += block1.ypt[ngl[n] - 1] * ts.phie[n];
+        y += block1.ypt[ngl[n] - 1] * basisFunction[n];
+        dy_deta += block1.ypt[ngl[n] - 1] * basisFunctionDerivEta[n];
       }
 
-      for (let k21 of [6, 7, 8]) {
-        block1.r1[ngl[k21] - 1] -= gauss.w[k2] * y2 * ts.phi[k21] * y;
+      // Nodes on right edge in local (quadratic) ordering: 6,7,8
+      for (let idx of [6, 7, 8]) {
+        block1.r1[ngl[idx] - 1] -= gauss.w[gpi] * dy_deta * basisFunction[idx] * y;
       }
     }
   }
