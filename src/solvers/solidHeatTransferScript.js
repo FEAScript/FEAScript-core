@@ -179,3 +179,94 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
     },
   };
 }
+
+// Frontal solver element assembly
+export function assembleSolidHeatTransferFront({
+  elementIndex,
+  nop,
+  xCoordinates,
+  yCoordinates,
+  basisFunctions,
+  gaussPoints,
+  gaussWeights,
+  ntopFlag = false,
+  nlatFlag = false,
+}) {
+  const numNodes = 9; // biquadratic 2D
+  const estifm = Array(numNodes)
+    .fill()
+    .map(() => Array(numNodes).fill(0));
+  const localLoad = Array(numNodes).fill(0);
+
+  // Global node numbers (1-based in nop)
+  const ngl = Array(numNodes);
+  for (let i = 0; i < numNodes; i++) ngl[i] = Math.abs(nop[elementIndex][i]);
+
+  // Volume (conductive) contribution
+  for (let j = 0; j < gaussPoints.length; j++) {
+    for (let k = 0; k < gaussPoints.length; k++) {
+      const { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta } =
+        basisFunctions.getBasisFunctions(gaussPoints[j], gaussPoints[k]);
+
+      const localToGlobalMap = ngl.map((g) => g - 1);
+
+      const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = performIsoparametricMapping2D({
+        basisFunction,
+        basisFunctionDerivKsi,
+        basisFunctionDerivEta,
+        nodesXCoordinates: xCoordinates,
+        nodesYCoordinates: yCoordinates,
+        localToGlobalMap,
+        numNodes,
+      });
+
+      for (let a = 0; a < numNodes; a++) {
+        for (let b = 0; b < numNodes; b++) {
+          estifm[a][b] -=
+            gaussWeights[j] *
+            gaussWeights[k] *
+            detJacobian *
+            (basisFunctionDerivX[a] * basisFunctionDerivX[b] +
+              basisFunctionDerivY[a] * basisFunctionDerivY[b]);
+        }
+      }
+    }
+  }
+
+  // Legacy natural boundary terms (top edge eta=1; right edge ksi=1) kept as in original frontal version
+  if (ntopFlag) {
+    for (let gp = 0; gp < gaussPoints.length; gp++) {
+      const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(gaussPoints[gp], 1);
+      let x = 0,
+        dx_dksi = 0;
+      for (let n = 0; n < numNodes; n++) {
+        const g = ngl[n] - 1;
+        x += xCoordinates[g] * basisFunction[n];
+        dx_dksi += xCoordinates[g] * basisFunctionDerivKsi[n];
+      }
+      // Local nodes on top edge: 2,5,8
+      for (const idx of [2, 5, 8]) {
+        localLoad[idx] -= gaussWeights[gp] * dx_dksi * basisFunction[idx] * x;
+      }
+    }
+  }
+
+  if (nlatFlag) {
+    for (let gp = 0; gp < gaussPoints.length; gp++) {
+      const { basisFunction, basisFunctionDerivEta } = basisFunctions.getBasisFunctions(1, gaussPoints[gp]);
+      let y = 0,
+        dy_deta = 0;
+      for (let n = 0; n < numNodes; n++) {
+        const g = ngl[n] - 1;
+        y += yCoordinates[g] * basisFunction[n];
+        dy_deta += yCoordinates[g] * basisFunctionDerivEta[n];
+      }
+      // Local nodes on right edge: 6,7,8
+      for (const idx of [6, 7, 8]) {
+        localLoad[idx] -= gaussWeights[gp] * dy_deta * basisFunction[idx] * y;
+      }
+    }
+  }
+
+  return { estifm, localLoad, ngl };
+}

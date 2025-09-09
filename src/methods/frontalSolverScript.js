@@ -1,12 +1,15 @@
-import {
-  prepareMesh,
-  initializeFEA,
-  performIsoparametricMapping1D,
-  performIsoparametricMapping2D,
-} from "../mesh/meshUtilsScript.js";
+//   ______ ______           _____           _       _     //
+//  |  ____|  ____|   /\    / ____|         (_)     | |    //
+//  | |__  | |__     /  \  | (___   ___ ____ _ ____ | |_   //
+//  |  __| |  __|   / /\ \  \___ \ / __|  __| |  _ \| __|  //
+//  | |    | |____ / ____ \ ____) | (__| |  | | |_) | |    //
+//  |_|    |______/_/    \_\_____/ \___|_|  |_|  __/| |    //
+//                                            | |   | |    //
+//                                            |_|   | |_   //
+//       Website: https://feascript.com/             \__|  //
+
 import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
-import { ThermalBoundaryConditions } from "../solvers/thermalBoundaryConditionsScript.js";
-import { basicLog, debugLog } from "../utilities/loggingScript.js";
+import { assembleSolidHeatTransferFront } from "../solvers/solidHeatTransferScript.js";
 
 // Constants
 const nemax = 1600;
@@ -189,94 +192,33 @@ function xycoord() {
   }
 }
 
-// Element stiffness matrix and residuals
+// Element stiffness matrix and residuals (delegated to external assembly function)
 function abfind() {
-  let ngl = Array(9).fill(0);
-  let tphx = Array(9).fill(0);
-  let tphy = Array(9).fill(0);
+  const elementIndex = fabf1.nell - 1;
 
-  // Zero element matrix
+  const { estifm, localLoad, ngl } = assembleSolidHeatTransferFront({
+    elementIndex,
+    nop: block1.nop,
+    xCoordinates: block1.xpt,
+    yCoordinates: block1.ypt,
+    basisFunctions: basisFunctionsLib,
+    gaussPoints: gauss.gp,
+    gaussWeights: gauss.w,
+    ntopFlag: block1.ntop[elementIndex] === 1,
+    nlatFlag: block1.nlat[elementIndex] === 1,
+  });
+
+  // Copy element matrix
   for (let i = 0; i < 9; i++) {
     for (let j = 0; j < 9; j++) {
-      fabf1.estifm[i][j] = 0;
+      fabf1.estifm[i][j] = estifm[i][j];
     }
   }
 
-  for (let i = 0; i < 9; i++) {
-    ngl[i] = Math.abs(block1.nop[fabf1.nell - 1][i]);
-  }
-
-  // 3x3 Gauss integration (uses existing gauss.gp in [0,1])
-  for (let j = 0; j < 3; j++) {
-    for (let k = 0; k < 3; k++) {
-      const { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta } =
-        basisFunctionsLib.getBasisFunctions(gauss.gp[j], gauss.gp[k]);
-
-      const localToGlobalMap = ngl.map((g) => g - 1);
-
-      const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = performIsoparametricMapping2D({
-        basisFunction,
-        basisFunctionDerivKsi,
-        basisFunctionDerivEta,
-        nodesXCoordinates: block1.xpt,
-        nodesYCoordinates: block1.ypt,
-        localToGlobalMap,
-        numNodes: 9,
-      });
-
-      for (let n = 0; n < 9; n++) {
-        tphx[n] = basisFunctionDerivX[n];
-        tphy[n] = basisFunctionDerivY[n];
-      }
-
-      for (let l = 0; l < 9; l++) {
-        for (let m = 0; m < 9; m++) {
-          fabf1.estifm[l][m] -=
-            gauss.w[j] * gauss.w[k] * detJacobian * (tphx[l] * tphx[m] + tphy[l] * tphy[m]);
-        }
-      }
-    }
-  }
-
-  // Natural boundary contributions (top / lateral)
-  if (block1.ntop[fabf1.nell - 1] !== 1 && block1.nlat[fabf1.nell - 1] !== 1) return;
-
-  if (block1.ntop[fabf1.nell - 1] === 1) {
-    // eta = 1 edge
-    for (let gpi = 0; gpi < 3; gpi++) {
-      const { basisFunction, basisFunctionDerivKsi } = basisFunctionsLib.getBasisFunctions(gauss.gp[gpi], 1);
-
-      let x = 0,
-        dx_dksi = 0;
-      for (let n = 0; n < 9; n++) {
-        x += block1.xpt[ngl[n] - 1] * basisFunction[n];
-        dx_dksi += block1.xpt[ngl[n] - 1] * basisFunctionDerivKsi[n];
-      }
-
-      // Nodes on top edge in local (quadratic) ordering: 2,5,8
-      for (let idx of [2, 5, 8]) {
-        block1.r1[ngl[idx] - 1] -= gauss.w[gpi] * dx_dksi * basisFunction[idx] * x;
-      }
-    }
-  }
-
-  if (block1.nlat[fabf1.nell - 1] === 1) {
-    // ksi = 1 edge
-    for (let gpi = 0; gpi < 3; gpi++) {
-      const { basisFunction, basisFunctionDerivEta } = basisFunctionsLib.getBasisFunctions(1, gauss.gp[gpi]);
-
-      let y = 0,
-        dy_deta = 0;
-      for (let n = 0; n < 9; n++) {
-        y += block1.ypt[ngl[n] - 1] * basisFunction[n];
-        dy_deta += block1.ypt[ngl[n] - 1] * basisFunctionDerivEta[n];
-      }
-
-      // Nodes on right edge in local (quadratic) ordering: 6,7,8
-      for (let idx of [6, 7, 8]) {
-        block1.r1[ngl[idx] - 1] -= gauss.w[gpi] * dy_deta * basisFunction[idx] * y;
-      }
-    }
+  // Accumulate local load into global RHS
+  for (let a = 0; a < 9; a++) {
+    const g = ngl[a] - 1;
+    block1.r1[g] += localLoad[a];
   }
 }
 
