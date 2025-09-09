@@ -11,7 +11,7 @@
 ## Contents
 
 - [Ways to Use FEAScript](#ways-to-use-feascript)
-- [JavaScript API](#javascript-api)
+- [JavaScript API (FEAScript Core)](#javascript-api-feascript-core)
   - [Use FEAScript in the Browser](#use-feascript-in-the-browser)
   - [Use FEAScript with Node.js](#use-feascript-with-nodejs)
   - [Use FEAScript with Scribbler](#use-feascript-with-scribbler)
@@ -25,12 +25,12 @@
 
 FEAScript offers two main approaches to creating simulations:
 
-1. **[JavaScript API](#javascript-api)** – For developers comfortable with coding, providing full programmatic control in browsers, Node.js, or interactive notebooks.
+1. **[JavaScript API (FEAScript Core)](#javascript-api-feascript-core)** – For developers comfortable with coding, providing full programmatic control in browsers, Node.js, or interactive notebooks.
 2. **[Visual Editor (FEAScript Platform)](#visual-editor-feascript-platform)** – For users who prefer a no-code approach, offering a block-based visual interface built with [Blockly](https://developers.google.com/blockly).
 
 Each approach is explained in detail below.
 
-## JavaScript API
+## JavaScript API (FEAScript Core)
 
 The JavaScript API is the core programmatic interface for FEAScript. Written entirely in pure JavaScript, it runs in three environments:
 
