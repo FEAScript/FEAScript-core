@@ -5,9 +5,9 @@
 [![npm version](https://img.shields.io/npm/v/feascript)](https://www.npmjs.com/package/feascript) 
 <!-- [![liberapay](https://img.shields.io/liberapay/receives/FEAScript.svg?logo=liberapay)](https://liberapay.com/FEAScript/) -->
 
-[FEAScript](https://feascript.com/) is a lightweight finite element simulation library built in JavaScript. It empowers users to create and execute simulations for physics and engineering applications in both browser-based and server-side environments. This is the core library of FEAScript.
+[FEAScript](https://feascript.com/) is a lightweight finite element simulation library built in JavaScript. It empowers users to create and execute simulations for physics and engineering applications in both browser-based and server-side environments. This is the core library of the FEAScript project.
 
-> 🚧 **FEAScript is currently under heavy development.** Functionality and interfaces may change rapidly as new features and enhancements are introduced.
+> 🚧 **FEAScript is currently under heavy development.** Its functionality and interfaces may change rapidly as new features and enhancements are introduced.
 
 ## Contents
 
@@ -35,7 +35,7 @@ Each approach is explained in detail below.
 
 The JavaScript API is the core programmatic interface for FEAScript. Written entirely in pure JavaScript, it runs in three environments:
 
-1. **[In the browser](#use-feascript-in-the-browser)** – Use FEAScript in a simple HTML page where simulations run locally without installations or cloud services.
+1. **[In the browser](#use-feascript-in-the-browser)** – Use FEAScript in a simple HTML page, running simulations locally without additional installations or cloud services.
 2. **[With Node.js](#use-feascript-with-nodejs)** – Use FEAScript in server-side JavaScript applications or CLI tools.
 3. **[With Scribbler](#use-feascript-with-scribbler)** – Use FEAScript in the [Scribbler](https://scribbler.live/) interactive JavaScript notebook environment.
 
@@ -61,11 +61,11 @@ You can use FEAScript in browser environments in two ways:
   </script>
   ```
 
-👉 Explore various browser-based examples and use cases on our [website](https://feascript.com/#tutorials).
+👉 Explore browser-based tutorials on our [website](https://feascript.com/#tutorials).
 
 #### Use FEAScript with Node.js
 
-Install FEAScript and its peer dependencies from npm:
+Install FEAScript and its peer dependencies from npm as follows:
 
 ```bash
 npm install feascript mathjs plotly.js
@@ -84,25 +84,27 @@ import { FEAScriptModel } from "feascript";
 echo '{"type":"module"}' > package.json
 ```
 
-When running examples from within this repository, this step is not needed as the root package.json already has the proper configuration.
+When running examples from within this repository, this step isn’t needed as the root package.json already has the proper configuration.
 
-👉 Explore various Node.js examples and use cases [here](https://github.com/FEAScript/FEAScript-core/tree/main/examples).
+👉 Explore Node.js use cases on the [examples directory](https://github.com/FEAScript/FEAScript-core/tree/main/examples).
 
 #### Use FEAScript with Scribbler
 
-FEAScript works well in interactive JavaScript notebook environments, where you can write code, visualize results inline, and share your work with others. [Scribbler](https://scribbler.live/) is one such platform that comes with preloaded scientific libraries, making it an excellent choice for FEAScript simulations.
+FEAScript also works well in interactive JavaScript notebook environments where you can write code, visualize results inline, and share your work with others. [Scribbler](https://scribbler.live/) is one such platform that comes with preloaded scientific libraries, making it an excellent choice for FEAScript simulations.
 
-👉 Explore various FEAScript examples on [Scribbler Hub](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples).
+👉 Explore FEAScript notebook examples on the [Scribbler Hub](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples).
 
 ### Visual Editor (FEAScript Platform)
 
-For users who prefer a visual approach to creating simulations, we offer the [FEAScript platform](https://platform.feascript.com/) - a browser-based visual editor built on the [Blockly](https://developers.google.com/blockly) library. This no-code interface allows you to:
+For users who prefer a visual approach to creating simulations, we offer the [FEAScript Platform](https://platform.feascript.com/) - a browser-based visual editor built on the [Blockly](https://developers.google.com/blockly) library. This no-code interface allows you to:
 
-- Build and run finite element simulations directly in your browser by connecting visual blocks
+- Build and run finite element simulations directly in your browser by connecting visual blocks together
 - Create complex simulations without writing any JavaScript code
 - Save and load projects in XML format for easy sharing and reuse
 
-While FEAScript's JavaScript API offers full programmatic control for advanced customization, the FEAScript platform provides an accessible entry point for users without coding experience.
+While FEAScript's JavaScript API offers full programmatic control for advanced customization, the FEAScript Platform provides an accessible entry point for users without coding experience.
+
+👉 Explore various FEAScript Platform examples on our [website](https://feascript.com/#tutorials).
 
 ## Quick Example
 
@@ -124,8 +126,8 @@ Here is a minimal browser-based example using the JavaScript API. Adapt paths, s
 
       // Configure the mesh
       model.setMeshConfig({
-        meshDimension: "1D", // Choose either: "1D" or "2D"
-        elementOrder: "linear", // Choose either: "linear" or "quadratic"
+        meshDimension: "1D", // Choose either "1D" or "2D"
+        elementOrder: "linear", // Choose either "linear" or "quadratic"
         numElementsX: 10, // Number of elements in x-direction
         numElementsY: 6, // Number of elements in y-direction (for 2D only)
         maxX: 1.0, // Domain length in x-direction
@@ -139,7 +141,7 @@ Here is a minimal browser-based example using the JavaScript API. Adapt paths, s
       const { solutionVector, nodesCoordinates } = model.solve();
     });
   </script>
-  <!-- ...continue of body region... -->
+  <!-- ...rest of body region... -->
 </body>
 ```
 
