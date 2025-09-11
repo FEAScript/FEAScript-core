@@ -8,6 +8,7 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
+// Internal imports
 import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
 import { assembleSolidHeatTransferFront } from "../solvers/solidHeatTransferScript.js";
 

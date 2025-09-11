@@ -31,7 +31,6 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
   let solutionVector = [];
   let jacobianMatrix = [];
   let residualVector = [];
-  let nodesCoordinates = {};
 
   // Calculate system size from meshData instead of meshConfig
   let totalNodes = context.meshData.nodesXCoordinates.length;
@@ -54,11 +53,11 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
     }
 
     // Compute Jacobian and residual matrices
-    ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleMat(
+    ({ jacobianMatrix, residualVector } = assembleMat(
       context.meshData,
       context.boundaryConditions,
       solutionVector, // The solution vector is required in the case of a non-linear equation
-      context.eikonalActivationFlag
+      context.eikonalActivationFlag // Currently used only in the front propagation solver (TODO refactor in case of a solver not needing it)
     ));
 
     // Solve the linear system based on the specified solver method
@@ -87,6 +86,5 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
     iterations,
     jacobianMatrix,
     residualVector,
-    nodesCoordinates,
   };
 }

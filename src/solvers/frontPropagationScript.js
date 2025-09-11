@@ -26,7 +26,6 @@ import { basicLog, debugLog } from "../utilities/loggingScript.js";
  * @returns {object}  An object containing:
  *  - jacobianMatrix: The assembled Jacobian matrix
  *  - residualVector: The assembled residual vector
- *  - nodesCoordinates: Object containing x and y coordinates of nodes
  */
 export function assembleFrontPropagationMat(
   meshData,
@@ -246,9 +245,5 @@ export function assembleFrontPropagationMat(
   return {
     jacobianMatrix,
     residualVector,
-    nodesCoordinates: {
-      nodesXCoordinates,
-      nodesYCoordinates,
-    },
   };
 }
