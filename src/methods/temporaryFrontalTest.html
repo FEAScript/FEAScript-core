@@ -3,11 +3,32 @@
   <head>
     <meta charset="utf-8" />
     <title>Frontal Solver Test (External Assembly)</title>
+    <!-- Plotly & Math.js needed by plotSolution -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/5.0.0/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+    <style>
+      #solutionPlot { width: 640px; height: 480px; }
+    </style>
   </head>
   <body>
     <p>Running frontal solver with external heat transfer element assembly...</p>
+    <div id="solutionPlot"></div>
     <script type="module">
-      import "./frontalSolverScript.js";
+      import { runFrontalSolver } from "./frontalSolverScript.js";
+      import { plotSolution } from "../visualization/plotSolutionScript.js";
+
+      const { solutionVector, nodesCoordinates } = runFrontalSolver();
+
+      // Plot as 2D contour (structured mesh)
+      plotSolution(
+        solutionVector,
+        nodesCoordinates,
+        "solidHeatTransferScript",
+        "2D",
+        "contour",
+        "solutionPlot",
+        "structured"
+      );
     </script>
   </body>
 </html>

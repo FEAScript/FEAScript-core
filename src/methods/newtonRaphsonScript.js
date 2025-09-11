@@ -14,7 +14,7 @@ import { solveLinearSystem } from "./linearSystemSolverScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**
- * Function to solve a system of nonlinear equations using the Newton-Raphson method
+ * Function to solve a system of non-linear equations using the Newton-Raphson method
  * @param {number} [maxIterations=100] - Maximum number of iterations
  * @param {number} [tolerance=1e-4] - Convergence tolerance
  * @returns {object} An object containing:

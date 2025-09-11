@@ -18,7 +18,7 @@ import {
 import { basicLog, debugLog } from "../utilities/loggingScript.js";
 
 /**
- * Function to assemble the front propagation matrix
+ * Function to assemble the Jacobian matrix and residuals vector for the front propagation model
  * @param {object} meshData - Object containing prepared mesh data
  * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
  * @param {array} solutionVector - The solution vector for non-linear equations

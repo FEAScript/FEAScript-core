@@ -614,4 +614,16 @@ function bacsub(ice) {
 }
 
 // Run the program
-main();
+// main();
+
+// Add an exported wrapper to obtain results for plotting
+export function runFrontalSolver() {
+  main();
+  return {
+    solutionVector: block1.u.slice(0, block1.np),
+    nodesCoordinates: {
+      nodesXCoordinates: block1.xpt.slice(0, block1.np),
+      nodesYCoordinates: block1.ypt.slice(0, block1.np),
+    },
+  };
+}

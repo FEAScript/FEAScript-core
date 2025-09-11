@@ -37,7 +37,7 @@ export class ThermalBoundaryConditions {
    * @param {array} jacobianMatrix - The Jacobian matrix to be modified
    */
   imposeConstantTempBoundaryConditions(residualVector, jacobianMatrix) {
-    basicLog("Applying constant temperature boundary conditions (Dirichlet type)");
+    basicLog("Applying constant temperature boundary conditions");
     if (this.meshDimension === "1D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
         if (this.boundaryConditions[boundaryKey][0] === "constantTemp") {
@@ -172,7 +172,7 @@ export class ThermalBoundaryConditions {
     nodesYCoordinates,
     basisFunctions
   ) {
-    basicLog("Applying convection boundary conditions (Robin type)");
+    basicLog("Applying convection boundary conditions");
     // Extract convection parameters from boundary conditions
     let convectionHeatTranfCoeff = [];
     let convectionExtTemp = [];

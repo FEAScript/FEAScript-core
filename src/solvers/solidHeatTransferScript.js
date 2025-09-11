@@ -18,13 +18,12 @@ import { ThermalBoundaryConditions } from "./thermalBoundaryConditionsScript.js"
 import { basicLog, debugLog } from "../utilities/loggingScript.js";
 
 /**
- * Function to assemble the solid heat transfer matrix
+ * Function to assemble the Jacobian matrix and residuals vector for the solid heat transfer model
  * @param {object} meshData - Object containing prepared mesh data
  * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
  * @returns {object} An object containing:
  *  - jacobianMatrix: The assembled Jacobian matrix
  *  - residualVector: The assembled residual vector
- *  - nodesCoordinates: Object containing x and y coordinates of nodes
  */
 export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
   basicLog("Starting solid heat transfer matrix assembly...");
@@ -173,14 +172,12 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
   return {
     jacobianMatrix,
     residualVector,
-    nodesCoordinates: {
-      nodesXCoordinates,
-      nodesYCoordinates,
-    },
   };
 }
 
-// Frontal solver element assembly
+/**
+ * Function to assemble the local Jacobian matrix and residuals vector for the solid heat transfer model when using the frontal system solver
+ */
 export function assembleSolidHeatTransferFront({
   elementIndex,
   nop,
