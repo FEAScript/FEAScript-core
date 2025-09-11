@@ -12,11 +12,11 @@
 ## Contents
 
 - [Ways to Use FEAScript](#ways-to-use-feascript)
-- [JavaScript API (FEAScript Core)](#javascript-api-feascript-core)
-  - [Use FEAScript in the Browser](#use-feascript-in-the-browser)
-  - [Use FEAScript with Node.js](#use-feascript-with-nodejs)
-  - [Use FEAScript with Scribbler](#use-feascript-with-scribbler)
-- [Visual Editor (FEAScript Platform)](#visual-editor-feascript-platform)
+  - [JavaScript API (FEAScript Core)](#javascript-api-feascript-core)
+    - [Use FEAScript in the Browser](#use-feascript-in-the-browser)
+    - [Use FEAScript with Node.js](#use-feascript-with-nodejs)
+    - [Use FEAScript with Scribbler](#use-feascript-with-scribbler)
+  - [Visual Editor (FEAScript Platform)](#visual-editor-feascript-platform)
 - [Quick Example](#quick-example)
 - [Support FEAScript](#support-feascript)
 - [Contributing](#contributing)
@@ -31,7 +31,7 @@ FEAScript offers two main approaches to creating simulations:
 
 Each approach is explained in detail below.
 
-## JavaScript API (FEAScript Core)
+### JavaScript API (FEAScript Core)
 
 The JavaScript API is the core programmatic interface for FEAScript. Written entirely in pure JavaScript, it runs in three environments:
 
@@ -39,7 +39,7 @@ The JavaScript API is the core programmatic interface for FEAScript. Written ent
 2. **[With Node.js](#use-feascript-with-nodejs)** – Use FEAScript in server-side JavaScript applications or CLI tools.
 3. **[With Scribbler](#use-feascript-with-scribbler)** – Use FEAScript in the [Scribbler](https://scribbler.live/) interactive JavaScript notebook environment.
 
-### Use FEAScript in the Browser
+#### Use FEAScript in the Browser
 
 You can use FEAScript in browser environments in two ways:
 
@@ -63,7 +63,7 @@ You can use FEAScript in browser environments in two ways:
 
 👉 Explore various browser-based examples and use cases on our [website](https://feascript.com/#tutorials).
 
-### Use FEAScript with Node.js
+#### Use FEAScript with Node.js
 
 Install FEAScript and its peer dependencies from npm:
 
@@ -88,13 +88,13 @@ When running examples from within this repository, this step is not needed as th
 
 👉 Explore various Node.js examples and use cases [here](https://github.com/FEAScript/FEAScript-core/tree/main/examples).
 
-### Use FEAScript with Scribbler
+#### Use FEAScript with Scribbler
 
 FEAScript works well in interactive JavaScript notebook environments, where you can write code, visualize results inline, and share your work with others. [Scribbler](https://scribbler.live/) is one such platform that comes with preloaded scientific libraries, making it an excellent choice for FEAScript simulations.
 
 👉 Explore various FEAScript examples on [Scribbler Hub](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples).
 
-## Visual Editor (FEAScript Platform)
+### Visual Editor (FEAScript Platform)
 
 For users who prefer a visual approach to creating simulations, we offer the [FEAScript platform](https://platform.feascript.com/) - a browser-based visual editor built on the [Blockly](https://developers.google.com/blockly) library. This no-code interface allows you to:
 
