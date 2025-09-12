@@ -9,9 +9,9 @@
 //       Website: https://feascript.com/             \__|  //
 
 // Import required Node.js modules
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // Import Math.js
 import * as math from "mathjs";
@@ -20,14 +20,14 @@ global.math = math;
 // Import FEAScript library
 import { FEAScriptModel, importGmshQuadTri, logSystem, VERSION } from "feascript";
 
-console.log('FEAScript Version:', VERSION);
+console.log("FEAScript Version:", VERSION);
 
 // Get directory name for the current file
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Read the mesh file
-const meshFilePath = path.join(__dirname, 'rect_quad_unstruct.msh');
-const meshContent = fs.readFileSync(meshFilePath, 'utf8');
+const meshFilePath = path.join(__dirname, "rect_quad_unstruct.msh");
+const meshContent = fs.readFileSync(meshFilePath, "utf8");
 
 async function main() {
   // Create a new FEAScript model
@@ -39,7 +39,7 @@ async function main() {
   // Create a mock File object for Node.js environment
   const mockFile = {
     text: async () => meshContent,
-    name: 'rect_quad_unstruct.msh'
+    name: "rect_quad_unstruct.msh",
   };
 
   // Parse the mesh data
@@ -62,9 +62,9 @@ async function main() {
   const { solutionVector, nodesCoordinates } = model.solve();
 
   // Print results to console
-  console.log("Solution vector:", solutionVector);
-  console.log("Node coordinates:", nodesCoordinates);
   console.log(`Number of nodes in mesh: ${nodesCoordinates.nodesXCoordinates.length}`);
+  console.log("Node coordinates:", nodesCoordinates);
+  console.log("Solution vector:", solutionVector);
 }
 
 // Run the main function

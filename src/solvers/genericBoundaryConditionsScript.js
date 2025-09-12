@@ -40,7 +40,7 @@ export class GenericBoundaryConditions {
    * @param {array} jacobianMatrix - The Jacobian matrix to be modified
    */
   imposeConstantValueBoundaryConditions(residualVector, jacobianMatrix) {
-    basicLog("Applying constant value boundary conditions (Dirichlet type)");
+    basicLog("Applying constant value boundary conditions");
     if (this.meshDimension === "1D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
         if (this.boundaryConditions[boundaryKey][0] === "constantValue") {

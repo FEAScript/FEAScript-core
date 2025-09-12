@@ -9,127 +9,51 @@
 //       Website: https://feascript.com/             \__|  //
 
 // Internal imports
-import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
-import { Mesh1D, Mesh2D } from "../mesh/meshGenerationScript.js";
-import { NumericalIntegration } from "../methods/numericalIntegrationScript.js";
+import {
+  initializeFEA,
+  performIsoparametricMapping1D,
+  performIsoparametricMapping2D,
+} from "../mesh/meshUtilsScript.js";
 import { ThermalBoundaryConditions } from "./thermalBoundaryConditionsScript.js";
-import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+import { basicLog, debugLog } from "../utilities/loggingScript.js";
 
 /**
- * Function to assemble the solid heat transfer matrix
- * @param {object} meshConfig - Object containing computational mesh details
+ * Function to assemble the Jacobian matrix and residuals vector for the solid heat transfer model
+ * @param {object} meshData - Object containing prepared mesh data
  * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
  * @returns {object} An object containing:
  *  - jacobianMatrix: The assembled Jacobian matrix
  *  - residualVector: The assembled residual vector
- *  - nodesCoordinates: Object containing x and y coordinates of nodes
  */
-export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
+export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
   basicLog("Starting solid heat transfer matrix assembly...");
 
-  // Extract mesh details from the configuration object
+  // Extract mesh data
   const {
-    meshDimension, // The dimension of the mesh
-    numElementsX, // Number of elements in x-direction
-    numElementsY, // Number of elements in y-direction (only for 2D)
-    maxX, // Max x-coordinate (m) of the domain
-    maxY, // Max y-coordinate (m) of the domain (only for 2D)
-    elementOrder, // The order of elements
-    parsedMesh, // The pre-parsed mesh data (if available)
-  } = meshConfig;
-
-  // Create a new instance of the Mesh class
-  debugLog("Generating mesh...");
-  let mesh;
-  if (meshDimension === "1D") {
-    mesh = new Mesh1D({ numElementsX, maxX, elementOrder, parsedMesh });
-  } else if (meshDimension === "2D") {
-    mesh = new Mesh2D({ numElementsX, maxX, numElementsY, maxY, elementOrder, parsedMesh });
-  } else {
-    errorLog("Mesh dimension must be either '1D' or '2D'.");
-  }
-
-  // Use the parsed mesh in case it was already passed with Gmsh format
-  const nodesCoordinatesAndNumbering = mesh.boundaryElementsProcessed ? mesh.parsedMesh : mesh.generateMesh();
-
-  // Extract nodes coordinates and nodal numbering (NOP) from the mesh data
-  let nodesXCoordinates = nodesCoordinatesAndNumbering.nodesXCoordinates;
-  let nodesYCoordinates = nodesCoordinatesAndNumbering.nodesYCoordinates;
-  let totalNodesX = nodesCoordinatesAndNumbering.totalNodesX;
-  let totalNodesY = nodesCoordinatesAndNumbering.totalNodesY;
-  let nop = nodesCoordinatesAndNumbering.nodalNumbering;
-  let boundaryElements = nodesCoordinatesAndNumbering.boundaryElements;
-
-  // Check the mesh type
-  const isParsedMesh = parsedMesh !== undefined && parsedMesh !== null;
-
-  // Calculate totalElements and totalNodes based on mesh type
-  let totalElements, totalNodes;
-
-  if (isParsedMesh) {
-    totalElements = nop.length; // Number of elements is the length of the nodal numbering array
-    totalNodes = nodesXCoordinates.length; // Number of nodes is the length of the coordinates array
-
-    // Debug log for mesh size
-    debugLog(`Using parsed mesh with ${totalElements} elements and ${totalNodes} nodes`);
-  } else {
-    // For structured mesh, calculate based on dimensions
-    totalElements = numElementsX * (meshDimension === "2D" ? numElementsY : 1);
-    totalNodes = totalNodesX * (meshDimension === "2D" ? totalNodesY : 1);
-    // Debug log for mesh size
-    debugLog(`Using mesh generated from geometry with ${totalElements} elements and ${totalNodes} nodes`);
-  }
-
-  // Initialize variables for matrix assembly
-  let localToGlobalMap = []; // Maps local element node indices to global mesh node indices
-  let gaussPoints = []; // Gauss points
-  let gaussWeights = []; // Gauss weights
-  let basisFunction = []; // Basis functions
-  let basisFunctionDerivKsi = []; // Derivatives of basis functions with respect to ksi
-  let basisFunctionDerivEta = []; // Derivatives of basis functions with respect to eta (only for 2D)
-  let basisFunctionDerivX = []; // The x-derivative of the basis function
-  let basisFunctionDerivY = []; // The y-derivative of the basis function (only for 2D)
-  let residualVector = []; // Galerkin residuals
-  let jacobianMatrix = []; // Jacobian matrix
-  let xCoordinates; // x-coordinate (physical coordinates)
-  let yCoordinates; // y-coordinate (physical coordinates) (only for 2D)
-  let ksiDerivX; // ksi-derivative of xCoordinates
-  let etaDerivX; // eta-derivative of xCoordinates (ksi and eta are natural coordinates that vary within a reference element) (only for 2D)
-  let ksiDerivY; // ksi-derivative of yCoordinates (only for 2D)
-  let etaDerivY; // eta-derivative of yCoordinates (only for 2D)
-  let detJacobian; // The Jacobian of the isoparametric mapping
-
-  // Initialize jacobianMatrix and residualVector arrays
-  for (let nodeIndex = 0; nodeIndex < totalNodes; nodeIndex++) {
-    residualVector[nodeIndex] = 0;
-    jacobianMatrix.push([]);
-    for (let colIndex = 0; colIndex < totalNodes; colIndex++) {
-      jacobianMatrix[nodeIndex][colIndex] = 0;
-    }
-  }
-
-  // Initialize the BasisFunctions class
-  const basisFunctions = new BasisFunctions({
+    nodesXCoordinates,
+    nodesYCoordinates,
+    nop,
+    boundaryElements,
+    totalElements,
     meshDimension,
     elementOrder,
-  });
+  } = meshData;
 
-  // Initialize the NumericalIntegration class
-  const numericalIntegration = new NumericalIntegration({
-    meshDimension,
-    elementOrder,
-  });
-
-  // Calculate Gauss points and weights
-  let gaussPointsAndWeights = numericalIntegration.getGaussPointsAndWeights();
-  gaussPoints = gaussPointsAndWeights.gaussPoints;
-  gaussWeights = gaussPointsAndWeights.gaussWeights;
-
-  // Determine the number of nodes in the reference element based on the first element in the nop array
-  const numNodes = nop[0].length;
+  // Initialize FEA components
+  const FEAData = initializeFEA(meshData);
+  const {
+    residualVector,
+    jacobianMatrix,
+    localToGlobalMap,
+    basisFunctions,
+    gaussPoints,
+    gaussWeights,
+    numNodes,
+  } = FEAData;
 
   // Matrix assembly
   for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {
+    // Map local element nodes to global mesh nodes
     for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
       // Subtract 1 from nop in order to start numbering from 0
       localToGlobalMap[localNodeIndex] = nop[elementIndex][localNodeIndex] - 1;
@@ -139,24 +63,20 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
       // 1D solid heat transfer
       if (meshDimension === "1D") {
+        // Get basis functions for the current Gauss point
         let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoints[gaussPointIndex1]);
-        basisFunction = basisFunctionsAndDerivatives.basisFunction;
-        basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
-        xCoordinates = 0;
-        ksiDerivX = 0;
 
-        // Isoparametric mapping
-        for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
-          xCoordinates += nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunction[localNodeIndex];
-          ksiDerivX +=
-            nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
-        }
-        detJacobian = ksiDerivX;
+        // Perform isoparametric mapping
+        const mappingResult = performIsoparametricMapping1D({
+          basisFunction: basisFunctionsAndDerivatives.basisFunction,
+          basisFunctionDerivKsi: basisFunctionsAndDerivatives.basisFunctionDerivKsi,
+          nodesXCoordinates,
+          localToGlobalMap,
+          numNodes,
+        });
 
-        // Compute x-derivative of basis functions
-        for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
-          basisFunctionDerivX[localNodeIndex] = basisFunctionDerivKsi[localNodeIndex] / detJacobian; // The x-derivative of the n basis function
-        }
+        // Extract mapping results
+        const { detJacobian, basisFunctionDerivX } = mappingResult;
 
         // Computation of Galerkin's residuals and Jacobian matrix
         for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
@@ -171,54 +91,29 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
               (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2]);
           }
         }
-        // 2D solid heat transfer
-      } else if (meshDimension === "2D") {
+      }
+      // 2D solid heat transfer
+      else if (meshDimension === "2D") {
         for (let gaussPointIndex2 = 0; gaussPointIndex2 < gaussPoints.length; gaussPointIndex2++) {
-          // Initialise variables for isoparametric mapping
+          // Get basis functions for the current Gauss point
           let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
             gaussPoints[gaussPointIndex1],
             gaussPoints[gaussPointIndex2]
           );
-          basisFunction = basisFunctionsAndDerivatives.basisFunction;
-          basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
-          basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
-          xCoordinates = 0;
-          yCoordinates = 0;
-          ksiDerivX = 0;
-          etaDerivX = 0;
-          ksiDerivY = 0;
-          etaDerivY = 0;
 
-          // Isoparametric mapping
-          for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
-            xCoordinates +=
-              nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunction[localNodeIndex];
-            yCoordinates +=
-              nodesYCoordinates[localToGlobalMap[localNodeIndex]] * basisFunction[localNodeIndex];
-            ksiDerivX +=
-              nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
-            etaDerivX +=
-              nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivEta[localNodeIndex];
-            ksiDerivY +=
-              nodesYCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
-            etaDerivY +=
-              nodesYCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivEta[localNodeIndex];
-          }
-          detJacobian = ksiDerivX * etaDerivY - etaDerivX * ksiDerivY;
+          // Perform isoparametric mapping
+          const mappingResult = performIsoparametricMapping2D({
+            basisFunction: basisFunctionsAndDerivatives.basisFunction,
+            basisFunctionDerivKsi: basisFunctionsAndDerivatives.basisFunctionDerivKsi,
+            basisFunctionDerivEta: basisFunctionsAndDerivatives.basisFunctionDerivEta,
+            nodesXCoordinates,
+            nodesYCoordinates,
+            localToGlobalMap,
+            numNodes,
+          });
 
-          // Compute x-derivative and y-derivative of basis functions
-          for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
-            // The x-derivative of the n basis function
-            basisFunctionDerivX[localNodeIndex] =
-              (etaDerivY * basisFunctionDerivKsi[localNodeIndex] -
-                ksiDerivY * basisFunctionDerivEta[localNodeIndex]) /
-              detJacobian;
-            // The y-derivative of the n basis function
-            basisFunctionDerivY[localNodeIndex] =
-              (ksiDerivX * basisFunctionDerivEta[localNodeIndex] -
-                etaDerivX * basisFunctionDerivKsi[localNodeIndex]) /
-              detJacobian;
-          }
+          // Extract mapping results
+          const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = mappingResult;
 
           // Computation of Galerkin's residuals and Jacobian matrix
           for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
@@ -240,7 +135,7 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
     }
   }
 
-  // Create an instance of ThermalBoundaryConditions
+  // Apply boundary conditions
   basicLog("Applying thermal boundary conditions...");
   const thermalBoundaryConditions = new ThermalBoundaryConditions(
     boundaryConditions,
@@ -266,14 +161,110 @@ export function assembleSolidHeatTransferMat(meshConfig, boundaryConditions) {
   thermalBoundaryConditions.imposeConstantTempBoundaryConditions(residualVector, jacobianMatrix);
   basicLog("Constant temperature boundary conditions applied");
 
+  // Print all residuals in debug mode
+  debugLog("Residuals at each node:");
+  for (let i = 0; i < residualVector.length; i++) {
+    debugLog(`Node ${i}: ${residualVector[i].toExponential(6)}`);
+  }
+
   basicLog("Solid heat transfer matrix assembly completed");
 
   return {
     jacobianMatrix,
     residualVector,
-    nodesCoordinates: {
-      nodesXCoordinates,
-      nodesYCoordinates,
-    },
   };
+}
+
+/**
+ * Function to assemble the local Jacobian matrix and residuals vector for the solid heat transfer model when using the frontal system solver
+ */
+export function assembleSolidHeatTransferFront({
+  elementIndex,
+  nop,
+  xCoordinates,
+  yCoordinates,
+  basisFunctions,
+  gaussPoints,
+  gaussWeights,
+  ntopFlag = false,
+  nlatFlag = false,
+  convectionTop = { active: false, coeff: 0, extTemp: 0 }, // NEW
+}) {
+  const numNodes = 9; // biquadratic 2D
+  const estifm = Array(numNodes)
+    .fill()
+    .map(() => Array(numNodes).fill(0));
+  const localLoad = Array(numNodes).fill(0);
+
+  // Global node numbers (1-based in nop)
+  const ngl = Array(numNodes);
+  for (let i = 0; i < numNodes; i++) ngl[i] = Math.abs(nop[elementIndex][i]);
+
+  // Volume (conductive) contribution
+  for (let j = 0; j < gaussPoints.length; j++) {
+    for (let k = 0; k < gaussPoints.length; k++) {
+      const { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta } =
+        basisFunctions.getBasisFunctions(gaussPoints[j], gaussPoints[k]);
+
+      const localToGlobalMap = ngl.map((g) => g - 1);
+
+      const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = performIsoparametricMapping2D({
+        basisFunction,
+        basisFunctionDerivKsi,
+        basisFunctionDerivEta,
+        nodesXCoordinates: xCoordinates,
+        nodesYCoordinates: yCoordinates,
+        localToGlobalMap,
+        numNodes,
+      });
+
+      for (let a = 0; a < numNodes; a++) {
+        for (let b = 0; b < numNodes; b++) {
+          estifm[a][b] -=
+            gaussWeights[j] *
+            gaussWeights[k] *
+            detJacobian *
+            (basisFunctionDerivX[a] * basisFunctionDerivX[b] +
+              basisFunctionDerivY[a] * basisFunctionDerivY[b]);
+        }
+      }
+    }
+  }
+
+  // Legacy natural boundary terms (top edge eta=1; right edge ksi=1) kept as in original frontal version
+  // Replace previous generic top-edge load term with explicit Robin (convection) if requested
+  if (ntopFlag && convectionTop.active) {
+    const h = convectionTop.coeff;
+    const Text = convectionTop.extTemp;
+    // Integrate along top edge (eta = 1); local top edge nodes: 2,5,8
+    for (let gp = 0; gp < gaussPoints.length; gp++) {
+      const ksi = gaussPoints[gp];
+      const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(ksi, 1);
+
+      // Compute metric (edge length differential) |dx/dksi|
+      let dx_dksi = 0, dy_dksi = 0;
+      const topEdgeLocalNodes = [2, 5, 8];
+      for (let n = 0; n < 9; n++) {
+        const g = nop[elementIndex][n] - 1;
+        dx_dksi += xCoordinates[g] * basisFunctionDerivKsi[n];
+        dy_dksi += yCoordinates[g] * basisFunctionDerivKsi[n];
+      }
+      const ds_dksi = Math.sqrt(dx_dksi * dx_dksi + dy_dksi * dy_dksi);
+
+      // Assemble Robin contributions
+      for (const a of topEdgeLocalNodes) {
+        for (const b of topEdgeLocalNodes) {
+          estifm[a][b] -= gaussWeights[gp] * ds_dksi * h * basisFunction[a] * basisFunction[b];
+        }
+        localLoad[a] -= gaussWeights[gp] * ds_dksi * h * Text * basisFunction[a];
+      }
+    }
+  } else if (ntopFlag && !convectionTop.active) {
+    // If a zero-flux (symmetry) condition were applied on top, do nothing (natural BC)
+    // (Previous placeholder load term removed to avoid unintended flux)
+  }
+
+  // If needed, similar patterned handling could be added for right edge (nlatFlag) later.
+
+  return { estifm, localLoad, ngl };
 }

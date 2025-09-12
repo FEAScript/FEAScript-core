@@ -118,7 +118,7 @@ export class Mesh {
 
         this.parsedMesh.nodalNumbering = mappedNodalNumbering;
       } else if (this.parsedMesh.elementTypes[2]) {
-        debugLog("Element type is neither triangle nor quad; mapping for this type is not implemented yet.");
+        errorLog("Element type is neither triangle nor quad; mapping for this type is not implemented yet.");
       }
 
       debugLog(
@@ -522,11 +522,10 @@ export class Mesh2D extends Mesh {
       parsedMesh,
     });
 
+    // Validate geometry parameters (when not using a parsed mesh)
     if (
-      this.numElementsX === null ||
-      this.maxX === null ||
-      this.numElementsY === null ||
-      this.maxY === null
+      !parsedMesh &&
+      (this.numElementsX === null || this.maxX === null || this.numElementsY === null || this.maxY === null)
     ) {
       errorLog(
         "numElementsX, maxX, numElementsY, and maxY are required parameters when generating a 2D mesh from geometry"
@@ -592,7 +591,7 @@ export class Mesh2D extends Mesh {
       totalNodesY,
       this.elementOrder
     );
-    
+
     // Find boundary elements
     const boundaryElements = this.findBoundaryElements();
 

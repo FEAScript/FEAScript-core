@@ -11,8 +11,10 @@
 // Internal imports
 import { newtonRaphson } from "./methods/newtonRaphsonScript.js";
 import { solveLinearSystem } from "./methods/linearSystemSolverScript.js";
+import { prepareMesh } from "./mesh/meshUtilsScript.js";
 import { assembleFrontPropagationMat } from "./solvers/frontPropagationScript.js";
 import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
+import { runFrontalSolver } from "./methods/frontalSolverScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
 
 /**
@@ -62,32 +64,49 @@ export class FEAScriptModel {
     let residualVector = [];
     let solutionVector = [];
     let initialSolution = [];
-    let nodesCoordinates = {};
-    let eikonalExteralIterations = 5; // Number of incremental steps to gradually activate the eikonal term - Used in frontPropagationScript
-    let newtonRaphsonIterations;
+
+    // Prepare the mesh
+    basicLog("Preparing mesh...");
+    const meshData = prepareMesh(this.meshConfig);
+    basicLog("Mesh preparation completed");
+
+    // Extract node coordinates from meshData
+    const nodesCoordinates = {
+      nodesXCoordinates: meshData.nodesXCoordinates,
+      nodesYCoordinates: meshData.nodesYCoordinates,
+    };
 
     // Select and execute the appropriate solver based on solverConfig
     basicLog("Beginning solving process...");
     console.time("totalSolvingTime");
     if (this.solverConfig === "solidHeatTransferScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
-      ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleSolidHeatTransferMat(
-        this.meshConfig,
-        this.boundaryConditions
-      ));
 
-      // Solve the assembled linear system
-      const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
-      solutionVector = linearSystemResult.solutionVector;
+      // Check if using frontal solver
+      if (this.solverMethod === "frontal") {
+        basicLog(`Using frontal solver method`);
+        // Call frontal solver
+        const frontalResult = runFrontalSolver(this.meshConfig, this.boundaryConditions);
+        solutionVector = frontalResult.solutionVector;
+      } else {
+        // Use regular linear solver methods
+        ({ jacobianMatrix, residualVector } = assembleSolidHeatTransferMat(
+          meshData,
+          this.boundaryConditions
+        ));
+        const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
+        solutionVector = linearSystemResult.solutionVector;
+      }
     } else if (this.solverConfig === "frontPropagationScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
 
       // Initialize eikonalActivationFlag
       let eikonalActivationFlag = 0;
+      const eikonalExteralIterations = 5; // Number of incremental steps for the eikonal equation
 
       // Create context object with all necessary properties
       const context = {
-        meshConfig: this.meshConfig,
+        meshData: meshData,
         boundaryConditions: this.boundaryConditions,
         eikonalActivationFlag: eikonalActivationFlag,
         solverMethod: this.solverMethod,
@@ -103,14 +122,13 @@ export class FEAScriptModel {
           context.initialSolution = [...solutionVector];
         }
 
+        // Solve the assembled non-linear system
         const newtonRaphsonResult = newtonRaphson(assembleFrontPropagationMat, context, 100, 1e-4);
 
         // Extract results
         jacobianMatrix = newtonRaphsonResult.jacobianMatrix;
         residualVector = newtonRaphsonResult.residualVector;
-        nodesCoordinates = newtonRaphsonResult.nodesCoordinates;
         solutionVector = newtonRaphsonResult.solutionVector;
-        newtonRaphsonIterations = newtonRaphsonResult.iterations;
 
         // Increment for next iteration
         eikonalActivationFlag += 1 / eikonalExteralIterations;

@@ -38,7 +38,11 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
 
   if (solverMethod === "lusolve") {
     // Use LU decomposition method
-    solutionVector = math.lusolve(jacobianMatrix, residualVector);
+    const jacobianMatrixSparse = math.sparse(jacobianMatrix);
+    const luFactorization = math.slu(jacobianMatrixSparse, 1, 1); // order=1, threshold=1 for pivoting
+    let solutionMatrix = math.lusolve(luFactorization, residualVector);
+    solutionVector = math.squeeze(solutionMatrix).valueOf();
+    //solutionVector = math.lusolve(jacobianMatrix, residualVector); // In the case of a dense matrix
   } else if (solverMethod === "jacobi") {
     // Use Jacobi method
     const initialGuess = new Array(residualVector.length).fill(0);

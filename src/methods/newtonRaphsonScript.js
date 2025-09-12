@@ -12,10 +12,9 @@
 import { euclideanNorm } from "../methods/euclideanNormScript.js";
 import { solveLinearSystem } from "./linearSystemSolverScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
-import { calculateSystemSize } from "../utilities/helperFunctionsScript.js";
 
 /**
- * Function to solve a system of nonlinear equations using the Newton-Raphson method
+ * Function to solve a system of non-linear equations using the Newton-Raphson method
  * @param {number} [maxIterations=100] - Maximum number of iterations
  * @param {number} [tolerance=1e-4] - Convergence tolerance
  * @returns {object} An object containing:
@@ -32,10 +31,9 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
   let solutionVector = [];
   let jacobianMatrix = [];
   let residualVector = [];
-  let nodesCoordinates = {};
 
-  // Calculate system size directly from meshConfig
-  let totalNodes = calculateSystemSize(context.meshConfig);
+  // Calculate system size from meshData instead of meshConfig
+  let totalNodes = context.meshData.nodesXCoordinates.length;
 
   // Initialize arrays with proper size
   for (let i = 0; i < totalNodes; i++) {
@@ -55,11 +53,11 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
     }
 
     // Compute Jacobian and residual matrices
-    ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleMat(
-      context.meshConfig,
+    ({ jacobianMatrix, residualVector } = assembleMat(
+      context.meshData,
       context.boundaryConditions,
       solutionVector, // The solution vector is required in the case of a non-linear equation
-      context.eikonalActivationFlag
+      context.eikonalActivationFlag // Currently used only in the front propagation solver (TODO refactor in case of a solver not needing it)
     ));
 
     // Solve the linear system based on the specified solver method
@@ -88,6 +86,5 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
     iterations,
     jacobianMatrix,
     residualVector,
-    nodesCoordinates,
   };
 }
