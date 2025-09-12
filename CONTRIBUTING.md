@@ -79,10 +79,16 @@ Thank you for your interest in contributing! FEAScript is in early development, 
 6. **Branching & Workflow:**  
    To contribute a new feature or fix:
 
-   - Do not commit directly to `main` or `dev`.
-   - Instead, start your work in a feature branch based on the `dev` branch.
+   - Do not commit directly to `main`.
+   - Instead, create a short‑lived branch:
+     - `feature/<topic>` for new functionality
+     - `fix/<issue>` for bug fixes
 
-   **If you are not a member of the repository (e.g., an external contributor), you must first [fork the repository](https://docs.github.com/en/get-started/quickstart/fork-a-repo).** Make your changes in your fork, then submit a Pull Request from your fork's feature branch into the `dev` branch.
+   External contributors:
+
+   1. Fork the repo.  
+   2. Branch from `main` in your fork.  
+   3. Push and open a PR from your fork’s branch into `main`.
 
 7. **Local Testing:**  
    Before submitting a pull request, test your modifications by running the FEAScript library from a local directory. For example, you can load the library in your HTML file as follows:
