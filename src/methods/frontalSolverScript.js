@@ -11,6 +11,19 @@
 // Internal imports
 import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
 import { assembleSolidHeatTransferFront } from "../solvers/solidHeatTransferScript.js";
+import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+
+// Add an exported wrapper to obtain results for plotting
+export function runFrontalSolver(meshConfig, boundaryConditions) {
+  main(meshConfig, boundaryConditions);
+  return {
+    solutionVector: block1.u.slice(0, block1.np),
+    nodesCoordinates: {
+      nodesXCoordinates: block1.xpt.slice(0, block1.np),
+      nodesYCoordinates: block1.ypt.slice(0, block1.np),
+    },
+  };
+}
 
 // Constants
 const nemax = 1600;
@@ -77,28 +90,64 @@ const fb1 = {
 const basisFunctionsLib = new BasisFunctions({ meshDimension: "2D", elementOrder: "quadratic" });
 
 // Main program logic
-function main() {
-  console.log("2-D problem. Biquadratic basis functions\n");
-  xydiscr();
+function main(meshConfig, boundaryConditions) {
+  // console.log("2-D problem. Biquadratic basis functions\n");
+
+  xydiscr(meshConfig);
   nodnumb();
   xycoord();
-  console.log(`nex=${block1.nex}  ney=${block1.ney}  ne=${block1.ne}  np=${block1.np}\n`);
+  // console.log(`nex=${block1.nex}  ney=${block1.ney}  ne=${block1.ne}  np=${block1.np}\n`);
 
-  // Prepare essential boundary conditions
+  // Initialize all nodes with no boundary condition
   for (let i = 0; i < block1.np; i++) {
     block1.ncod[i] = 0;
     block1.bc[i] = 0;
   }
 
-  for (let i = 0; i < block1.nny; i++) {
-    block1.ncod[i] = 1;
-    block1.bc[i] = 0;
-  }
+  // Apply boundary conditions based on the boundaryConditions parameter
+  Object.keys(boundaryConditions).forEach((boundaryKey) => {
+    const condition = boundaryConditions[boundaryKey];
 
-  for (let i = 0; i < block1.np; i += block1.nny) {
-    block1.ncod[i] = 1;
-    block1.bc[i] = 0;
-  }
+    // Handle constantTemp (Dirichlet) boundary conditions
+    if (condition[0] === "constantTemp") {
+      const tempValue = boundaryConditions[boundaryKey][1];
+
+      // Apply boundary condition to the appropriate nodes based on boundary key
+      switch (boundaryKey) {
+        case "0": // Bottom boundary (y = yorigin)
+          for (let col = 0; col < block1.nnx; col++) {
+            const nodeIndex = col * block1.nny;
+            block1.ncod[nodeIndex] = 1;
+            block1.bc[nodeIndex] = tempValue;
+          }
+          break;
+
+        case "1": // Right boundary (x = xlast)
+          for (let j = 0; j < block1.nny; j++) {
+            block1.ncod[j] = 1;
+            block1.bc[j] = tempValue;
+          }
+          break;
+
+        case "2": // Top boundary (y = ylast)
+          for (let col = 0; col < block1.nnx; col++) {
+            const nodeIndex = col * block1.nny + (block1.nny - 1);
+            block1.ncod[nodeIndex] = 1;
+            block1.bc[nodeIndex] = tempValue;
+          }
+          break;
+
+        case "3": // Left boundary (x = xorigin)
+          for (let j = 0; j < block1.nny; j++) {
+            const nodeIndex = (block1.nnx - 1) * block1.nny + j;
+            block1.ncod[nodeIndex] = 1;
+            block1.bc[nodeIndex] = tempValue;
+          }
+          break;
+      }
+    }
+    // Other boundary condition types can be handled later if needed
+  });
 
   // Prepare natural boundary conditions
   for (let i = 0; i < block1.ne; i++) {
@@ -106,13 +155,13 @@ function main() {
     block1.nlat[i] = 0;
   }
 
-  for (let i = block1.ney - 1; i < block1.ne; i += block1.ney) {
-    block1.ntop[i] = 1;
-  }
+  // for (let i = block1.ney - 1; i < block1.ne; i += block1.ney) {
+  //   block1.ntop[i] = 1;
+  // }
 
-  for (let i = block1.ne - block1.ney; i < block1.ne; i++) {
-    block1.nlat[i] = 1;
-  }
+  // for (let i = block1.ne - block1.ney; i < block1.ne; i++) {
+  //   block1.nlat[i] = 1;
+  // }
 
   // Initialization
   for (let i = 0; i < block1.np; i++) {
@@ -137,20 +186,23 @@ function main() {
 
   // Output results to console
   for (let i = 0; i < block1.np; i++) {
-    console.log(
+    debugLog(
       `${block1.xpt[i].toExponential(5)}  ${block1.ypt[i].toExponential(5)}  ${block1.u[i].toExponential(5)}`
     );
   }
 }
 
 // Discretization
-function xydiscr() {
-  block1.nex = 12;
-  block1.ney = 8;
+function xydiscr(meshConfig) {
+  // Extract values from meshConfig
+  const { meshDimension, numElementsX, numElementsY, maxX, maxY, elementOrder, parsedMesh } = meshConfig;
+
+  block1.nex = numElementsX;
+  block1.ney = numElementsY;
   block1.xorigin = 0;
   block1.yorigin = 0;
-  block1.xlast = 1;
-  block1.ylast = 1;
+  block1.xlast = maxX;
+  block1.ylast = maxY;
   block1.deltax = (block1.xlast - block1.xorigin) / block1.nex;
   block1.deltay = (block1.ylast - block1.yorigin) / block1.ney;
 }
@@ -332,7 +384,7 @@ function front() {
     }
 
     if (krow > nmax || lcol > nmax) {
-      console.error("Error: nmax-nsum not large enough");
+      errorLog("Error: nmax-nsum not large enough");
       return;
     }
 
@@ -383,7 +435,7 @@ function front() {
 
     if (lc > nsum || fabf1.nell < block1.ne) {
       if (lc === 0) {
-        console.error("Error: no more rows fully summed");
+        errorLog("Error: no more rows fully summed");
         return;
       }
 
@@ -418,7 +470,7 @@ function front() {
       }
 
       if (Math.abs(pivot) < 1e-10) {
-        console.warn(
+        errorLog(
           `Warning: matrix singular or ill-conditioned, nell=${fabf1.nell}, kro=${kro}, lco=${lco}, pivot=${pivot}`
         );
       }
@@ -534,7 +586,7 @@ function front() {
 
       fb1.qq[0] = 1;
       if (Math.abs(pivot) < 1e-10) {
-        console.warn(
+        errorLog(
           `Warning: matrix singular or ill-conditioned, nell=${fabf1.nell}, kro=${kro}, lco=${lco}, pivot=${pivot}`
         );
       }
@@ -560,7 +612,7 @@ function front() {
       ipiv++;
 
       fro1.ice1 = ice;
-      if (fro1.iwr1 === 1) console.log(`total ecs transfer in matrix reduction=${ice}`);
+      if (fro1.iwr1 === 1) debugLog(`total ecs transfer in matrix reduction=${ice}`);
 
       bacsub(ice);
       break;
@@ -611,20 +663,5 @@ function bacsub(ice) {
     block1.ncod[lco - 1] = 1;
   }
 
-  if (fro1.iwr1 === 1) console.log(`value of ice after backsubstitution=${ice}`);
-}
-
-// Run the program
-// main();
-
-// Add an exported wrapper to obtain results for plotting
-export function runFrontalSolver() {
-  main();
-  return {
-    solutionVector: block1.u.slice(0, block1.np),
-    nodesCoordinates: {
-      nodesXCoordinates: block1.xpt.slice(0, block1.np),
-      nodesYCoordinates: block1.ypt.slice(0, block1.np),
-    },
-  };
+  if (fro1.iwr1 === 1) debugLog(`value of ice after backsubstitution=${ice}`);
 }

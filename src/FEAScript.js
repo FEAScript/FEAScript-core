@@ -14,6 +14,7 @@ import { solveLinearSystem } from "./methods/linearSystemSolverScript.js";
 import { prepareMesh } from "./mesh/meshUtilsScript.js";
 import { assembleFrontPropagationMat } from "./solvers/frontPropagationScript.js";
 import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
+import { runFrontalSolver } from "./methods/frontalSolverScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
 
 /**
@@ -80,11 +81,22 @@ export class FEAScriptModel {
     console.time("totalSolvingTime");
     if (this.solverConfig === "solidHeatTransferScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
-      ({ jacobianMatrix, residualVector } = assembleSolidHeatTransferMat(meshData, this.boundaryConditions));
 
-      // Solve the assembled linear system
-      const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
-      solutionVector = linearSystemResult.solutionVector;
+      // Check if using frontal solver
+      if (this.solverMethod === "frontal") {
+        basicLog(`Using frontal solver method`);
+        // Call frontal solver
+        const frontalResult = runFrontalSolver(this.meshConfig, this.boundaryConditions);
+        solutionVector = frontalResult.solutionVector;
+      } else {
+        // Use regular linear solver methods
+        ({ jacobianMatrix, residualVector } = assembleSolidHeatTransferMat(
+          meshData,
+          this.boundaryConditions
+        ));
+        const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
+        solutionVector = linearSystemResult.solutionVector;
+      }
     } else if (this.solverConfig === "frontPropagationScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
 

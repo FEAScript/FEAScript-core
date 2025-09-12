@@ -188,6 +188,7 @@ export function assembleSolidHeatTransferFront({
   gaussWeights,
   ntopFlag = false,
   nlatFlag = false,
+  convectionTop = { active: false, coeff: 0, extTemp: 0 }, // NEW
 }) {
   const numNodes = 9; // biquadratic 2D
   const estifm = Array(numNodes)
@@ -231,39 +232,39 @@ export function assembleSolidHeatTransferFront({
   }
 
   // Legacy natural boundary terms (top edge eta=1; right edge ksi=1) kept as in original frontal version
-  if (ntopFlag) {
+  // Replace previous generic top-edge load term with explicit Robin (convection) if requested
+  if (ntopFlag && convectionTop.active) {
+    const h = convectionTop.coeff;
+    const Text = convectionTop.extTemp;
+    // Integrate along top edge (eta = 1); local top edge nodes: 2,5,8
     for (let gp = 0; gp < gaussPoints.length; gp++) {
-      const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(gaussPoints[gp], 1);
-      let x = 0,
-        dx_dksi = 0;
-      for (let n = 0; n < numNodes; n++) {
-        const g = ngl[n] - 1;
-        x += xCoordinates[g] * basisFunction[n];
+      const ksi = gaussPoints[gp];
+      const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(ksi, 1);
+
+      // Compute metric (edge length differential) |dx/dksi|
+      let dx_dksi = 0, dy_dksi = 0;
+      const topEdgeLocalNodes = [2, 5, 8];
+      for (let n = 0; n < 9; n++) {
+        const g = nop[elementIndex][n] - 1;
         dx_dksi += xCoordinates[g] * basisFunctionDerivKsi[n];
+        dy_dksi += yCoordinates[g] * basisFunctionDerivKsi[n];
       }
-      // Local nodes on top edge: 2,5,8
-      for (const idx of [2, 5, 8]) {
-        localLoad[idx] -= gaussWeights[gp] * dx_dksi * basisFunction[idx] * x;
+      const ds_dksi = Math.sqrt(dx_dksi * dx_dksi + dy_dksi * dy_dksi);
+
+      // Assemble Robin contributions
+      for (const a of topEdgeLocalNodes) {
+        for (const b of topEdgeLocalNodes) {
+          estifm[a][b] -= gaussWeights[gp] * ds_dksi * h * basisFunction[a] * basisFunction[b];
+        }
+        localLoad[a] -= gaussWeights[gp] * ds_dksi * h * Text * basisFunction[a];
       }
     }
+  } else if (ntopFlag && !convectionTop.active) {
+    // If a zero-flux (symmetry) condition were applied on top, do nothing (natural BC)
+    // (Previous placeholder load term removed to avoid unintended flux)
   }
 
-  if (nlatFlag) {
-    for (let gp = 0; gp < gaussPoints.length; gp++) {
-      const { basisFunction, basisFunctionDerivEta } = basisFunctions.getBasisFunctions(1, gaussPoints[gp]);
-      let y = 0,
-        dy_deta = 0;
-      for (let n = 0; n < numNodes; n++) {
-        const g = ngl[n] - 1;
-        y += yCoordinates[g] * basisFunction[n];
-        dy_deta += yCoordinates[g] * basisFunctionDerivEta[n];
-      }
-      // Local nodes on right edge: 6,7,8
-      for (const idx of [6, 7, 8]) {
-        localLoad[idx] -= gaussWeights[gp] * dy_deta * basisFunction[idx] * y;
-      }
-    }
-  }
+  // If needed, similar patterned handling could be added for right edge (nlatFlag) later.
 
   return { estifm, localLoad, ngl };
 }
