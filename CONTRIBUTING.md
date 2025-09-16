@@ -29,7 +29,7 @@ Thank you for your interest in contributing! FEAScript is in early development, 
 
    1. **Banner**: All files start with the FEAScript ASCII art banner.
    2. **Imports**:
-      - External imports (from npm packages) first, alphabetically ordered.
+      - External imports first, alphabetically ordered.
       - Internal imports next, grouped by module/folder.
    3. **Classes/Functions**: Implementation with proper JSDoc comments.
 
