@@ -84,7 +84,7 @@ export class FEAScriptModel {
 
       // Check if using frontal solver
       if (this.solverMethod === "frontal") {
-        const frontalResult = runFrontalSolver(this.meshConfig, this.boundaryConditions);
+        const frontalResult = runFrontalSolver(this.meshConfig, meshData, this.boundaryConditions);
         solutionVector = frontalResult.solutionVector;
       } else {
         // Use regular linear solver methods

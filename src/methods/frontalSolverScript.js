@@ -12,15 +12,17 @@
 import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
 import { assembleSolidHeatTransferFront } from "../solvers/solidHeatTransferScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+import { initializeFEA } from "../mesh/meshUtilsScript.js";
 
 // Add an exported wrapper to obtain results for plotting
-export function runFrontalSolver(meshConfig, boundaryConditions) {
-  main(meshConfig, boundaryConditions);
+export function runFrontalSolver(meshConfig, meshData, boundaryConditions) {
+  main(meshConfig, meshData, boundaryConditions);
+  const { nodesXCoordinates, nodesYCoordinates } = meshData;
   return {
     solutionVector: block1.u.slice(0, block1.np),
     nodesCoordinates: {
-      nodesXCoordinates: block1.xpt.slice(0, block1.np),
-      nodesYCoordinates: block1.ypt.slice(0, block1.np),
+      nodesXCoordinates,
+      nodesYCoordinates,
     },
   };
 }
@@ -57,11 +59,6 @@ const block1 = {
   nlat: Array(nemax).fill(0),
 };
 
-const gauss = {
-  w: [0.27777777777778, 0.444444444444, 0.27777777777778],
-  gp: [0.1127016654, 0.5, 0.8872983346],
-};
-
 const fro1 = {
   iwr1: 0,
   npt: 0,
@@ -90,13 +87,14 @@ const fb1 = {
 const basisFunctionsLib = new BasisFunctions({ meshDimension: "2D", elementOrder: "quadratic" });
 
 // Main program logic
-function main(meshConfig, boundaryConditions) {
+function main(meshConfig, meshData, boundaryConditions) {
   // console.log("2-D problem. Biquadratic basis functions\n");
 
+  // Initialize FEA components
+  const FEAData = initializeFEA(meshData);
+
   xydiscr(meshConfig);
-  nodnumb();
-  xycoord();
-  // console.log(`nex=${block1.nex}  ney=${block1.ney}  ne=${block1.ne}  np=${block1.np}\n`);
+  nodnumb(meshData, FEAData);
 
   // Initialize all nodes with no boundary condition
   for (let i = 0; i < block1.np; i++) {
@@ -146,7 +144,6 @@ function main(meshConfig, boundaryConditions) {
           break;
       }
     }
-    // Other boundary condition types can be handled later if needed
   });
 
   // Prepare natural boundary conditions
@@ -174,20 +171,23 @@ function main(meshConfig, boundaryConditions) {
   fro1.det = 1;
 
   for (let i = 0; i < block1.ne; i++) {
-    fro1.nbn[i] = 9;
+    fro1.nbn[i] = FEAData.numNodes;
   }
 
-  front();
+  front(meshData, FEAData);
 
   // Copy solution
   for (let i = 0; i < block1.np; i++) {
     block1.u[i] = fro1.sk[i];
   }
 
-  // Output results to console
+  // Output results to console for debugging
+  const { nodesXCoordinates, nodesYCoordinates } = meshData;
   for (let i = 0; i < block1.np; i++) {
     debugLog(
-      `${block1.xpt[i].toExponential(5)}  ${block1.ypt[i].toExponential(5)}  ${block1.u[i].toExponential(5)}`
+      `${nodesXCoordinates[i].toExponential(5)}  ${nodesYCoordinates[i].toExponential(5)}  ${block1.u[
+        i
+      ].toExponential(5)}`
     );
   }
 }
@@ -208,77 +208,53 @@ function xydiscr(meshConfig) {
 }
 
 // Nodal numbering
-function nodnumb() {
-  block1.ne = block1.nex * block1.ney;
-  block1.nnx = 2 * block1.nex + 1;
-  block1.nny = 2 * block1.ney + 1;
-  block1.np = block1.nnx * block1.nny;
+function nodnumb(meshData, FEAData) {
+  block1.ne = meshData.totalElements;
+  block1.nnx = meshData.totalNodesX;
+  block1.nny = meshData.totalNodesY;
+  block1.np = meshData.nodesXCoordinates.length;
 
-  let nel = 0;
-  for (let i = 1; i <= block1.nex; i++) {
-    for (let j = 1; j <= block1.ney; j++) {
-      nel++;
-      for (let k = 1; k <= 3; k++) {
-        let l = 3 * k - 2;
-        block1.nop[nel - 1][l - 1] = block1.nny * (2 * i + k - 3) + 2 * j - 1;
-        block1.nop[nel - 1][l] = block1.nop[nel - 1][l - 1] + 1;
-        block1.nop[nel - 1][l + 1] = block1.nop[nel - 1][l - 1] + 2;
-      }
-    }
-  }
-}
-
-// Coordinate setup
-function xycoord() {
-  block1.xpt[0] = block1.xorigin;
-  block1.ypt[0] = block1.yorigin;
-
-  for (let i = 1; i <= block1.nnx; i++) {
-    let nnode = (i - 1) * block1.nny;
-    block1.xpt[nnode] = block1.xpt[0] + ((i - 1) * block1.deltax) / 2;
-    block1.ypt[nnode] = block1.ypt[0];
-
-    for (let j = 2; j <= block1.nny; j++) {
-      block1.xpt[nnode + j - 1] = block1.xpt[nnode];
-      block1.ypt[nnode + j - 1] = block1.ypt[nnode] + ((j - 1) * block1.deltay) / 2;
+  // Copy NOP array into block1 storage
+  for (let e = 0; e < block1.ne; e++) {
+    for (let n = 0; n < FEAData.numNodes; n++) {
+      block1.nop[e][n] = meshData.nop[e][n];
     }
   }
 }
 
 // Element stiffness matrix and residuals (delegated to external assembly function)
-function abfind() {
+function abfind(meshData, FEAData) {
   const elementIndex = fabf1.nell - 1;
+  const { gaussPoints, gaussWeights } = FEAData;
 
   const { estifm, localLoad, ngl } = assembleSolidHeatTransferFront({
     elementIndex,
     nop: block1.nop,
-    xCoordinates: block1.xpt,
-    yCoordinates: block1.ypt,
+    meshData,
     basisFunctions: basisFunctionsLib,
-    gaussPoints: gauss.gp,
-    gaussWeights: gauss.w,
     ntopFlag: block1.ntop[elementIndex] === 1,
     nlatFlag: block1.nlat[elementIndex] === 1,
+    FEAData,
   });
 
   // Copy element matrix
-  for (let i = 0; i < 9; i++) {
-    for (let j = 0; j < 9; j++) {
+  for (let i = 0; i < FEAData.numNodes; i++) {
+    for (let j = 0; j < FEAData.numNodes; j++) {
       fabf1.estifm[i][j] = estifm[i][j];
     }
   }
 
   // Accumulate local load into global RHS
-  for (let a = 0; a < 9; a++) {
+  for (let a = 0; a < FEAData.numNodes; a++) {
     const g = ngl[a] - 1;
     block1.r1[g] += localLoad[a];
   }
 }
 
 // Frontal solver
-function front() {
-  let ldest = Array(9).fill(0);
-  let kdest = Array(9).fill(0);
+function front(meshData, FEAData) {
+  let ldest = Array(FEAData.numNodes).fill(0);
+  let kdest = Array(FEAData.numNodes).fill(0);
   let khed = Array(nmax).fill(0);
   let kpiv = Array(nmax).fill(0);
   let lpiv = Array(nmax).fill(0);
@@ -333,7 +309,7 @@ function front() {
 
   while (true) {
     fabf1.nell++;
-    abfind();
+    abfind(meshData, FEAData);
 
     let n = fabf1.nell;
     let nend = fro1.nbn[n - 1];

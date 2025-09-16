@@ -181,16 +181,16 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
 export function assembleSolidHeatTransferFront({
   elementIndex,
   nop,
-  xCoordinates,
-  yCoordinates,
+  meshData,
   basisFunctions,
-  gaussPoints,
-  gaussWeights,
   ntopFlag = false,
   nlatFlag = false,
-  convectionTop = { active: false, coeff: 0, extTemp: 0 }, // NEW
+  convectionTop = { active: false, coeff: 0, extTemp: 0 },
+  FEAData,
 }) {
-  const numNodes = 9; // biquadratic 2D
+  const { gaussPoints, gaussWeights, numNodes } = FEAData;
+  const { nodesXCoordinates, nodesYCoordinates } = meshData;
+
   const estifm = Array(numNodes)
     .fill()
     .map(() => Array(numNodes).fill(0));
@@ -212,8 +212,8 @@ export function assembleSolidHeatTransferFront({
         basisFunction,
         basisFunctionDerivKsi,
         basisFunctionDerivEta,
-        nodesXCoordinates: xCoordinates,
-        nodesYCoordinates: yCoordinates,
+        nodesXCoordinates,
+        nodesYCoordinates,
         localToGlobalMap,
         numNodes,
       });
@@ -242,12 +242,13 @@ export function assembleSolidHeatTransferFront({
       const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(ksi, 1);
 
       // Compute metric (edge length differential) |dx/dksi|
-      let dx_dksi = 0, dy_dksi = 0;
+      let dx_dksi = 0,
+        dy_dksi = 0;
       const topEdgeLocalNodes = [2, 5, 8];
       for (let n = 0; n < 9; n++) {
         const g = nop[elementIndex][n] - 1;
-        dx_dksi += xCoordinates[g] * basisFunctionDerivKsi[n];
-        dy_dksi += yCoordinates[g] * basisFunctionDerivKsi[n];
+        dx_dksi += nodesXCoordinates[g] * basisFunctionDerivKsi[n];
+        dy_dksi += nodesYCoordinates[g] * basisFunctionDerivKsi[n];
       }
       const ds_dksi = Math.sqrt(dx_dksi * dx_dksi + dy_dksi * dy_dksi);
 
