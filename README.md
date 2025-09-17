@@ -6,7 +6,7 @@
 
 <!-- [![liberapay](https://img.shields.io/liberapay/receives/FEAScript.svg?logo=liberapay)](https://liberapay.com/FEAScript/) -->
 
-[FEAScript](https://feascript.com/) is a lightweight finite element simulation library built in JavaScript. It empowers users to create and execute simulations for physics and engineering applications in both browser-based and server-side environments. This is the core library of the FEAScript project.
+[FEAScript](https://feascript.com/) is a lightweight finite element simulation library written in JavaScript. It empowers users to create and execute simulations for physics and engineering applications in both browser-based and server-side environments. This is the core library of the FEAScript project.
 
 > 🚧 **FEAScript is currently under heavy development.** Its functionality and interfaces may change rapidly as new features and enhancements are introduced.
 

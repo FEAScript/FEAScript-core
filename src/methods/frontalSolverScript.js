@@ -83,7 +83,12 @@ function main(meshConfig, meshData, boundaryConditions) {
     elementOrder: meshConfig.elementOrder,
   });
 
-  nodnumb(meshData, FEAData);
+  // Copy NOP array into block1 storage
+  for (let e = 0; e < meshData.totalElements; e++) {
+    for (let n = 0; n < FEAData.numNodes; n++) {
+      block1.nop[e][n] = meshData.nop[e][n];
+    }
+  }
 
   // Apply boundary conditions
   basicLog("Applying thermal boundary conditions...");
@@ -140,16 +145,6 @@ function main(meshConfig, meshData, boundaryConditions) {
         i
       ].toExponential(5)}`
     );
-  }
-}
-
-// Nodal numbering
-function nodnumb(meshData, FEAData) {
-  // Copy NOP array into block1 storage
-  for (let e = 0; e < meshData.totalElements; e++) {
-    for (let n = 0; n < FEAData.numNodes; n++) {
-      block1.nop[e][n] = meshData.nop[e][n];
-    }
   }
 }
 

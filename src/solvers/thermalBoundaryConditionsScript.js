@@ -555,4 +555,272 @@ export class ThermalBoundaryConditions {
       });
     }
   }
+
+  /**
+   * Function to impose convection boundary conditions for the frontal solver
+   * @param {number} elementIndex - Index of the element being processed
+   * @param {array} nodesXCoordinates - Array of x-coordinates of nodes
+   * @param {array} nodesYCoordinates - Array of y-coordinates of nodes
+   * @param {array} gaussPoints - Array of Gauss points for numerical integration
+   * @param {array} gaussWeights - Array of Gauss weights for numerical integration
+   * @param {object} basisFunctions - Object containing basis functions and their derivatives
+   * @returns {object} An object containing:
+   *  - estifm: Local element stiffness matrix with convection contributions
+   *  - localLoad: Local element load vector with convection contributions
+   */
+  imposeConvectionBoundaryConditionsFrontal(
+    elementIndex,
+    nodesXCoordinates,
+    nodesYCoordinates,
+    gaussPoints,
+    gaussWeights,
+    basisFunctions
+  ) {
+    basicLog("Applying convection boundary conditions for frontal solver");
+    // Extract convection parameters from boundary conditions
+    let convectionHeatTranfCoeff = [];
+    let convectionExtTemp = [];
+    Object.keys(this.boundaryConditions).forEach((key) => {
+      const boundaryCondition = this.boundaryConditions[key];
+      if (boundaryCondition[0] === "convection") {
+        convectionHeatTranfCoeff[key] = boundaryCondition[1];
+        convectionExtTemp[key] = boundaryCondition[2];
+      }
+    });
+
+    // Initialize local stiffness matrix and load vector
+    const numNodes = this.nop[elementIndex].length;
+    const estifm = Array(numNodes)
+      .fill()
+      .map(() => Array(numNodes).fill(0));
+    const localLoad = Array(numNodes).fill(0);
+
+    // Check if this element is on a convection boundary
+    for (const boundaryKey in this.boundaryElements) {
+      if (this.boundaryConditions[boundaryKey]?.[0] === "convection") {
+        const convectionCoeff = convectionHeatTranfCoeff[boundaryKey];
+        const extTemp = convectionExtTemp[boundaryKey];
+        debugLog(
+          `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionCoeff} W/(m²·K) and external temperature T∞=${extTemp} K`
+        );
+
+        // Find if this element is on this boundary and which side
+        const boundaryElement = this.boundaryElements[boundaryKey].find(
+          ([elemIdx, _]) => elemIdx === elementIndex
+        );
+
+        if (boundaryElement) {
+          const side = boundaryElement[1];
+
+          if (this.meshDimension === "1D") {
+            // Handle 1D case
+            let nodeIndex;
+            if (this.elementOrder === "linear") {
+              nodeIndex = side === 0 ? 0 : 1;
+            } else if (this.elementOrder === "quadratic") {
+              nodeIndex = side === 0 ? 0 : 2;
+            }
+
+            // Add contribution to local load vector and stiffness matrix
+            debugLog(
+              `  - Applied convection boundary condition to node ${nodeIndex + 1} (element ${
+                elementIndex + 1
+              }, local node ${nodeIndex + 1})`
+            );
+            localLoad[nodeIndex] += -convectionCoeff * extTemp;
+            estifm[nodeIndex][nodeIndex] += convectionCoeff;
+          } else if (this.meshDimension === "2D") {
+            // Handle 2D case
+            if (this.elementOrder === "linear") {
+              let gaussPoint1, gaussPoint2, firstNodeIndex, lastNodeIndex, nodeIncrement;
+
+              if (side === 0) {
+                // Nodes at the bottom side of the reference element
+                gaussPoint1 = gaussPoints[0];
+                gaussPoint2 = 0;
+                firstNodeIndex = 0;
+                lastNodeIndex = 3;
+                nodeIncrement = 2;
+              } else if (side === 1) {
+                // Nodes at the left side of the reference element
+                gaussPoint1 = 0;
+                gaussPoint2 = gaussPoints[0];
+                firstNodeIndex = 0;
+                lastNodeIndex = 2;
+                nodeIncrement = 1;
+              } else if (side === 2) {
+                // Nodes at the top side of the reference element
+                gaussPoint1 = gaussPoints[0];
+                gaussPoint2 = 1;
+                firstNodeIndex = 1;
+                lastNodeIndex = 4;
+                nodeIncrement = 2;
+              } else if (side === 3) {
+                // Nodes at the right side of the reference element
+                gaussPoint1 = 1;
+                gaussPoint2 = gaussPoints[0];
+                firstNodeIndex = 2;
+                lastNodeIndex = 4;
+                nodeIncrement = 1;
+              }
+
+              // Get basis functions
+              const basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoint1, gaussPoint2);
+              const basisFunction = basisFunctionsAndDerivatives.basisFunction;
+              const basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
+              const basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
+
+              // Calculate tangent vector components
+              let ksiDerivX = 0,
+                ksiDerivY = 0,
+                etaDerivX = 0,
+                etaDerivY = 0;
+              for (let nodeIndex = 0; nodeIndex < numNodes; nodeIndex++) {
+                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+
+                if (side === 0 || side === 2) {
+                  ksiDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
+                  ksiDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
+                } else if (side === 1 || side === 3) {
+                  etaDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
+                  etaDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
+                }
+              }
+
+              // Compute tangent vector length
+              let tangentVectorLength;
+              if (side === 0 || side === 2) {
+                tangentVectorLength = Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2);
+              } else {
+                tangentVectorLength = Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
+              }
+
+              // Apply boundary conditions to local matrices
+              for (
+                let localNodeIndex = firstNodeIndex;
+                localNodeIndex < lastNodeIndex;
+                localNodeIndex += nodeIncrement
+              ) {
+                localLoad[localNodeIndex] +=
+                  -gaussWeights[0] *
+                  tangentVectorLength *
+                  basisFunction[localNodeIndex] *
+                  convectionCoeff *
+                  extTemp;
+
+                for (
+                  let localNodeIndex2 = firstNodeIndex;
+                  localNodeIndex2 < lastNodeIndex;
+                  localNodeIndex2 += nodeIncrement
+                ) {
+                  estifm[localNodeIndex][localNodeIndex2] +=
+                    -gaussWeights[0] *
+                    tangentVectorLength *
+                    basisFunction[localNodeIndex] *
+                    basisFunction[localNodeIndex2] *
+                    convectionCoeff;
+                }
+              }
+            } else if (this.elementOrder === "quadratic") {
+              // Handle quadratic elements (similar pattern but with more Gauss points)
+              for (let gaussPointIndex = 0; gaussPointIndex < 3; gaussPointIndex++) {
+                let gaussPoint1, gaussPoint2, firstNodeIndex, lastNodeIndex, nodeIncrement;
+
+                if (side === 0) {
+                  // Nodes at the bottom side of the reference element
+                  gaussPoint1 = gaussPoints[gaussPointIndex];
+                  gaussPoint2 = 0;
+                  firstNodeIndex = 0;
+                  lastNodeIndex = 7;
+                  nodeIncrement = 3;
+                } else if (side === 1) {
+                  // Nodes at the left side of the reference element
+                  gaussPoint1 = 0;
+                  gaussPoint2 = gaussPoints[gaussPointIndex];
+                  firstNodeIndex = 0;
+                  lastNodeIndex = 3;
+                  nodeIncrement = 1;
+                } else if (side === 2) {
+                  // Nodes at the top side of the reference element
+                  gaussPoint1 = gaussPoints[gaussPointIndex];
+                  gaussPoint2 = 1;
+                  firstNodeIndex = 2;
+                  lastNodeIndex = 9;
+                  nodeIncrement = 3;
+                } else if (side === 3) {
+                  // Nodes at the right side of the reference element
+                  gaussPoint1 = 1;
+                  gaussPoint2 = gaussPoints[gaussPointIndex];
+                  firstNodeIndex = 6;
+                  lastNodeIndex = 9;
+                  nodeIncrement = 1;
+                }
+                let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoint1, gaussPoint2);
+                let basisFunction = basisFunctionsAndDerivatives.basisFunction;
+                let basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
+                let basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
+
+                let ksiDerivX = 0;
+                let ksiDerivY = 0;
+                let etaDerivX = 0;
+                let etaDerivY = 0;
+                const numNodes = this.nop[elementIndex].length;
+                for (let nodeIndex = 0; nodeIndex < numNodes; nodeIndex++) {
+                  const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+
+                  // For boundaries along Ksi (horizontal), use Ksi derivatives
+                  if (side === 0 || side === 2) {
+                    ksiDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
+                    ksiDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
+                  }
+                  // For boundaries along Eta (vertical), use Eta derivatives
+                  else if (side === 1 || side === 3) {
+                    etaDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
+                    etaDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
+                  }
+                }
+
+                // Compute the length of tangent vector
+                let tangentVectorLength;
+                if (side === 0 || side === 2) {
+                  tangentVectorLength = Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2);
+                } else {
+                  tangentVectorLength = Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
+                }
+
+                // Apply boundary conditions to local matrices
+                for (
+                  let localNodeIndex = firstNodeIndex;
+                  localNodeIndex < lastNodeIndex;
+                  localNodeIndex += nodeIncrement
+                ) {
+                  localLoad[localNodeIndex] +=
+                    -gaussWeights[gaussPointIndex] *
+                    tangentVectorLength *
+                    basisFunction[localNodeIndex] *
+                    convectionCoeff *
+                    extTemp;
+
+                  for (
+                    let localNodeIndex2 = firstNodeIndex;
+                    localNodeIndex2 < lastNodeIndex;
+                    localNodeIndex2 += nodeIncrement
+                  ) {
+                    estifm[localNodeIndex][localNodeIndex2] +=
+                      -gaussWeights[gaussPointIndex] *
+                      tangentVectorLength *
+                      basisFunction[localNodeIndex] *
+                      basisFunction[localNodeIndex2] *
+                      convectionCoeff;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    return { estifm, localLoad };
+  }
 }

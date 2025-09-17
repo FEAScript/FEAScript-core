@@ -64,7 +64,7 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
       // 1D solid heat transfer
       if (meshDimension === "1D") {
         // Get basis functions for the current Gauss point
-        let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoints[gaussPointIndex1]);
+        const basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoints[gaussPointIndex1]);
 
         // Perform isoparametric mapping
         const mappingResult = performIsoparametricMapping1D({
@@ -96,7 +96,7 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
       else if (meshDimension === "2D") {
         for (let gaussPointIndex2 = 0; gaussPointIndex2 < gaussPoints.length; gaussPointIndex2++) {
           // Get basis functions for the current Gauss point
-          let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
+          const basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
             gaussPoints[gaussPointIndex1],
             gaussPoints[gaussPointIndex2]
           );
@@ -133,47 +133,6 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
         }
       }
     }
-    const estifm = Array(numNodes)
-      .fill()
-      .map(() => Array(numNodes).fill(0));
-    const localLoad = Array(numNodes).fill(0);
-
-    const ngl = Array(numNodes);
-    for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++)
-      ngl[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]);
-
-    // Loop over Gauss points
-    for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
-      for (let gaussPointIndex2 = 0; gaussPointIndex2 < gaussPoints.length; gaussPointIndex2++) {
-        const { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta } =
-          basisFunctions.getBasisFunctions(gaussPoints[gaussPointIndex1], gaussPoints[gaussPointIndex2]);
-
-        const localToGlobalMap = ngl.map((globalIndex) => globalIndex - 1);
-
-        const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = performIsoparametricMapping2D({
-          basisFunction,
-          basisFunctionDerivKsi,
-          basisFunctionDerivEta,
-          nodesXCoordinates,
-          nodesYCoordinates,
-          localToGlobalMap,
-          numNodes,
-        });
-
-        for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
-          for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
-            estifm[localNodeIndex1][localNodeIndex2] -=
-              gaussWeights[gaussPointIndex1] *
-              gaussWeights[gaussPointIndex2] *
-              detJacobian *
-              (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] +
-                basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
-          }
-        }
-      }
-    }
-
-    return { estifm, localLoad, ngl };
   }
 
   // Apply boundary conditions
@@ -211,17 +170,28 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
 
 /**
  * Function to assemble the local Jacobian matrix and residual vector for the solid heat transfer model when using the frontal system solver
+ * @param {number} elementIndex - Index of the element being processed
+ * @param {array} nop - Nodal connectivity array (element-to-node mapping)
+ * @param {object} meshData - Object containing prepared mesh data
+ * @param {object} basisFunctions - Object containing basis functions and their derivatives
+ * @param {object} FEAData - Object containing FEA components (Gauss points, weights, etc.)
+ * @returns {object} An object containing:
+ *  - estifm: Local element stiffness matrix
+ *  - localLoad: Local element load vector
+ *  - ngl: Array mapping local node indices to global node indices
  */
 export function assembleSolidHeatTransferFront({ elementIndex, nop, meshData, basisFunctions, FEAData }) {
+  // Extract numerical integration parameters and mesh coordinates
   const { gaussPoints, gaussWeights, numNodes } = FEAData;
   const { nodesXCoordinates, nodesYCoordinates } = meshData;
 
-  //
+  // Initialize element stiffness matrix and local load vector for the current element
   const estifm = Array(numNodes)
     .fill()
     .map(() => Array(numNodes).fill(0));
   const localLoad = Array(numNodes).fill(0);
 
+  // Build the mapping from local node indices to global node indices
   const ngl = Array(numNodes);
   for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++)
     ngl[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]);
