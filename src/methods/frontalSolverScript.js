@@ -106,15 +106,8 @@ function main(meshConfig, meshData, boundaryConditions) {
     block1.bc[i] = 0;
   }
 
-  // Apply boundary conditions using the new method in ThermalBoundaryConditions
-  const { ncod, bc } = thermalBoundaryConditions.imposeConstantTempBoundaryConditionsFrontal(
-    block1.ncod,
-    block1.bc
-  );
-
-  // Update the block1 arrays with the results (though they are already updated by reference)
-  block1.ncod = ncod;
-  block1.bc = bc;
+  // Apply constant temperature boundary conditions
+  thermalBoundaryConditions.imposeConstantTempBoundaryConditionsFront(block1.ncod, block1.bc);
 
   // Initialization
   for (let i = 0; i < meshData.nodesXCoordinates.length; i++) {

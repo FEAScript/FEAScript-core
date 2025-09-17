@@ -161,7 +161,7 @@ export class ThermalBoundaryConditions {
    *  - ncod: Modified array indicating boundary condition code for each node
    *  - bc: Modified array containing boundary condition values
    */
-  imposeConstantTempBoundaryConditionsFrontal(ncod, bc) {
+  imposeConstantTempBoundaryConditionsFront(ncod, bc) {
     basicLog("Applying constant temperature boundary conditions for frontal solver");
 
     if (this.meshDimension === "1D") {
@@ -568,7 +568,7 @@ export class ThermalBoundaryConditions {
    *  - estifm: Local element stiffness matrix with convection contributions
    *  - localLoad: Local element load vector with convection contributions
    */
-  imposeConvectionBoundaryConditionsFrontal(
+  imposeConvectionBoundaryConditionsFront(
     elementIndex,
     nodesXCoordinates,
     nodesYCoordinates,
