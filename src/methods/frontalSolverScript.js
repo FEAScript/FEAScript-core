@@ -10,9 +10,10 @@
 
 // Internal imports
 import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
-import { assembleSolidHeatTransferFront } from "../solvers/solidHeatTransferScript.js";
-import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 import { initializeFEA } from "../mesh/meshUtilsScript.js";
+import { assembleSolidHeatTransferFront } from "../solvers/solidHeatTransferScript.js";
+import { ThermalBoundaryConditions } from "../solvers/thermalBoundaryConditionsScript.js";
+import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 // Add an exported wrapper to obtain results for plotting
 export function runFrontalSolver(meshConfig, meshData, boundaryConditions) {
@@ -69,15 +70,30 @@ const fb1 = {
   ecpiv: Array(2000000).fill(0),
 };
 
-// Calculate basis functions
-const basisFunctionsLib = new BasisFunctions({ meshDimension: "2D", elementOrder: "quadratic" });
+let basisFunctionsLib;
 
 // Main program logic
 function main(meshConfig, meshData, boundaryConditions) {
   // Initialize FEA components
   const FEAData = initializeFEA(meshData);
 
+  // Initialize basis functions with meshConfig values
+  basisFunctionsLib = new BasisFunctions({
+    meshDimension: meshConfig.meshDimension,
+    elementOrder: meshConfig.elementOrder,
+  });
+
   nodnumb(meshData, FEAData);
+
+  // Apply boundary conditions
+  basicLog("Applying thermal boundary conditions...");
+  const thermalBoundaryConditions = new ThermalBoundaryConditions(
+    boundaryConditions,
+    meshData.boundaryElements,
+    meshData.nop,
+    meshConfig.meshDimension,
+    meshConfig.elementOrder
+  );
 
   // Initialize all nodes with no boundary condition
   for (let i = 0; i < meshData.nodesXCoordinates.length; i++) {
@@ -85,63 +101,15 @@ function main(meshConfig, meshData, boundaryConditions) {
     block1.bc[i] = 0;
   }
 
-  // Apply boundary conditions based on the boundaryConditions parameter
-  Object.keys(boundaryConditions).forEach((boundaryKey) => {
-    const condition = boundaryConditions[boundaryKey];
+  // Apply boundary conditions using the new method in ThermalBoundaryConditions
+  const { ncod, bc } = thermalBoundaryConditions.imposeConstantTempBoundaryConditionsFrontal(
+    block1.ncod,
+    block1.bc
+  );
 
-    // Handle constantTemp (Dirichlet) boundary conditions
-    if (condition[0] === "constantTemp") {
-      const tempValue = boundaryConditions[boundaryKey][1];
-
-      // Apply boundary condition to the appropriate nodes based on boundary key
-      switch (boundaryKey) {
-        case "0": // Bottom boundary (y = yorigin)
-          for (let col = 0; col < meshData.totalNodesX; col++) {
-            const nodeIndex = col * meshData.totalNodesY;
-            block1.ncod[nodeIndex] = 1;
-            block1.bc[nodeIndex] = tempValue;
-          }
-          break;
-
-        case "1": // Right boundary (x = xlast)
-          for (let j = 0; j < meshData.totalNodesY; j++) {
-            block1.ncod[j] = 1;
-            block1.bc[j] = tempValue;
-          }
-          break;
-
-        case "2": // Top boundary (y = ylast)
-          for (let col = 0; col < meshData.totalNodesX; col++) {
-            const nodeIndex = col * meshData.totalNodesY + (meshData.totalNodesY - 1);
-            block1.ncod[nodeIndex] = 1;
-            block1.bc[nodeIndex] = tempValue;
-          }
-          break;
-
-        case "3": // Left boundary (x = xorigin)
-          for (let j = 0; j < meshData.totalNodesY; j++) {
-            const nodeIndex = (meshData.totalNodesX - 1) * meshData.totalNodesY + j;
-            block1.ncod[nodeIndex] = 1;
-            block1.bc[nodeIndex] = tempValue;
-          }
-          break;
-      }
-    }
-  });
-
-  // Prepare natural boundary conditions
-  for (let i = 0; i < meshData.totalElements; i++) {
-    block1.ntop[i] = 0;
-    block1.nlat[i] = 0;
-  }
-
-  // for (let i = meshData.totalElementsy - 1; i < meshData.totalElements; i += meshData.totalElementsy) {
-  //   block1.ntop[i] = 1;
-  // }
-
-  // for (let i = meshData.totalElements - meshData.totalElementsy; i < meshData.totalElements; i++) {
-  //   block1.nlat[i] = 1;
-  // }
+  // Update the block1 arrays with the results (though they are already updated by reference)
+  block1.ncod = ncod;
+  block1.bc = bc;
 
   // Initialization
   for (let i = 0; i < meshData.nodesXCoordinates.length; i++) {
@@ -157,7 +125,7 @@ function main(meshConfig, meshData, boundaryConditions) {
     fro1.nbn[i] = FEAData.numNodes;
   }
 
-  front(meshData, FEAData);
+  front(meshData, FEAData, thermalBoundaryConditions);
 
   // Copy solution
   for (let i = 0; i < meshData.nodesXCoordinates.length; i++) {
@@ -186,7 +154,7 @@ function nodnumb(meshData, FEAData) {
 }
 
 // Element stiffness matrix and residuals (delegated to external assembly function)
-function abfind(meshData, FEAData) {
+function abfind(meshData, FEAData, thermalBoundaryConditions) {
   const elementIndex = fabf1.nell - 1;
 
   const { estifm, localLoad, ngl } = assembleSolidHeatTransferFront({
@@ -194,8 +162,6 @@ function abfind(meshData, FEAData) {
     nop: block1.nop,
     meshData,
     basisFunctions: basisFunctionsLib,
-    ntopFlag: block1.ntop[elementIndex] === 1,
-    nlatFlag: block1.nlat[elementIndex] === 1,
     FEAData,
   });
 
@@ -214,7 +180,7 @@ function abfind(meshData, FEAData) {
 }
 
 // Frontal solver
-function front(meshData, FEAData) {
+function front(meshData, FEAData, thermalBoundaryConditions) {
   let ldest = Array(FEAData.numNodes).fill(0);
   let kdest = Array(FEAData.numNodes).fill(0);
   let khed = Array(nmax).fill(0);
@@ -271,7 +237,7 @@ function front(meshData, FEAData) {
 
   while (true) {
     fabf1.nell++;
-    abfind(meshData, FEAData);
+    abfind(meshData, FEAData, thermalBoundaryConditions);
 
     let n = fabf1.nell;
     let nend = fro1.nbn[n - 1];

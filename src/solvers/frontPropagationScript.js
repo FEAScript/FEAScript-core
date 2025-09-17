@@ -233,13 +233,6 @@ export function assembleFrontPropagationMat(
   // Impose ConstantValue boundary conditions
   genericBoundaryConditions.imposeConstantValueBoundaryConditions(residualVector, jacobianMatrix);
   basicLog("Constant value boundary conditions applied");
-
-  // Print all residuals in debug mode
-  debugLog("Residuals at each node:");
-  for (let i = 0; i < residualVector.length; i++) {
-    debugLog(`Node ${i}: ${residualVector[i].toExponential(6)}`);
-  }
-
   basicLog("Front propagation matrix assembly completed");
 
   return {

@@ -154,6 +154,124 @@ export class ThermalBoundaryConditions {
   }
 
   /**
+   * Function to impose constant temperature boundary conditions for the frontal solver
+   * @param {array} ncod - Array indicating boundary condition code for each node
+   * @param {array} bc - Array containing boundary condition values
+   * @returns {object} An object containing:
+   *  - ncod: Modified array indicating boundary condition code for each node
+   *  - bc: Modified array containing boundary condition values
+   */
+  imposeConstantTempBoundaryConditionsFrontal(ncod, bc) {
+    basicLog("Applying constant temperature boundary conditions for frontal solver");
+
+    if (this.meshDimension === "1D") {
+      Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
+        if (this.boundaryConditions[boundaryKey][0] === "constantTemp") {
+          const tempValue = this.boundaryConditions[boundaryKey][1];
+          debugLog(
+            `Boundary ${boundaryKey}: Applying constant temperature of ${tempValue} K (Dirichlet condition)`
+          );
+
+          this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
+            if (this.elementOrder === "linear") {
+              const boundarySides = {
+                0: [0], // Node at the left side of the reference element
+                1: [1], // Node at the right side of the reference element
+              };
+
+              boundarySides[side].forEach((nodeIndex) => {
+                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+                debugLog(
+                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
+                    elementIndex + 1
+                  }, local node ${nodeIndex + 1})`
+                );
+
+                // Set boundary condition code and value
+                ncod[globalNodeIndex] = 1;
+                bc[globalNodeIndex] = tempValue;
+              });
+            } else if (this.elementOrder === "quadratic") {
+              const boundarySides = {
+                0: [0], // Node at the left side of the reference element
+                2: [2], // Node at the right side of the reference element
+              };
+
+              boundarySides[side].forEach((nodeIndex) => {
+                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+                debugLog(
+                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
+                    elementIndex + 1
+                  }, local node ${nodeIndex + 1})`
+                );
+
+                // Set boundary condition code and value
+                ncod[globalNodeIndex] = 1;
+                bc[globalNodeIndex] = tempValue;
+              });
+            }
+          });
+        }
+      });
+    } else if (this.meshDimension === "2D") {
+      Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
+        if (this.boundaryConditions[boundaryKey][0] === "constantTemp") {
+          const tempValue = this.boundaryConditions[boundaryKey][1];
+          debugLog(
+            `Boundary ${boundaryKey}: Applying constant temperature of ${tempValue} K (Dirichlet condition)`
+          );
+
+          this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
+            if (this.elementOrder === "linear") {
+              const boundarySides = {
+                0: [0, 2], // Nodes at the bottom side of the reference element
+                1: [0, 1], // Nodes at the left side of the reference element
+                2: [1, 3], // Nodes at the top side of the reference element
+                3: [2, 3], // Nodes at the right side of the reference element
+              };
+
+              boundarySides[side].forEach((nodeIndex) => {
+                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+                debugLog(
+                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
+                    elementIndex + 1
+                  }, local node ${nodeIndex + 1})`
+                );
+
+                // Set boundary condition code and value
+                ncod[globalNodeIndex] = 1;
+                bc[globalNodeIndex] = tempValue;
+              });
+            } else if (this.elementOrder === "quadratic") {
+              const boundarySides = {
+                0: [0, 3, 6], // Nodes at the bottom side of the reference element
+                1: [0, 1, 2], // Nodes at the left side of the reference element
+                2: [2, 5, 8], // Nodes at the top side of the reference element
+                3: [6, 7, 8], // Nodes at the right side of the reference element
+              };
+
+              boundarySides[side].forEach((nodeIndex) => {
+                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+                debugLog(
+                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
+                    elementIndex + 1
+                  }, local node ${nodeIndex + 1})`
+                );
+
+                // Set boundary condition code and value
+                ncod[globalNodeIndex] = 1;
+                bc[globalNodeIndex] = tempValue;
+              });
+            }
+          });
+        }
+      });
+    }
+
+    return { ncod, bc };
+  }
+
+  /**
    * Function to impose convection boundary conditions (Robin type)
    * @param {array} residualVector - The residual vector to be modified
    * @param {array} jacobianMatrix - The Jacobian matrix to be modified
