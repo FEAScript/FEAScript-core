@@ -174,7 +174,7 @@ function runFrontalSolverMain(meshConfig, meshData, boundaryConditions) {
     frontalData.boundaryValues[nodeIndex] = 0;
   }
 
-  // Apply constant temperature (Dirichlet-type) boundary conditions
+  // Apply Dirichlet-type boundary conditions
   thermalBoundaryConditions.imposeConstantTempBoundaryConditionsFront(
     frontalData.nodeConstraintCode,
     frontalData.boundaryValues
@@ -247,25 +247,25 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
     FEAData,
   });
 
-  // Check if this element is on a convection boundary
-  let isOnConvectionBoundary = false;
+  // Check if this element is on a Robin-type boundary
+  let isOnRobinTypeBoundary = false;
   for (const boundaryKey in meshData.boundaryElements) {
     if (
       thermalBoundaryConditions.boundaryConditions[boundaryKey]?.[0] === "convection" &&
       meshData.boundaryElements[boundaryKey].some(([elemIdx, _]) => elemIdx === elementIndex)
     ) {
-      isOnConvectionBoundary = true;
+      isOnRobinTypeBoundary = true;
       break;
     }
   }
 
-  // Only calculate convection for elements when required
+  // Only calculate Robin-type for elements when required
   let boundaryLocalJacobianMatrix = Array(FEAData.numNodes)
     .fill()
     .map(() => Array(FEAData.numNodes).fill(0));
   let boundaryResidualVector = Array(FEAData.numNodes).fill(0);
 
-  if (isOnConvectionBoundary) {
+  if (isOnRobinTypeBoundary) {
     const { gaussPoints, gaussWeights } = FEAData;
     const result = thermalBoundaryConditions.imposeConvectionBoundaryConditionsFront(
       elementIndex,
