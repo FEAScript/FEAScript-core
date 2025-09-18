@@ -174,6 +174,9 @@ function runFrontalSolverMain(meshConfig, meshData, boundaryConditions) {
     frontalData.boundaryValues
   );
 
+  // Match normal solvers’ logging
+  basicLog("Constant temperature boundary conditions applied");
+
   // Initialize global residual vector
   for (let nodeIndex = 0; nodeIndex < meshData.nodesXCoordinates.length; nodeIndex++) {
     frontalData.globalResidualVector[nodeIndex] = 0;

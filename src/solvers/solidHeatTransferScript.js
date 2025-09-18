@@ -182,10 +182,10 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
  * @param {array} nop - Nodal connectivity array (element-to-node mapping)
  * @param {object} meshData - Object containing prepared mesh data
  * @param {object} basisFunctions - Object containing basis functions and their derivatives
- * @param {object} FEAData - Object containing FEA components (Gauss points, weights, etc.)
+ * @param {object} FEAData - Object containing FEA-related data
  * @returns {object} An object containing:
- *  - estifm: Local element stiffness matrix
- *  - localLoad: Local element load vector
+ *  - localJacobianMatrix: Local element stiffness matrix
+ *  - residualVector: Local element load vector
  *  - ngl: Array mapping local node indices to global node indices
  */
 export function assembleSolidHeatTransferFront({ elementIndex, nop, meshData, basisFunctions, FEAData }) {

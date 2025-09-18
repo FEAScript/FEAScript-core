@@ -52,8 +52,10 @@ export class GenericBoundaryConditions {
     if (this.meshDimension === "1D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
         if (this.boundaryConditions[boundaryKey][0] === "constantValue") {
-          const value = this.boundaryConditions[boundaryKey][1];
-          debugLog(`Boundary ${boundaryKey}: Applying constant value of ${value} (Dirichlet condition)`);
+          const boundaryValue = this.boundaryConditions[boundaryKey][1];
+          debugLog(
+            `Boundary ${boundaryKey}: Applying constant value of ${boundaryValue} (Dirichlet condition)`
+          );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
             if (this.elementOrder === "linear") {
               const boundarySides = {
@@ -67,8 +69,8 @@ export class GenericBoundaryConditions {
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`
                 );
-                // Set the residual vector to the constantValue
-                residualVector[globalNodeIndex] = value;
+                // Set the residual vector to the boundaryValue
+                residualVector[globalNodeIndex] = boundaryValue;
                 // Set the Jacobian matrix row to zero
                 for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
                   jacobianMatrix[globalNodeIndex][colIndex] = 0;
@@ -88,8 +90,8 @@ export class GenericBoundaryConditions {
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`
                 );
-                // Set the residual vector to the constantValue
-                residualVector[globalNodeIndex] = value;
+                // Set the residual vector to the boundaryValue
+                residualVector[globalNodeIndex] = boundaryValue;
                 // Set the Jacobian matrix row to zero
                 for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
                   jacobianMatrix[globalNodeIndex][colIndex] = 0;
@@ -104,8 +106,10 @@ export class GenericBoundaryConditions {
     } else if (this.meshDimension === "2D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
         if (this.boundaryConditions[boundaryKey][0] === "constantValue") {
-          const value = this.boundaryConditions[boundaryKey][1];
-          debugLog(`Boundary ${boundaryKey}: Applying constant value of ${value} (Dirichlet condition)`);
+          const boundaryValue = this.boundaryConditions[boundaryKey][1];
+          debugLog(
+            `Boundary ${boundaryKey}: Applying constant value of ${boundaryValue} (Dirichlet condition)`
+          );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
             if (this.elementOrder === "linear") {
               const boundarySides = {
@@ -121,8 +125,8 @@ export class GenericBoundaryConditions {
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`
                 );
-                // Set the residual vector to the constantValue
-                residualVector[globalNodeIndex] = value;
+                // Set the residual vector to the boundaryValue
+                residualVector[globalNodeIndex] = boundaryValue;
                 // Set the Jacobian matrix row to zero
                 for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
                   jacobianMatrix[globalNodeIndex][colIndex] = 0;
@@ -144,8 +148,8 @@ export class GenericBoundaryConditions {
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`
                 );
-                // Set the residual vector to the constantValue
-                residualVector[globalNodeIndex] = value;
+                // Set the residual vector to the boundaryValue
+                residualVector[globalNodeIndex] = boundaryValue;
                 // Set the Jacobian matrix row to zero
                 for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
                   jacobianMatrix[globalNodeIndex][colIndex] = 0;

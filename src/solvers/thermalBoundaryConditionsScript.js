@@ -163,13 +163,10 @@ export class ThermalBoundaryConditions {
 
   /**
    * Function to impose constant temperature boundary conditions for the frontal solver
-   * @param {array} ncod - Array indicating boundary condition code for each node
-   * @param {array} bc - Array containing boundary condition values
-   * @returns {object} An object containing:
-   *  - ncod: Modified array indicating boundary condition code for each node
-   *  - bc: Modified array containing boundary condition values
+   * @param {array} nodeConstraintCode - Array indicating boundary condition code for each node
+   * @param {array} boundaryValues - Array containing boundary condition values
    */
-  imposeConstantTempBoundaryConditionsFront(ncod, bc) {
+  imposeConstantTempBoundaryConditionsFront(nodeConstraintCode, boundaryValues) {
     basicLog("Applying constant temperature boundary conditions for frontal solver");
 
     if (this.meshDimension === "1D") {
@@ -196,8 +193,8 @@ export class ThermalBoundaryConditions {
                 );
 
                 // Set boundary condition code and value
-                ncod[globalNodeIndex] = 1;
-                bc[globalNodeIndex] = tempValue;
+                nodeConstraintCode[globalNodeIndex] = 1;
+                boundaryValues[globalNodeIndex] = tempValue;
               });
             } else if (this.elementOrder === "quadratic") {
               const boundarySides = {
@@ -214,8 +211,8 @@ export class ThermalBoundaryConditions {
                 );
 
                 // Set boundary condition code and value
-                ncod[globalNodeIndex] = 1;
-                bc[globalNodeIndex] = tempValue;
+                nodeConstraintCode[globalNodeIndex] = 1;
+                boundaryValues[globalNodeIndex] = tempValue;
               });
             }
           });
@@ -247,8 +244,8 @@ export class ThermalBoundaryConditions {
                 );
 
                 // Set boundary condition code and value
-                ncod[globalNodeIndex] = 1;
-                bc[globalNodeIndex] = tempValue;
+                nodeConstraintCode[globalNodeIndex] = 1;
+                boundaryValues[globalNodeIndex] = tempValue;
               });
             } else if (this.elementOrder === "quadratic") {
               const boundarySides = {
@@ -267,16 +264,14 @@ export class ThermalBoundaryConditions {
                 );
 
                 // Set boundary condition code and value
-                ncod[globalNodeIndex] = 1;
-                bc[globalNodeIndex] = tempValue;
+                nodeConstraintCode[globalNodeIndex] = 1;
+                boundaryValues[globalNodeIndex] = tempValue;
               });
             }
           });
         }
       });
     }
-
-    return { ncod, bc };
   }
 
   /**
@@ -573,8 +568,8 @@ export class ThermalBoundaryConditions {
    * @param {array} gaussWeights - Array of Gauss weights for numerical integration
    * @param {object} basisFunctions - Object containing basis functions and their derivatives
    * @returns {object} An object containing:
-   *  - estifm: Local element stiffness matrix with convection contributions
-   *  - localLoad: Local element load vector with convection contributions
+   *  - localJacobianMatrix: Local element stiffness matrix with convection contributions
+   *  - residualVector: Local element load vector with convection contributions
    */
   imposeConvectionBoundaryConditionsFront(
     elementIndex,
