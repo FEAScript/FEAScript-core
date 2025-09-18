@@ -8,19 +8,19 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
-// Create object templates without preallocated arrays - must be defined before use
-const frontalData = {};
-const frontalState = {};
-const elementData = { currentElementIndex: 0 };
-const frontStorage = {};
-let basisFunctionsLib; // Basis functions used by assembleElementContribution
-
 // Internal imports
 import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
 import { initializeFEA } from "../mesh/meshUtilsScript.js";
 import { assembleSolidHeatTransferFront } from "../solvers/solidHeatTransferScript.js";
 import { ThermalBoundaryConditions } from "../solvers/thermalBoundaryConditionsScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+
+// Create object templates
+const frontalData = {};
+const frontalState = {};
+const elementData = { currentElementIndex: 0 };
+const frontStorage = {};
+let basisFunctionsLib; // Basis functions used by assembleElementContribution
 
 /**
  * Function to run the frontal solver and obtain results for plotting
