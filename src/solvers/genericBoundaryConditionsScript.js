@@ -38,6 +38,14 @@ export class GenericBoundaryConditions {
    * Function to impose constant value boundary conditions (Dirichlet type)
    * @param {array} residualVector - The residual vector to be modified
    * @param {array} jacobianMatrix - The Jacobian matrix to be modified
+   *
+   * For consistency across both linear and nonlinear formulations,
+   * this project always refers to the assembled right-hand side vector
+   * as `residualVector` and the assembled system matrix as `jacobianMatrix`.
+   *
+   * In linear problems `jacobianMatrix` is equivalent to the
+   * classic stiffness/conductivity matrix and `residualVector`
+   * corresponds to the traditional load (RHS) vector.
    */
   imposeConstantValueBoundaryConditions(residualVector, jacobianMatrix) {
     basicLog("Applying constant value boundary conditions");

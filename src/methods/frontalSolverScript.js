@@ -8,6 +8,13 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
+// Create object templates without preallocated arrays - must be defined before use
+const frontalData = {};
+const frontalState = {};
+const elementData = { currentElementIndex: 0 };
+const frontStorage = {};
+let basisFunctionsLib; // Basis functions used by assembleElementContribution
+
 // Internal imports
 import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
 import { initializeFEA } from "../mesh/meshUtilsScript.js";
@@ -15,12 +22,35 @@ import { assembleSolidHeatTransferFront } from "../solvers/solidHeatTransferScri
 import { ThermalBoundaryConditions } from "../solvers/thermalBoundaryConditionsScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
-// Add an exported wrapper to obtain results for plotting
+/**
+ * Function to run the frontal solver and obtain results for plotting
+ * @param {object} meshConfig - Configuration object for the mesh
+ * @param {object} meshData - Object containing mesh data
+ * @param {object} boundaryConditions - Object containing boundary conditions
+ * @returns {object} An object containing the solution vector and node coordinates
+ */
 export function runFrontalSolver(meshConfig, meshData, boundaryConditions) {
-  main(meshConfig, meshData, boundaryConditions);
+  // Initialize arrays dynamically based on actual problem size
+  const numNodes = meshData.nodesXCoordinates.length;
+  const numElements = meshData.totalElements;
+  const maxNodesPerElement = getMaxNodesPerElement(meshConfig);
+
+  // Calculate required array sizes
+  initializeFrontalArrays(numNodes, numElements, maxNodesPerElement);
+
+  // Start timing for system solving (frontal algorithm)
+  basicLog("Solving system using frontal...");
+  console.time("systemSolving");
+
+  // Run the solver
+  runFrontalSolverMain(meshConfig, meshData, boundaryConditions);
+
+  console.timeEnd("systemSolving");
+  basicLog("System solved successfully");
+
   const { nodesXCoordinates, nodesYCoordinates } = meshData;
   return {
-    solutionVector: block1.u.slice(0, meshData.nodesXCoordinates.length),
+    solutionVector: frontalData.solutionVector.slice(0, numNodes),
     nodesCoordinates: {
       nodesXCoordinates,
       nodesYCoordinates,
@@ -28,52 +58,84 @@ export function runFrontalSolver(meshConfig, meshData, boundaryConditions) {
   };
 }
 
-// Constants (TODO: Transform to allocatable arrays)
-const nemax = 1600;
-const nnmax = 6724;
-const nmax = 2000;
+/**
+ * Function to determine the maximum number of nodes per element based on mesh configuration
+ * @param {object} meshConfig - Configuration object for the mesh
+ * @returns {number} The maximum number of nodes per element
+ */
+function getMaxNodesPerElement(meshConfig) {
+  if (meshConfig.meshDimension === "1D") {
+    return meshConfig.elementOrder === "linear" ? 2 : 3;
+  } else if (meshConfig.meshDimension === "2D") {
+    return meshConfig.elementOrder === "linear" ? 4 : 9;
+  }
+}
 
-// Common block equivalents as objects
-const block1 = {
-  nop: Array(nemax)
+/**
+ * Function to initialize arrays dynamically based on problem size
+ * @param {number} numNodes - Number of nodes in the mesh
+ * @param {number} numElements - Number of elements in the mesh
+ * @param {number} maxNodesPerElement - Maximum number of nodes per element
+ */
+function initializeFrontalArrays(numNodes, numElements, maxNodesPerElement) {
+  // Use the actual number of elements from the mesh
+  frontalData.nodalNumbering = Array(numElements)
     .fill()
-    .map(() => Array(9).fill(0)),
-  ncod: Array(nnmax).fill(0),
-  bc: Array(nnmax).fill(0),
-  r1: Array(nnmax).fill(0),
-  u: Array(nnmax).fill(0),
-  ntop: Array(nemax).fill(0),
-  nlat: Array(nemax).fill(0),
-};
+    .map(() => Array(maxNodesPerElement).fill(0));
+  frontalData.nodeConstraintCode = Array(numNodes).fill(0);
+  frontalData.boundaryValues = Array(numNodes).fill(0);
+  frontalData.globalResidualVector = Array(numNodes).fill(0);
+  frontalData.solutionVector = Array(numNodes).fill(0);
+  frontalData.topologyData = Array(numElements).fill(0);
+  frontalData.lateralData = Array(numElements).fill(0);
 
-const fro1 = {
-  iwr1: 0,
-  npt: 0,
-  ntra: 0,
-  nbn: Array(nemax).fill(0),
-  det: 1,
-  sk: Array(nmax * nmax).fill(0),
-  ice1: 0,
-};
+  // Initialize frontalState arrays
+  frontalState.writeFlag = 0;
+  frontalState.totalNodes = numNodes;
+  frontalState.transformationFlag = 0;
+  frontalState.nodesPerElement = Array(numElements).fill(0);
+  frontalState.determinant = 1;
 
-const fabf1 = {
-  estifm: Array(9)
+  // For matrix operations, estimate required size based on problem complexity
+  const systemSize = Math.max(numNodes, 2000);
+  frontalState.globalSolutionVector = Array(systemSize).fill(0);
+  frontalState.frontDataIndex = 0;
+
+  // Initialize elementData arrays
+  elementData.localJacobianMatrix = Array(maxNodesPerElement)
     .fill()
-    .map(() => Array(9).fill(0)),
-  nell: 0,
-};
+    .map(() => Array(maxNodesPerElement).fill(0));
+  elementData.currentElementIndex = 0;
 
-const fb1 = {
-  ecv: Array(2000000).fill(0),
-  lhed: Array(nmax).fill(0),
-  qq: Array(nmax).fill(0),
-  ecpiv: Array(2000000).fill(0),
-};
+  // Initialize frontStorage arrays (front storage)
+  const frontSize = estimateFrontSize(numNodes, numElements, maxNodesPerElement);
+  frontStorage.frontValues = Array(frontSize).fill(0);
+  frontStorage.columnHeaders = Array(systemSize).fill(0);
+  frontStorage.pivotRow = Array(systemSize).fill(0);
+  frontStorage.pivotData = Array(frontSize).fill(0);
+}
 
-let basisFunctionsLib;
+/**
+ * Function to estimate the required front size
+ * @param {number} numNodes - Number of nodes in the mesh
+ * @param {number} numElements - Number of elements in the mesh
+ * @param {number} maxNodesPerElement - Maximum number of nodes per element
+ * @returns {number} Estimated front size
+ */
+function estimateFrontSize(numNodes, numElements, maxNodesPerElement) {
+  // Heuristic estimate for front storage
+  const frontWidthEstimate = Math.ceil(Math.sqrt(numElements) * maxNodesPerElement * 2);
+  const frontSize = frontWidthEstimate * numNodes * 4;
+  return Math.max(frontSize, 10000);
+}
 
-// Main program logic
-function main(meshConfig, meshData, boundaryConditions) {
+/**
+ * Function to initialize and execute the frontal solver process
+ * @param {object} meshConfig - Configuration object for the mesh
+ * @param {object} meshData - Object containing mesh data
+ * @param {object} boundaryConditions - Object containing boundary conditions
+ */
+function runFrontalSolverMain(meshConfig, meshData, boundaryConditions) {
   // Initialize FEA components
   const FEAData = initializeFEA(meshData);
 
@@ -83,10 +145,10 @@ function main(meshConfig, meshData, boundaryConditions) {
     elementOrder: meshConfig.elementOrder,
   });
 
-  // Copy NOP array into block1 storage
-  for (let e = 0; e < meshData.totalElements; e++) {
-    for (let n = 0; n < FEAData.numNodes; n++) {
-      block1.nop[e][n] = meshData.nop[e][n];
+  // Copy node connectivity array into frontalData storage
+  for (let elementIndex = 0; elementIndex < meshData.totalElements; elementIndex++) {
+    for (let nodeIndex = 0; nodeIndex < FEAData.numNodes; nodeIndex++) {
+      frontalData.nodalNumbering[elementIndex][nodeIndex] = meshData.nop[elementIndex][nodeIndex];
     }
   }
 
@@ -101,459 +163,529 @@ function main(meshConfig, meshData, boundaryConditions) {
   );
 
   // Initialize all nodes with no boundary condition
-  for (let i = 0; i < meshData.nodesXCoordinates.length; i++) {
-    block1.ncod[i] = 0;
-    block1.bc[i] = 0;
+  for (let nodeIndex = 0; nodeIndex < meshData.nodesXCoordinates.length; nodeIndex++) {
+    frontalData.nodeConstraintCode[nodeIndex] = 0;
+    frontalData.boundaryValues[nodeIndex] = 0;
   }
 
   // Apply constant temperature boundary conditions
-  thermalBoundaryConditions.imposeConstantTempBoundaryConditionsFront(block1.ncod, block1.bc);
+  thermalBoundaryConditions.imposeConstantTempBoundaryConditionsFront(
+    frontalData.nodeConstraintCode,
+    frontalData.boundaryValues
+  );
 
-  // Initialization
-  for (let i = 0; i < meshData.nodesXCoordinates.length; i++) {
-    block1.r1[i] = 0;
+  // Initialize global residual vector
+  for (let nodeIndex = 0; nodeIndex < meshData.nodesXCoordinates.length; nodeIndex++) {
+    frontalData.globalResidualVector[nodeIndex] = 0;
   }
 
-  fro1.npt = meshData.nodesXCoordinates.length;
-  fro1.iwr1 = 0;
-  fro1.ntra = 1;
-  fro1.det = 1;
+  frontalState.totalNodes = meshData.nodesXCoordinates.length;
+  frontalState.writeFlag = 0;
+  frontalState.transformationFlag = 1;
+  frontalState.determinant = 1;
 
-  for (let i = 0; i < meshData.totalElements; i++) {
-    fro1.nbn[i] = FEAData.numNodes;
+  for (let elementIndex = 0; elementIndex < meshData.totalElements; elementIndex++) {
+    frontalState.nodesPerElement[elementIndex] = FEAData.numNodes;
   }
 
-  front(meshData, FEAData, thermalBoundaryConditions);
+  executeFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions);
 
   // Copy solution
-  for (let i = 0; i < meshData.nodesXCoordinates.length; i++) {
-    block1.u[i] = fro1.sk[i];
+  for (let nodeIndex = 0; nodeIndex < meshData.nodesXCoordinates.length; nodeIndex++) {
+    frontalData.solutionVector[nodeIndex] = frontalState.globalSolutionVector[nodeIndex];
   }
 
   // Output results to console for debugging
   const { nodesXCoordinates, nodesYCoordinates } = meshData;
-  for (let i = 0; i < meshData.nodesXCoordinates.length; i++) {
+  for (let nodeIndex = 0; nodeIndex < meshData.nodesXCoordinates.length; nodeIndex++) {
     debugLog(
-      `${nodesXCoordinates[i].toExponential(5)}  ${nodesYCoordinates[i].toExponential(5)}  ${block1.u[
-        i
-      ].toExponential(5)}`
+      `${nodesXCoordinates[nodeIndex].toExponential(5)}  ${nodesYCoordinates[nodeIndex].toExponential(
+        5
+      )}  ${frontalData.solutionVector[nodeIndex].toExponential(5)}`
     );
   }
 }
 
-// Element stiffness matrix and residuals (delegated to external assembly function)
-function abfind(meshData, FEAData, thermalBoundaryConditions) {
-  const elementIndex = fabf1.nell - 1;
+/**
+ * Function to compute element stiffness matrix and residuals
+ * @param {object} meshData - Object containing mesh data
+ * @param {object} FEAData - Object containing FEA-related data
+ * @param {object} thermalBoundaryConditions - Object containing thermal boundary conditions
+ */
+function assembleElementContribution(meshData, FEAData, thermalBoundaryConditions) {
+  const elementIndex = elementData.currentElementIndex - 1;
 
-  const { estifm, localLoad, ngl } = assembleSolidHeatTransferFront({
+  // Guard against out-of-range indices
+  if (elementIndex < 0 || elementIndex >= meshData.totalElements) {
+    errorLog(`Skipping out-of-range elementIndex=${elementIndex} (totalElements=${meshData.totalElements})`);
+    return false;
+  }
+
+  // Adopt naming convention: localJacobianMatrix, residualVector
+  const { localJacobianMatrix, residualVector, ngl } = assembleSolidHeatTransferFront({
     elementIndex,
-    nop: block1.nop,
+    nop: frontalData.nodalNumbering,
     meshData,
     basisFunctions: basisFunctionsLib,
     FEAData,
   });
 
   // Copy element matrix
-  for (let i = 0; i < FEAData.numNodes; i++) {
-    for (let j = 0; j < FEAData.numNodes; j++) {
-      fabf1.estifm[i][j] = estifm[i][j];
+  for (let localNodeI = 0; localNodeI < FEAData.numNodes; localNodeI++) {
+    for (let localNodeJ = 0; localNodeJ < FEAData.numNodes; localNodeJ++) {
+      elementData.localJacobianMatrix[localNodeI][localNodeJ] = localJacobianMatrix[localNodeI][localNodeJ];
     }
   }
 
-  // Accumulate local load into global RHS
-  for (let a = 0; a < FEAData.numNodes; a++) {
-    const g = ngl[a] - 1;
-    block1.r1[g] += localLoad[a];
+  // Accumulate local residual into global RHS
+  for (let localNodeIndex = 0; localNodeIndex < FEAData.numNodes; localNodeIndex++) {
+    const globalNodeIndex = ngl[localNodeIndex] - 1;
+    frontalData.globalResidualVector[globalNodeIndex] += residualVector[localNodeIndex];
   }
+
+  return true;
 }
 
-// Frontal solver
-function front(meshData, FEAData, thermalBoundaryConditions) {
-  let ldest = Array(FEAData.numNodes).fill(0);
-  let kdest = Array(FEAData.numNodes).fill(0);
-  let khed = Array(nmax).fill(0);
-  let kpiv = Array(nmax).fill(0);
-  let lpiv = Array(nmax).fill(0);
-  let jmod = Array(nmax).fill(0);
-  let pvkol = Array(nmax).fill(0);
-  let eq = Array(nmax)
+/**
+ * Function to implement the frontal solver algorithm
+ * @param {object} meshData - Object containing mesh data
+ * @param {object} FEAData - Object containing FEA-related data
+ * @param {object} thermalBoundaryConditions - Object containing thermal boundary conditions
+ */
+function executeFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions) {
+  // Get actual number of elements
+  const totalElements = meshData.totalElements;
+
+  const numNodes = meshData.nodesXCoordinates.length;
+  const systemSize = Math.max(numNodes, frontalState.globalSolutionVector.length);
+
+  // Allocate local arrays dynamically
+  let localDestination = Array(FEAData.numNodes).fill(0);
+  let rowDestination = Array(FEAData.numNodes).fill(0);
+  let rowHeaders = Array(systemSize).fill(0);
+  let pivotRowIndices = Array(systemSize).fill(0);
+  let pivotColumnIndices = Array(systemSize).fill(0);
+  let modifiedRows = Array(systemSize).fill(0);
+  let pivotColumn = Array(systemSize).fill(0);
+  let frontMatrix = Array(systemSize)
     .fill()
-    .map(() => Array(nmax).fill(0));
-  let nrs = Array(nnmax).fill(0);
-  let ncs = Array(nnmax).fill(0);
-  let check = Array(nnmax).fill(0);
-  let lco; // Declare lco once at function scope
+    .map(() => Array(systemSize).fill(0));
+  let rowSwapCount = Array(numNodes).fill(0);
+  let columnSwapCount = Array(numNodes).fill(0);
+  let lastAppearanceCheck = Array(numNodes).fill(0);
+  let pivotColumnGlobalIndex; // Pivot column global index
 
-  let ice = 1;
-  fro1.iwr1++;
-  let ipiv = 1;
-  let nsum = 1;
-  fabf1.nell = 0;
+  let frontDataCounter = 1;
+  frontalState.writeFlag++;
+  let pivotDataIndex = 1;
+  let summedRows = 1;
+  elementData.currentElementIndex = 0;
 
-  for (let i = 0; i < fro1.npt; i++) {
-    nrs[i] = 0;
-    ncs[i] = 0;
+  for (let nodeIndex = 0; nodeIndex < frontalState.totalNodes; nodeIndex++) {
+    rowSwapCount[nodeIndex] = 0;
+    columnSwapCount[nodeIndex] = 0;
   }
 
-  if (fro1.ntra !== 0) {
+  if (frontalState.transformationFlag !== 0) {
     // Prefront: find last appearance of each node
-    for (let i = 0; i < fro1.npt; i++) {
-      check[i] = 0;
+    for (let nodeIndex = 0; nodeIndex < frontalState.totalNodes; nodeIndex++) {
+      lastAppearanceCheck[nodeIndex] = 0;
     }
 
-    for (let i = 0; i < meshData.totalElements; i++) {
-      let nep = meshData.totalElements - i - 1;
-      for (let j = 0; j < fro1.nbn[nep]; j++) {
-        let k = block1.nop[nep][j];
-        if (check[k - 1] === 0) {
-          check[k - 1] = 1;
-          block1.nop[nep][j] = -block1.nop[nep][j];
+    for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {
+      let reverseElementIndex = totalElements - elementIndex - 1;
+      for (
+        let localNodeIndex = 0;
+        localNodeIndex < frontalState.nodesPerElement[reverseElementIndex];
+        localNodeIndex++
+      ) {
+        let globalNodeIndex = frontalData.nodalNumbering[reverseElementIndex][localNodeIndex];
+        if (lastAppearanceCheck[globalNodeIndex - 1] === 0) {
+          lastAppearanceCheck[globalNodeIndex - 1] = 1;
+          frontalData.nodalNumbering[reverseElementIndex][localNodeIndex] =
+            -frontalData.nodalNumbering[reverseElementIndex][localNodeIndex];
         }
       }
     }
   }
 
-  fro1.ntra = 0;
-  let lcol = 0;
-  let krow = 0;
+  frontalState.transformationFlag = 0;
+  let columnCount = 0;
+  let rowCount = 0;
 
-  for (let i = 0; i < nmax; i++) {
-    for (let j = 0; j < nmax; j++) {
-      eq[j][i] = 0;
+  for (let i = 0; i < systemSize; i++) {
+    for (let j = 0; j < systemSize; j++) {
+      frontMatrix[j][i] = 0;
     }
   }
 
   while (true) {
-    fabf1.nell++;
-    abfind(meshData, FEAData, thermalBoundaryConditions);
+    // Assemble a new element only while we still have elements
+    let assembled = false;
+    let numElementNodes = 0;
+    let numElementColumns = 0;
 
-    let n = fabf1.nell;
-    let nend = fro1.nbn[n - 1];
-    let lend = fro1.nbn[n - 1];
+    if (elementData.currentElementIndex < totalElements) {
+      elementData.currentElementIndex++;
+      assembled = assembleElementContribution(meshData, FEAData, thermalBoundaryConditions);
+    }
 
-    for (let lk = 0; lk < lend; lk++) {
-      let nodk = block1.nop[n - 1][lk];
-      let ll;
+    if (assembled) {
+      const currentElement = elementData.currentElementIndex;
+      numElementNodes = frontalState.nodesPerElement[currentElement - 1];
+      numElementColumns = frontalState.nodesPerElement[currentElement - 1];
 
-      if (lcol === 0) {
-        lcol++;
-        ldest[lk] = lcol;
-        fb1.lhed[lcol - 1] = nodk;
-      } else {
-        for (ll = 0; ll < lcol; ll++) {
-          if (Math.abs(nodk) === Math.abs(fb1.lhed[ll])) break;
-        }
+      for (let localNodeIndex = 0; localNodeIndex < numElementColumns; localNodeIndex++) {
+        let globalNodeIndex = frontalData.nodalNumbering[currentElement - 1][localNodeIndex];
+        let columnIndex;
 
-        if (ll === lcol) {
-          lcol++;
-          ldest[lk] = lcol;
-          fb1.lhed[lcol - 1] = nodk;
+        if (columnCount === 0) {
+          columnCount++;
+          localDestination[localNodeIndex] = columnCount;
+          frontStorage.columnHeaders[columnCount - 1] = globalNodeIndex;
         } else {
-          ldest[lk] = ll + 1;
-          fb1.lhed[ll] = nodk;
-        }
-      }
+          for (columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+            if (Math.abs(globalNodeIndex) === Math.abs(frontStorage.columnHeaders[columnIndex])) break;
+          }
 
-      let kk;
-      if (krow === 0) {
-        krow++;
-        kdest[lk] = krow;
-        khed[krow - 1] = nodk;
-      } else {
-        for (kk = 0; kk < krow; kk++) {
-          if (Math.abs(nodk) === Math.abs(khed[kk])) break;
+          if (columnIndex === columnCount) {
+            columnCount++;
+            localDestination[localNodeIndex] = columnCount;
+            frontStorage.columnHeaders[columnCount - 1] = globalNodeIndex;
+          } else {
+            localDestination[localNodeIndex] = columnIndex + 1;
+            frontStorage.columnHeaders[columnIndex] = globalNodeIndex;
+          }
         }
 
-        if (kk === krow) {
-          krow++;
-          kdest[lk] = krow;
-          khed[krow - 1] = nodk;
+        let rowIndex;
+        if (rowCount === 0) {
+          rowCount++;
+          rowDestination[localNodeIndex] = rowCount;
+          rowHeaders[rowCount - 1] = globalNodeIndex;
         } else {
-          kdest[lk] = kk + 1;
-          khed[kk] = nodk;
+          for (rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+            if (Math.abs(globalNodeIndex) === Math.abs(rowHeaders[rowIndex])) break;
+          }
+
+          if (rowIndex === rowCount) {
+            rowCount++;
+            rowDestination[localNodeIndex] = rowCount;
+            rowHeaders[rowCount - 1] = globalNodeIndex;
+          } else {
+            rowDestination[localNodeIndex] = rowIndex + 1;
+            rowHeaders[rowIndex] = globalNodeIndex;
+          }
+        }
+      }
+
+      if (rowCount > systemSize || columnCount > systemSize) {
+        errorLog("Error: systemSize not large enough");
+        return;
+      }
+
+      for (let localColumnIndex = 0; localColumnIndex < numElementColumns; localColumnIndex++) {
+        let frontColumnIndex = localDestination[localColumnIndex];
+        for (let localRowIndex = 0; localRowIndex < numElementNodes; localRowIndex++) {
+          let frontRowIndex = rowDestination[localRowIndex];
+          frontMatrix[frontRowIndex - 1][frontColumnIndex - 1] +=
+            elementData.localJacobianMatrix[localRowIndex][localColumnIndex];
         }
       }
     }
 
-    if (krow > nmax || lcol > nmax) {
-      errorLog("Error: nmax-nsum not large enough");
-      return;
-    }
-
-    for (let l = 0; l < lend; l++) {
-      let ll = ldest[l];
-      for (let k = 0; k < nend; k++) {
-        let kk = kdest[k];
-        eq[kk - 1][ll - 1] += fabf1.estifm[k][l];
+    // Pivoting/elimination continues whether or not a new element was assembled
+    let availableColumnCount = 0;
+    for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+      if (frontStorage.columnHeaders[columnIndex] < 0) {
+        pivotColumnIndices[availableColumnCount] = columnIndex + 1;
+        availableColumnCount++;
       }
     }
 
-    let lc = 0;
-    for (let l = 0; l < lcol; l++) {
-      if (fb1.lhed[l] < 0) {
-        lpiv[lc] = l + 1;
-        lc++;
-      }
-    }
-
-    let ir = 0;
-    let kr = 0;
-    for (let k = 0; k < krow; k++) {
-      let kt = khed[k];
-      if (kt < 0) {
-        kpiv[kr] = k + 1;
-        kr++;
-        let kro = Math.abs(kt);
-        if (block1.ncod[kro - 1] === 1) {
-          jmod[ir] = k + 1;
-          ir++;
-          block1.ncod[kro - 1] = 2;
-          block1.r1[kro - 1] = block1.bc[kro - 1];
+    let constrainedRowCount = 0;
+    let availableRowCount = 0;
+    for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+      let globalNodeIndex = rowHeaders[rowIndex];
+      if (globalNodeIndex < 0) {
+        pivotRowIndices[availableRowCount] = rowIndex + 1;
+        availableRowCount++;
+        let absoluteNodeIndex = Math.abs(globalNodeIndex);
+        if (frontalData.nodeConstraintCode[absoluteNodeIndex - 1] === 1) {
+          modifiedRows[constrainedRowCount] = rowIndex + 1;
+          constrainedRowCount++;
+          frontalData.nodeConstraintCode[absoluteNodeIndex - 1] = 2;
+          frontalData.globalResidualVector[absoluteNodeIndex - 1] =
+            frontalData.boundaryValues[absoluteNodeIndex - 1];
         }
       }
     }
 
-    if (ir > 0) {
-      for (let irr = 0; irr < ir; irr++) {
-        let k = jmod[irr] - 1;
-        let kh = Math.abs(khed[k]);
-        for (let l = 0; l < lcol; l++) {
-          eq[k][l] = 0;
-          let lh = Math.abs(fb1.lhed[l]);
-          if (lh === kh) eq[k][l] = 1;
+    if (constrainedRowCount > 0) {
+      for (let constrainedIndex = 0; constrainedIndex < constrainedRowCount; constrainedIndex++) {
+        let rowIndex = modifiedRows[constrainedIndex] - 1;
+        let globalNodeIndex = Math.abs(rowHeaders[rowIndex]);
+        for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+          frontMatrix[rowIndex][columnIndex] = 0;
+          let columnGlobalIndex = Math.abs(frontStorage.columnHeaders[columnIndex]);
+          if (columnGlobalIndex === globalNodeIndex) frontMatrix[rowIndex][columnIndex] = 1;
         }
       }
     }
 
-    if (lc > nsum || fabf1.nell < meshData.totalElements) {
-      if (lc === 0) {
+    if (availableColumnCount > summedRows || elementData.currentElementIndex < totalElements) {
+      if (availableColumnCount === 0) {
         errorLog("Error: no more rows fully summed");
         return;
       }
 
-      let kpivro = kpiv[0];
-      let lpivco = lpiv[0];
-      let pivot = eq[kpivro - 1][lpivco - 1];
+      let pivotRowIndex = pivotRowIndices[0];
+      let pivotColumnIndex = pivotColumnIndices[0];
+      let pivotValue = frontMatrix[pivotRowIndex - 1][pivotColumnIndex - 1];
 
-      if (Math.abs(pivot) < 1e-4) {
-        pivot = 0;
-        for (let l = 0; l < lc; l++) {
-          let lpivc = lpiv[l];
-          for (let k = 0; k < kr; k++) {
-            let kpivr = kpiv[k];
-            let piva = eq[kpivr - 1][lpivc - 1];
-            if (Math.abs(piva) > Math.abs(pivot)) {
-              pivot = piva;
-              lpivco = lpivc;
-              kpivro = kpivr;
+      if (Math.abs(pivotValue) < 1e-4) {
+        pivotValue = 0;
+        for (let columnIndex = 0; columnIndex < availableColumnCount; columnIndex++) {
+          let testColumnIndex = pivotColumnIndices[columnIndex];
+          for (let rowIndex = 0; rowIndex < availableRowCount; rowIndex++) {
+            let testRowIndex = pivotRowIndices[rowIndex];
+            let testValue = frontMatrix[testRowIndex - 1][testColumnIndex - 1];
+            if (Math.abs(testValue) > Math.abs(pivotValue)) {
+              pivotValue = testValue;
+              pivotColumnIndex = testColumnIndex;
+              pivotRowIndex = testRowIndex;
             }
           }
         }
       }
 
-      let kro = Math.abs(khed[kpivro - 1]);
-      lco = Math.abs(fb1.lhed[lpivco - 1]); // Assign, don't declare
-      let nhlp = kro + lco + nrs[kro - 1] + ncs[lco - 1];
-      fro1.det = (fro1.det * pivot * (-1) ** nhlp) / Math.abs(pivot);
+      let pivotGlobalRowIndex = Math.abs(rowHeaders[pivotRowIndex - 1]);
+      pivotColumnGlobalIndex = Math.abs(frontStorage.columnHeaders[pivotColumnIndex - 1]); // Assign, don't declare
+      let permutationHelper =
+        pivotGlobalRowIndex +
+        pivotColumnGlobalIndex +
+        rowSwapCount[pivotGlobalRowIndex - 1] +
+        columnSwapCount[pivotColumnGlobalIndex - 1];
+      frontalState.determinant =
+        (frontalState.determinant * pivotValue * (-1) ** permutationHelper) / Math.abs(pivotValue);
 
-      for (let iperm = 0; iperm < fro1.npt; iperm++) {
-        if (iperm >= kro) nrs[iperm]--;
-        if (iperm >= lco) ncs[iperm]--;
+      for (let nodeIndex = 0; nodeIndex < frontalState.totalNodes; nodeIndex++) {
+        if (nodeIndex >= pivotGlobalRowIndex) rowSwapCount[nodeIndex]--;
+        if (nodeIndex >= pivotColumnGlobalIndex) columnSwapCount[nodeIndex]--;
       }
 
-      if (Math.abs(pivot) < 1e-10) {
+      if (Math.abs(pivotValue) < 1e-10) {
         errorLog(
-          `Warning: matrix singular or ill-conditioned, nell=${fabf1.nell}, kro=${kro}, lco=${lco}, pivot=${pivot}`
+          `Matrix singular or ill-conditioned, currentElementIndex=${elementData.currentElementIndex}, pivotGlobalRowIndex=${pivotGlobalRowIndex}, pivotColumnGlobalIndex=${pivotColumnGlobalIndex}, pivotValue=${pivotValue}`
         );
       }
 
-      if (pivot === 0) return;
+      if (pivotValue === 0) return;
 
-      for (let l = 0; l < lcol; l++) {
-        fb1.qq[l] = eq[kpivro - 1][l] / pivot;
+      for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+        frontStorage.pivotRow[columnIndex] = frontMatrix[pivotRowIndex - 1][columnIndex] / pivotValue;
       }
 
-      let rhs = block1.r1[kro - 1] / pivot;
-      block1.r1[kro - 1] = rhs;
-      pvkol[kpivro - 1] = pivot;
+      let rightHandSide = frontalData.globalResidualVector[pivotGlobalRowIndex - 1] / pivotValue;
+      frontalData.globalResidualVector[pivotGlobalRowIndex - 1] = rightHandSide;
+      pivotColumn[pivotRowIndex - 1] = pivotValue;
 
-      if (kpivro > 1) {
-        for (let k = 0; k < kpivro - 1; k++) {
-          let krw = Math.abs(khed[k]);
-          let fac = eq[k][lpivco - 1];
-          pvkol[k] = fac;
-          if (lpivco > 1 && fac !== 0) {
-            for (let l = 0; l < lpivco - 1; l++) {
-              eq[k][l] -= fac * fb1.qq[l];
+      if (pivotRowIndex > 1) {
+        for (let rowIndex = 0; rowIndex < pivotRowIndex - 1; rowIndex++) {
+          let globalRowIndex = Math.abs(rowHeaders[rowIndex]);
+          let eliminationFactor = frontMatrix[rowIndex][pivotColumnIndex - 1];
+          pivotColumn[rowIndex] = eliminationFactor;
+          if (pivotColumnIndex > 1 && eliminationFactor !== 0) {
+            for (let columnIndex = 0; columnIndex < pivotColumnIndex - 1; columnIndex++) {
+              frontMatrix[rowIndex][columnIndex] -= eliminationFactor * frontStorage.pivotRow[columnIndex];
             }
           }
-          if (lpivco < lcol) {
-            for (let l = lpivco; l < lcol; l++) {
-              eq[k][l - 1] = eq[k][l] - fac * fb1.qq[l];
+          if (pivotColumnIndex < columnCount) {
+            for (let columnIndex = pivotColumnIndex; columnIndex < columnCount; columnIndex++) {
+              frontMatrix[rowIndex][columnIndex - 1] =
+                frontMatrix[rowIndex][columnIndex] - eliminationFactor * frontStorage.pivotRow[columnIndex];
             }
           }
-          block1.r1[krw - 1] -= fac * rhs;
+          frontalData.globalResidualVector[globalRowIndex - 1] -= eliminationFactor * rightHandSide;
         }
       }
 
-      if (kpivro < krow) {
-        for (let k = kpivro; k < krow; k++) {
-          let krw = Math.abs(khed[k]);
-          let fac = eq[k][lpivco - 1];
-          pvkol[k] = fac;
-          if (lpivco > 1) {
-            for (let l = 0; l < lpivco - 1; l++) {
-              eq[k - 1][l] = eq[k][l] - fac * fb1.qq[l];
+      if (pivotRowIndex < rowCount) {
+        for (let rowIndex = pivotRowIndex; rowIndex < rowCount; rowIndex++) {
+          let globalRowIndex = Math.abs(rowHeaders[rowIndex]);
+          let eliminationFactor = frontMatrix[rowIndex][pivotColumnIndex - 1];
+          pivotColumn[rowIndex] = eliminationFactor;
+          if (pivotColumnIndex > 1) {
+            for (let columnIndex = 0; columnIndex < pivotColumnIndex - 1; columnIndex++) {
+              frontMatrix[rowIndex - 1][columnIndex] =
+                frontMatrix[rowIndex][columnIndex] - eliminationFactor * frontStorage.pivotRow[columnIndex];
             }
           }
-          if (lpivco < lcol) {
-            for (let l = lpivco; l < lcol; l++) {
-              eq[k - 1][l - 1] = eq[k][l] - fac * fb1.qq[l];
+          if (pivotColumnIndex < columnCount) {
+            for (let columnIndex = pivotColumnIndex; columnIndex < columnCount; columnIndex++) {
+              frontMatrix[rowIndex - 1][columnIndex - 1] =
+                frontMatrix[rowIndex][columnIndex] - eliminationFactor * frontStorage.pivotRow[columnIndex];
             }
           }
-          block1.r1[krw - 1] -= fac * rhs;
+          frontalData.globalResidualVector[globalRowIndex - 1] -= eliminationFactor * rightHandSide;
         }
       }
 
-      for (let i = 0; i < krow; i++) {
-        fb1.ecpiv[ipiv + i - 1] = pvkol[i];
+      for (let i = 0; i < rowCount; i++) {
+        frontStorage.pivotData[pivotDataIndex + i - 1] = pivotColumn[i];
       }
-      ipiv += krow;
+      pivotDataIndex += rowCount;
 
-      for (let i = 0; i < krow; i++) {
-        fb1.ecpiv[ipiv + i - 1] = khed[i];
+      for (let i = 0; i < rowCount; i++) {
+        frontStorage.pivotData[pivotDataIndex + i - 1] = rowHeaders[i];
       }
-      ipiv += krow;
+      pivotDataIndex += rowCount;
 
-      fb1.ecpiv[ipiv - 1] = kpivro;
-      ipiv++;
+      frontStorage.pivotData[pivotDataIndex - 1] = pivotRowIndex;
+      pivotDataIndex++;
 
-      for (let i = 0; i < lcol; i++) {
-        fb1.ecv[ice - 1 + i] = fb1.qq[i];
+      for (let i = 0; i < columnCount; i++) {
+        frontStorage.frontValues[frontDataCounter - 1 + i] = frontStorage.pivotRow[i];
       }
-      ice += lcol;
+      frontDataCounter += columnCount;
 
-      for (let i = 0; i < lcol; i++) {
-        fb1.ecv[ice - 1 + i] = fb1.lhed[i];
+      for (let i = 0; i < columnCount; i++) {
+        frontStorage.frontValues[frontDataCounter - 1 + i] = frontStorage.columnHeaders[i];
       }
-      ice += lcol;
+      frontDataCounter += columnCount;
 
-      fb1.ecv[ice - 1] = kro;
-      fb1.ecv[ice] = lcol;
-      fb1.ecv[ice + 1] = lpivco;
-      fb1.ecv[ice + 2] = pivot;
-      ice += 4;
+      frontStorage.frontValues[frontDataCounter - 1] = pivotGlobalRowIndex;
+      frontStorage.frontValues[frontDataCounter] = columnCount;
+      frontStorage.frontValues[frontDataCounter + 1] = pivotColumnIndex;
+      frontStorage.frontValues[frontDataCounter + 2] = pivotValue;
+      frontDataCounter += 4;
 
-      for (let k = 0; k < krow; k++) {
-        eq[k][lcol - 1] = 0;
-      }
-
-      for (let l = 0; l < lcol; l++) {
-        eq[krow - 1][l] = 0;
+      for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
+        frontMatrix[rowIndex][columnCount - 1] = 0;
       }
 
-      lcol--;
-      if (lpivco < lcol + 1) {
-        for (let l = lpivco - 1; l < lcol; l++) {
-          fb1.lhed[l] = fb1.lhed[l + 1];
+      for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+        frontMatrix[rowCount - 1][columnIndex] = 0;
+      }
+
+      columnCount--;
+      if (pivotColumnIndex < columnCount + 1) {
+        for (let columnIndex = pivotColumnIndex - 1; columnIndex < columnCount; columnIndex++) {
+          frontStorage.columnHeaders[columnIndex] = frontStorage.columnHeaders[columnIndex + 1];
         }
       }
 
-      krow--;
-      if (kpivro < krow + 1) {
-        for (let k = kpivro - 1; k < krow; k++) {
-          khed[k] = khed[k + 1];
+      rowCount--;
+      if (pivotRowIndex < rowCount + 1) {
+        for (let rowIndex = pivotRowIndex - 1; rowIndex < rowCount; rowIndex++) {
+          rowHeaders[rowIndex] = rowHeaders[rowIndex + 1];
         }
       }
 
-      if (krow > 1 || fabf1.nell < meshData.totalElements) continue;
+      if (rowCount > 1 || elementData.currentElementIndex < meshData.totalElements) continue;
 
-      lco = Math.abs(fb1.lhed[0]); // Assign, don't declare
-      kpivro = 1;
-      pivot = eq[0][0];
-      kro = Math.abs(khed[0]);
-      lpivco = 1;
-      nhlp = kro + lco + nrs[kro - 1] + ncs[lco - 1];
-      fro1.det = (fro1.det * pivot * (-1) ** nhlp) / Math.abs(pivot);
+      pivotColumnGlobalIndex = Math.abs(frontStorage.columnHeaders[0]); // Assign, don't declare
+      pivotRowIndex = 1;
+      pivotValue = frontMatrix[0][0];
+      pivotGlobalRowIndex = Math.abs(rowHeaders[0]);
+      pivotColumnIndex = 1;
+      permutationHelper =
+        pivotGlobalRowIndex +
+        pivotColumnGlobalIndex +
+        rowSwapCount[pivotGlobalRowIndex - 1] +
+        columnSwapCount[pivotColumnGlobalIndex - 1];
+      frontalState.determinant =
+        (frontalState.determinant * pivotValue * (-1) ** permutationHelper) / Math.abs(pivotValue);
 
-      fb1.qq[0] = 1;
-      if (Math.abs(pivot) < 1e-10) {
+      frontStorage.pivotRow[0] = 1;
+      if (Math.abs(pivotValue) < 1e-10) {
         errorLog(
-          `Warning: matrix singular or ill-conditioned, nell=${fabf1.nell}, kro=${kro}, lco=${lco}, pivot=${pivot}`
+          `Matrix singular or ill-conditioned, currentElementIndex=${elementData.currentElementIndex}, pivotGlobalRowIndex=${pivotGlobalRowIndex}, pivotColumnGlobalIndex=${pivotColumnGlobalIndex}, pivotValue=${pivotValue}`
         );
       }
 
-      if (pivot === 0) return;
+      if (pivotValue === 0) return;
 
-      block1.r1[kro - 1] = block1.r1[kro - 1] / pivot;
-      fb1.ecv[ice - 1] = fb1.qq[0];
-      ice++;
-      fb1.ecv[ice - 1] = fb1.lhed[0];
-      ice++;
-      fb1.ecv[ice - 1] = kro;
-      fb1.ecv[ice] = lcol;
-      fb1.ecv[ice + 1] = lpivco;
-      fb1.ecv[ice + 2] = pivot;
-      ice += 4;
+      frontalData.globalResidualVector[pivotGlobalRowIndex - 1] =
+        frontalData.globalResidualVector[pivotGlobalRowIndex - 1] / pivotValue;
+      frontStorage.frontValues[frontDataCounter - 1] = frontStorage.pivotRow[0];
+      frontDataCounter++;
+      frontStorage.frontValues[frontDataCounter - 1] = frontStorage.columnHeaders[0];
+      frontDataCounter++;
+      frontStorage.frontValues[frontDataCounter - 1] = pivotGlobalRowIndex;
+      frontStorage.frontValues[frontDataCounter] = columnCount;
+      frontStorage.frontValues[frontDataCounter + 1] = pivotColumnIndex;
+      frontStorage.frontValues[frontDataCounter + 2] = pivotValue;
+      frontDataCounter += 4;
 
-      fb1.ecpiv[ipiv - 1] = pvkol[0];
-      ipiv++;
-      fb1.ecpiv[ipiv - 1] = khed[0];
-      ipiv++;
-      fb1.ecpiv[ipiv - 1] = kpivro;
-      ipiv++;
+      frontStorage.pivotData[pivotDataIndex - 1] = pivotColumn[0];
+      pivotDataIndex++;
+      frontStorage.pivotData[pivotDataIndex - 1] = rowHeaders[0];
+      pivotDataIndex++;
+      frontStorage.pivotData[pivotDataIndex - 1] = pivotRowIndex;
+      pivotDataIndex++;
 
-      fro1.ice1 = ice;
-      if (fro1.iwr1 === 1) debugLog(`total ecs transfer in matrix reduction=${ice}`);
+      frontalState.frontDataIndex = frontDataCounter;
+      if (frontalState.writeFlag === 1)
+        debugLog(`total ecs transfer in matrix reduction=${frontDataCounter}`);
 
-      bacsub(ice);
+      // Back substitution
+      performBackSubstitution(frontDataCounter);
       break;
     }
   }
 }
 
-// Back substitution
-function bacsub(ice) {
-  for (let i = 0; i < fro1.npt; i++) {
-    fro1.sk[i] = block1.bc[i];
+/**
+ * Function to perform back substitution for the frontal solver
+ * @param {number} frontDataCounter - Index counter for the element contributions
+ */
+function performBackSubstitution(frontDataCounter) {
+  for (let nodeIndex = 0; nodeIndex < frontalState.totalNodes; nodeIndex++) {
+    frontalState.globalSolutionVector[nodeIndex] = frontalData.boundaryValues[nodeIndex];
   }
 
-  for (let iv = 1; iv <= fro1.npt; iv++) {
-    ice -= 4;
-    let kro = fb1.ecv[ice - 1];
-    let lcol = fb1.ecv[ice];
-    let lpivco = fb1.ecv[ice + 1];
-    let pivot = fb1.ecv[ice + 2];
+  for (let iterationIndex = 1; iterationIndex <= frontalState.totalNodes; iterationIndex++) {
+    frontDataCounter -= 4;
+    let pivotGlobalRowIndex = frontStorage.frontValues[frontDataCounter - 1];
+    let columnCount = frontStorage.frontValues[frontDataCounter];
+    let pivotColumnIndex = frontStorage.frontValues[frontDataCounter + 1];
+    let pivotValue = frontStorage.frontValues[frontDataCounter + 2];
 
-    if (iv === 1) {
-      ice--;
-      fb1.lhed[0] = fb1.ecv[ice - 1];
-      ice--;
-      fb1.qq[0] = fb1.ecv[ice - 1];
+    if (iterationIndex === 1) {
+      frontDataCounter--;
+      frontStorage.columnHeaders[0] = frontStorage.frontValues[frontDataCounter - 1];
+      frontDataCounter--;
+      frontStorage.pivotRow[0] = frontStorage.frontValues[frontDataCounter - 1];
     } else {
-      ice -= lcol;
-      for (let iii = 0; iii < lcol; iii++) {
-        fb1.lhed[iii] = fb1.ecv[ice - 1 + iii];
+      frontDataCounter -= columnCount;
+      for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+        frontStorage.columnHeaders[columnIndex] =
+          frontStorage.frontValues[frontDataCounter - 1 + columnIndex];
       }
-      ice -= lcol;
-      for (let iii = 0; iii < lcol; iii++) {
-        fb1.qq[iii] = fb1.ecv[ice - 1 + iii];
+      frontDataCounter -= columnCount;
+      for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+        frontStorage.pivotRow[columnIndex] = frontStorage.frontValues[frontDataCounter - 1 + columnIndex];
       }
     }
 
-    let lco = Math.abs(fb1.lhed[lpivco - 1]);
-    if (block1.ncod[lco - 1] > 0) continue;
+    let pivotColumnGlobalIndex = Math.abs(frontStorage.columnHeaders[pivotColumnIndex - 1]);
+    if (frontalData.nodeConstraintCode[pivotColumnGlobalIndex - 1] > 0) continue;
 
-    let gash = 0;
-    fb1.qq[lpivco - 1] = 0;
-    for (let l = 0; l < lcol; l++) {
-      gash -= fb1.qq[l] * fro1.sk[Math.abs(fb1.lhed[l]) - 1];
+    let accumulatedValue = 0;
+    frontStorage.pivotRow[pivotColumnIndex - 1] = 0;
+    for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+      accumulatedValue -=
+        frontStorage.pivotRow[columnIndex] *
+        frontalState.globalSolutionVector[Math.abs(frontStorage.columnHeaders[columnIndex]) - 1];
     }
 
-    fro1.sk[lco - 1] = gash + block1.r1[kro - 1];
+    frontalState.globalSolutionVector[pivotColumnGlobalIndex - 1] =
+      accumulatedValue + frontalData.globalResidualVector[pivotGlobalRowIndex - 1];
 
-    block1.ncod[lco - 1] = 1;
+    frontalData.nodeConstraintCode[pivotColumnGlobalIndex - 1] = 1;
   }
 
-  if (fro1.iwr1 === 1) debugLog(`value of ice after backsubstitution=${ice}`);
+  if (frontalState.writeFlag === 1)
+    debugLog(`value of frontDataCounter after backsubstitution=${frontDataCounter}`);
 }

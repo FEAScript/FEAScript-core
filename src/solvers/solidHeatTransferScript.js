@@ -24,6 +24,14 @@ import { basicLog, debugLog } from "../utilities/loggingScript.js";
  * @returns {object} An object containing:
  *  - jacobianMatrix: The assembled Jacobian matrix
  *  - residualVector: The assembled residual vector
+ *
+ * For consistency across both linear and nonlinear formulations,
+ * this project always refers to the assembled right-hand side vector
+ * as `residualVector` and the assembled system matrix as `jacobianMatrix`.
+ *
+ * In linear problems `jacobianMatrix` is equivalent to the
+ * classic stiffness/conductivity matrix and `residualVector`
+ * corresponds to the traditional load (RHS) vector.
  */
 export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
   basicLog("Starting solid heat transfer matrix assembly...");
@@ -185,16 +193,17 @@ export function assembleSolidHeatTransferFront({ elementIndex, nop, meshData, ba
   const { gaussPoints, gaussWeights, numNodes } = FEAData;
   const { nodesXCoordinates, nodesYCoordinates } = meshData;
 
-  // Initialize element stiffness matrix and local load vector for the current element
-  const estifm = Array(numNodes)
+  // Initialize local Jacobian (stiffness) and residual (load) for the current element
+  const localJacobianMatrix = Array(numNodes)
     .fill()
     .map(() => Array(numNodes).fill(0));
-  const localLoad = Array(numNodes).fill(0);
+  const residualVector = Array(numNodes).fill(0);
 
   // Build the mapping from local node indices to global node indices
   const ngl = Array(numNodes);
-  for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++)
+  for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
     ngl[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]);
+  }
 
   // Loop over Gauss points
   for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
@@ -220,7 +229,7 @@ export function assembleSolidHeatTransferFront({ elementIndex, nop, meshData, ba
       // Computation of Galerkin's residuals and local Jacobian matrix
       for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
         for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
-          estifm[localNodeIndex1][localNodeIndex2] -=
+          localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
             gaussWeights[gaussPointIndex1] *
             gaussWeights[gaussPointIndex2] *
             detJacobian *
@@ -231,5 +240,5 @@ export function assembleSolidHeatTransferFront({ elementIndex, nop, meshData, ba
     }
   }
 
-  return { estifm, localLoad, ngl };
+  return { localJacobianMatrix, residualVector, ngl };
 }

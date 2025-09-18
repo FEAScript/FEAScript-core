@@ -35,6 +35,14 @@ export class ThermalBoundaryConditions {
    * Function to impose constant temperature boundary conditions (Dirichlet type)
    * @param {array} residualVector - The residual vector to be modified
    * @param {array} jacobianMatrix - The Jacobian matrix to be modified
+   *
+   * For consistency across both linear and nonlinear formulations,
+   * this project always refers to the assembled right-hand side vector
+   * as `residualVector` and the assembled system matrix as `jacobianMatrix`.
+   *
+   * In linear problems `jacobianMatrix` is equivalent to the
+   * classic stiffness/conductivity matrix and `residualVector`
+   * corresponds to the traditional load (RHS) vector.
    */
   imposeConstantTempBoundaryConditions(residualVector, jacobianMatrix) {
     basicLog("Applying constant temperature boundary conditions");
@@ -590,10 +598,10 @@ export class ThermalBoundaryConditions {
 
     // Initialize local stiffness matrix and load vector
     const numNodes = this.nop[elementIndex].length;
-    const estifm = Array(numNodes)
+    const localJacobianMatrix = Array(numNodes)
       .fill()
       .map(() => Array(numNodes).fill(0));
-    const localLoad = Array(numNodes).fill(0);
+    const residualVector = Array(numNodes).fill(0);
 
     // Check if this element is on a convection boundary
     for (const boundaryKey in this.boundaryElements) {
@@ -627,8 +635,8 @@ export class ThermalBoundaryConditions {
                 elementIndex + 1
               }, local node ${nodeIndex + 1})`
             );
-            localLoad[nodeIndex] += -convectionCoeff * extTemp;
-            estifm[nodeIndex][nodeIndex] += convectionCoeff;
+            residualVector[nodeIndex] += -convectionCoeff * extTemp;
+            localJacobianMatrix[nodeIndex][nodeIndex] += convectionCoeff;
           } else if (this.meshDimension === "2D") {
             // Handle 2D case
             if (this.elementOrder === "linear") {
@@ -701,7 +709,7 @@ export class ThermalBoundaryConditions {
                 localNodeIndex < lastNodeIndex;
                 localNodeIndex += nodeIncrement
               ) {
-                localLoad[localNodeIndex] +=
+                residualVector[localNodeIndex] +=
                   -gaussWeights[0] *
                   tangentVectorLength *
                   basisFunction[localNodeIndex] *
@@ -713,7 +721,7 @@ export class ThermalBoundaryConditions {
                   localNodeIndex2 < lastNodeIndex;
                   localNodeIndex2 += nodeIncrement
                 ) {
-                  estifm[localNodeIndex][localNodeIndex2] +=
+                  localJacobianMatrix[localNodeIndex][localNodeIndex2] +=
                     -gaussWeights[0] *
                     tangentVectorLength *
                     basisFunction[localNodeIndex] *
@@ -794,7 +802,7 @@ export class ThermalBoundaryConditions {
                   localNodeIndex < lastNodeIndex;
                   localNodeIndex += nodeIncrement
                 ) {
-                  localLoad[localNodeIndex] +=
+                  residualVector[localNodeIndex] +=
                     -gaussWeights[gaussPointIndex] *
                     tangentVectorLength *
                     basisFunction[localNodeIndex] *
@@ -806,7 +814,7 @@ export class ThermalBoundaryConditions {
                     localNodeIndex2 < lastNodeIndex;
                     localNodeIndex2 += nodeIncrement
                   ) {
-                    estifm[localNodeIndex][localNodeIndex2] +=
+                    localJacobianMatrix[localNodeIndex][localNodeIndex2] +=
                       -gaussWeights[gaussPointIndex] *
                       tangentVectorLength *
                       basisFunction[localNodeIndex] *
@@ -821,6 +829,6 @@ export class ThermalBoundaryConditions {
       }
     }
 
-    return { estifm, localLoad };
+    return { localJacobianMatrix, residualVector };
   }
 }
