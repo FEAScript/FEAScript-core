@@ -168,13 +168,11 @@ function runFrontalSolverMain(meshConfig, meshData, boundaryConditions) {
     frontalData.boundaryValues[nodeIndex] = 0;
   }
 
-  // Apply constant temperature boundary conditions
+  // Apply constant temperature (Dirichlet-type) boundary conditions
   thermalBoundaryConditions.imposeConstantTempBoundaryConditionsFront(
     frontalData.nodeConstraintCode,
     frontalData.boundaryValues
   );
-
-  // Match normal solvers’ logging
   basicLog("Constant temperature boundary conditions applied");
 
   // Initialize global residual vector
@@ -224,7 +222,7 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
     return false;
   }
 
-  // Adopt naming convention: localJacobianMatrix, residualVector
+  // Domain terms
   const { localJacobianMatrix, residualVector, ngl } = assembleSolidHeatTransferFront({
     elementIndex,
     nop: frontalData.nodalNumbering,
@@ -233,17 +231,53 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
     FEAData,
   });
 
-  // Copy element matrix
-  for (let localNodeI = 0; localNodeI < FEAData.numNodes; localNodeI++) {
-    for (let localNodeJ = 0; localNodeJ < FEAData.numNodes; localNodeJ++) {
-      elementData.localJacobianMatrix[localNodeI][localNodeJ] = localJacobianMatrix[localNodeI][localNodeJ];
+  // Check if this element is on a convection boundary
+  let isOnConvectionBoundary = false;
+  for (const boundaryKey in meshData.boundaryElements) {
+    if (
+      thermalBoundaryConditions.boundaryConditions[boundaryKey]?.[0] === "convection" &&
+      meshData.boundaryElements[boundaryKey].some(([elemIdx, _]) => elemIdx === elementIndex)
+    ) {
+      isOnConvectionBoundary = true;
+      break;
     }
   }
 
-  // Accumulate local residual into global RHS
+  // Only calculate convection for elements when required
+  let boundaryLocalJacobianMatrix = Array(FEAData.numNodes)
+    .fill()
+    .map(() => Array(FEAData.numNodes).fill(0));
+  let boundaryResidualVector = Array(FEAData.numNodes).fill(0);
+
+  if (isOnConvectionBoundary) {
+    const { gaussPoints, gaussWeights } = FEAData;
+    const result = thermalBoundaryConditions.imposeConvectionBoundaryConditionsFront(
+      elementIndex,
+      meshData.nodesXCoordinates,
+      meshData.nodesYCoordinates,
+      gaussPoints,
+      gaussWeights,
+      basisFunctionsLib
+    );
+    boundaryLocalJacobianMatrix = result.localJacobianMatrix;
+    boundaryResidualVector = result.residualVector;
+
+    basicLog("Convection boundary conditions applied");
+  }
+
+  // Combine domain and boundary contributions
+  for (let localNodeI = 0; localNodeI < FEAData.numNodes; localNodeI++) {
+    for (let localNodeJ = 0; localNodeJ < FEAData.numNodes; localNodeJ++) {
+      elementData.localJacobianMatrix[localNodeI][localNodeJ] =
+        localJacobianMatrix[localNodeI][localNodeJ] + boundaryLocalJacobianMatrix[localNodeI][localNodeJ];
+    }
+  }
+
+  // Assemble local element residual
   for (let localNodeIndex = 0; localNodeIndex < FEAData.numNodes; localNodeIndex++) {
     const globalNodeIndex = ngl[localNodeIndex] - 1;
-    frontalData.globalResidualVector[globalNodeIndex] += residualVector[localNodeIndex];
+    frontalData.globalResidualVector[globalNodeIndex] +=
+      residualVector[localNodeIndex] + boundaryResidualVector[localNodeIndex];
   }
 
   return true;

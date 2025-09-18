@@ -167,7 +167,7 @@ export class ThermalBoundaryConditions {
    * @param {array} boundaryValues - Array containing boundary condition values
    */
   imposeConstantTempBoundaryConditionsFront(nodeConstraintCode, boundaryValues) {
-    basicLog("Applying constant temperature boundary conditions for frontal solver");
+    basicLog("Applying constant temperature boundary conditions");
 
     if (this.meshDimension === "1D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
@@ -579,7 +579,7 @@ export class ThermalBoundaryConditions {
     gaussWeights,
     basisFunctions
   ) {
-    basicLog("Applying convection boundary conditions for frontal solver");
+    basicLog("Applying convection boundary conditions");
     // Extract convection parameters from boundary conditions
     let convectionHeatTranfCoeff = [];
     let convectionExtTemp = [];
