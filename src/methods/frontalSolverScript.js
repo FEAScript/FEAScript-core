@@ -122,11 +122,17 @@ function initializeFrontalArrays(numNodes, numElements, maxNodesPerElement) {
  * @param {number} maxNodesPerElement - Maximum number of nodes per element
  * @returns {number} Estimated front size
  */
+// function estimateFrontSize(numNodes, numElements, maxNodesPerElement) {
+//   const frontWidthEstimate = Math.ceil(Math.sqrt(numElements) * maxNodesPerElement * 2);
+//   const frontSize = frontWidthEstimate * numNodes * 4;
+//   return Math.max(frontSize, 10000);
+// }
 function estimateFrontSize(numNodes, numElements, maxNodesPerElement) {
-  // Heuristic estimate for front storage
-  const frontWidthEstimate = Math.ceil(Math.sqrt(numElements) * maxNodesPerElement * 2);
-  const frontSize = frontWidthEstimate * numNodes * 4;
-  return Math.max(frontSize, 10000);
+  const frontWidthEstimate = Math.max(
+    Math.ceil(Math.sqrt(numElements)) * maxNodesPerElement,
+    maxNodesPerElement * 2
+  );
+  return frontWidthEstimate * numElements;
 }
 
 /**
