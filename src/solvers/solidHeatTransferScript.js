@@ -191,7 +191,7 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
 export function assembleSolidHeatTransferFront({ elementIndex, nop, meshData, basisFunctions, FEAData }) {
   // Extract numerical integration parameters and mesh coordinates
   const { gaussPoints, gaussWeights, numNodes } = FEAData;
-  const { nodesXCoordinates, nodesYCoordinates } = meshData;
+  const { nodesXCoordinates, nodesYCoordinates, meshDimension } = meshData;
 
   // Initialize local Jacobian (stiffness) and residual (load) for the current element
   const localJacobianMatrix = Array(numNodes)
@@ -206,22 +206,22 @@ export function assembleSolidHeatTransferFront({ elementIndex, nop, meshData, ba
   }
 
   // Loop over Gauss points
-  for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
-    for (let gaussPointIndex2 = 0; gaussPointIndex2 < gaussPoints.length; gaussPointIndex2++) {
+  if (meshDimension === "1D") {
+    // 1D solid heat transfer
+    for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
       // Get basis functions for the current Gauss point
-      const { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta } =
-        basisFunctions.getBasisFunctions(gaussPoints[gaussPointIndex1], gaussPoints[gaussPointIndex2]);
+      const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(
+        gaussPoints[gaussPointIndex1]
+      );
 
       // Create mapping from local element space to global mesh (convert to 0-based indexing)
       const localToGlobalMap = ngl.map((globalIndex) => globalIndex - 1);
 
       // Perform isoparametric mapping
-      const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = performIsoparametricMapping2D({
+      const { detJacobian, basisFunctionDerivX } = performIsoparametricMapping1D({
         basisFunction,
         basisFunctionDerivKsi,
-        basisFunctionDerivEta,
         nodesXCoordinates,
-        nodesYCoordinates,
         localToGlobalMap,
         numNodes,
       });
@@ -231,10 +231,43 @@ export function assembleSolidHeatTransferFront({ elementIndex, nop, meshData, ba
         for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
           localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
             gaussWeights[gaussPointIndex1] *
-            gaussWeights[gaussPointIndex2] *
             detJacobian *
-            (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] +
-              basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
+            (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2]);
+        }
+      }
+    }
+  } else if (meshDimension === "2D") {
+    // 2D solid heat transfer
+    for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
+      for (let gaussPointIndex2 = 0; gaussPointIndex2 < gaussPoints.length; gaussPointIndex2++) {
+        // Get basis functions for the current Gauss point
+        const { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta } =
+          basisFunctions.getBasisFunctions(gaussPoints[gaussPointIndex1], gaussPoints[gaussPointIndex2]);
+
+        // Create mapping from local element space to global mesh (convert to 0-based indexing)
+        const localToGlobalMap = ngl.map((globalIndex) => globalIndex - 1);
+
+        // Perform isoparametric mapping
+        const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = performIsoparametricMapping2D({
+          basisFunction,
+          basisFunctionDerivKsi,
+          basisFunctionDerivEta,
+          nodesXCoordinates,
+          nodesYCoordinates,
+          localToGlobalMap,
+          numNodes,
+        });
+
+        // Computation of Galerkin's residuals and local Jacobian matrix
+        for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
+          for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
+            localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
+              gaussWeights[gaussPointIndex1] *
+              gaussWeights[gaussPointIndex2] *
+              detJacobian *
+              (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] +
+                basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
+          }
         }
       }
     }

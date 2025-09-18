@@ -205,11 +205,21 @@ function runFrontalSolverMain(meshConfig, meshData, boundaryConditions) {
   // Output results to console for debugging
   const { nodesXCoordinates, nodesYCoordinates } = meshData;
   for (let nodeIndex = 0; nodeIndex < meshData.nodesXCoordinates.length; nodeIndex++) {
-    debugLog(
-      `${nodesXCoordinates[nodeIndex].toExponential(5)}  ${nodesYCoordinates[nodeIndex].toExponential(
-        5
-      )}  ${frontalData.solutionVector[nodeIndex].toExponential(5)}`
-    );
+    if (meshConfig.meshDimension === "1D") {
+      // 1D case - only output X coordinates and temperature
+      debugLog(
+        `${nodesXCoordinates[nodeIndex].toExponential(5)}  ${frontalData.solutionVector[
+          nodeIndex
+        ].toExponential(5)}`
+      );
+    } else {
+      // 2D case - output X, Y coordinates and temperature
+      debugLog(
+        `${nodesXCoordinates[nodeIndex].toExponential(5)}  ${nodesYCoordinates[nodeIndex].toExponential(
+          5
+        )}  ${frontalData.solutionVector[nodeIndex].toExponential(5)}`
+      );
+    }
   }
 }
 
