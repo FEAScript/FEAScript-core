@@ -191,7 +191,7 @@ function runFrontalSolverMain(meshConfig, meshData, boundaryConditions) {
     frontalState.nodesPerElement[elementIndex] = FEAData.numNodes;
   }
 
-  executeFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions);
+  runFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions);
 
   // Copy solution
   for (let nodeIndex = 0; nodeIndex < meshData.nodesXCoordinates.length; nodeIndex++) {
@@ -255,14 +255,11 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
  * @param {object} FEAData - Object containing FEA-related data
  * @param {object} thermalBoundaryConditions - Object containing thermal boundary conditions
  */
-function executeFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions) {
-  // Get actual number of elements
+function runFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions) {
+  // Allocate local arrays dynamically
   const totalElements = meshData.totalElements;
-
   const numNodes = meshData.nodesXCoordinates.length;
   const systemSize = Math.max(numNodes, frontalState.globalSolutionVector.length);
-
-  // Allocate local arrays dynamically
   let localDestination = Array(FEAData.numNodes).fill(0);
   let rowDestination = Array(FEAData.numNodes).fill(0);
   let rowHeaders = Array(systemSize).fill(0);
