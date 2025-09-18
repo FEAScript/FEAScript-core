@@ -107,7 +107,7 @@ function initializeFrontalArrays(numNodes, numElements, maxNodesPerElement) {
     .map(() => Array(maxNodesPerElement).fill(0));
   elementData.currentElementIndex = 0;
 
-  // Initialize frontStorage arrays (front storage)
+  // Initialize frontStorage arrays
   const frontSize = estimateFrontSize(numNodes, numElements, maxNodesPerElement);
   frontStorage.frontValues = Array(frontSize).fill(0);
   frontStorage.columnHeaders = Array(systemSize).fill(0);
