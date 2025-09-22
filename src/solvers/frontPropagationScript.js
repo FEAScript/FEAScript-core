@@ -17,6 +17,9 @@ import {
 } from "../mesh/meshUtilsScript.js";
 import { basicLog, debugLog } from "../utilities/loggingScript.js";
 
+// Base viscous term that remains when eikonal equation is fully activated
+const baseEikonalViscousTerm = 1e-2;
+
 /**
  * Function to assemble the Jacobian matrix and residuals vector for the front propagation model
  * @param {object} meshData - Object containing prepared mesh data
@@ -36,7 +39,6 @@ export function assembleFrontPropagationMat(
   basicLog("Starting front propagation matrix assembly...");
 
   // Calculate eikonal viscous term
-  const baseEikonalViscousTerm = 1e-2; // Base viscous term that remains when eikonal equation is fully activated
   let eikonalViscousTerm = 1 - eikonalActivationFlag + baseEikonalViscousTerm; // Viscous term for the front propagation (eikonal) equation
   basicLog(`eikonalViscousTerm: ${eikonalViscousTerm}`);
   basicLog(`eikonalActivationFlag: ${eikonalActivationFlag}`);
@@ -103,12 +105,12 @@ export function assembleFrontPropagationMat(
         for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
           let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
           // residualVector
-          // To perform residualVector calculation here
+          // TODO residualVector calculation here
 
           for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
             let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
             // jacobianMatrix
-            // To perform jacobianMatrix calculation here
+            // TODO jacobianMatrix calculation here
           }
         }
       }
@@ -239,4 +241,154 @@ export function assembleFrontPropagationMat(
     jacobianMatrix,
     residualVector,
   };
+}
+
+/**
+ * Function to assemble the local Jacobian matrix and residual vector for the front propagation model when using the frontal system solver
+ * @param {number} elementIndex - Index of the element being processed
+ * @param {array} nop - Nodal connectivity array (element-to-node mapping)
+ * @param {object} meshData - Object containing prepared mesh data
+ * @param {object} basisFunctions - Object containing basis functions and their derivatives
+ * @param {object} FEAData - Object containing FEA-related data
+ * @param {array} solutionVector - The solution vector for non-linear equations
+ * @param {number} eikonalActivationFlag - Activation parameter for the eikonal equation
+ * @returns {object} An object containing:
+ *  - localJacobianMatrix: Local element stiffness matrix
+ *  - residualVector: Local element load vector
+ *  - ngl: Array mapping local node indices to global node indices
+ */
+export function assembleFrontPropagationFront({
+  elementIndex,
+  nop,
+  meshData,
+  basisFunctions,
+  FEAData,
+  solutionVector,
+  eikonalActivationFlag,
+}) {
+  // Extract numerical integration parameters and mesh coordinates
+  const { gaussPoints, gaussWeights, numNodes } = FEAData;
+  const { nodesXCoordinates, nodesYCoordinates, meshDimension } = meshData;
+
+  // Calculate eikonal viscous term
+  let eikonalViscousTerm = 1 - eikonalActivationFlag + baseEikonalViscousTerm; // Viscous term for the front propagation (eikonal) equation
+
+  // Initialize local Jacobian (stiffness) and residual (load) for the current element
+  const localJacobianMatrix = Array(numNodes)
+    .fill()
+    .map(() => Array(numNodes).fill(0));
+  const residualVector = Array(numNodes).fill(0);
+
+  // Build the mapping from local node indices to global node indices
+  const ngl = Array(numNodes);
+  const localToGlobalMap = Array(numNodes);
+  for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+    ngl[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]);
+    localToGlobalMap[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]) - 1;
+  }
+
+  // Loop over Gauss points
+  if (meshDimension === "1D") {
+    // 1D front propagation (eikonal) equation
+    for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {}
+  } else if (meshDimension === "2D") {
+    // 2D front propagation (eikonal) equation
+    for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
+      for (let gaussPointIndex2 = 0; gaussPointIndex2 < gaussPoints.length; gaussPointIndex2++) {
+        // Get basis functions for the current Gauss point
+        const { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta } =
+          basisFunctions.getBasisFunctions(gaussPoints[gaussPointIndex1], gaussPoints[gaussPointIndex2]);
+
+        // Perform isoparametric mapping
+        const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = performIsoparametricMapping2D({
+          basisFunction,
+          basisFunctionDerivKsi,
+          basisFunctionDerivEta,
+          nodesXCoordinates,
+          nodesYCoordinates,
+          localToGlobalMap,
+          numNodes,
+        });
+
+        // Calculate solution derivatives
+        let solutionDerivX = 0;
+        let solutionDerivY = 0;
+        for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+          solutionDerivX +=
+            solutionVector[localToGlobalMap[localNodeIndex]] * basisFunctionDerivX[localNodeIndex];
+          solutionDerivY +=
+            solutionVector[localToGlobalMap[localNodeIndex]] * basisFunctionDerivY[localNodeIndex];
+        }
+
+        // Computation of Galerkin's residuals and Jacobian matrix
+        for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
+          let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
+          // Viscous term contribution
+          residualVector[localToGlobalMap1] +=
+            eikonalViscousTerm *
+              gaussWeights[gaussPointIndex1] *
+              gaussWeights[gaussPointIndex2] *
+              detJacobian *
+              basisFunctionDerivX[localNodeIndex1] *
+              solutionDerivX +
+            eikonalViscousTerm *
+              gaussWeights[gaussPointIndex1] *
+              gaussWeights[gaussPointIndex2] *
+              detJacobian *
+              basisFunctionDerivY[localNodeIndex1] *
+              solutionDerivY;
+
+          // Eikonal equation contribution
+          if (eikonalActivationFlag !== 0) {
+            residualVector[localToGlobalMap1] +=
+              eikonalActivationFlag *
+              (gaussWeights[gaussPointIndex1] *
+                gaussWeights[gaussPointIndex2] *
+                detJacobian *
+                basisFunction[localNodeIndex1] *
+                Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2) -
+                gaussWeights[gaussPointIndex1] *
+                  gaussWeights[gaussPointIndex2] *
+                  detJacobian *
+                  basisFunction[localNodeIndex1]);
+          }
+
+          for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
+            // Viscous term contribution
+            localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
+              eikonalViscousTerm *
+              gaussWeights[gaussPointIndex1] *
+              gaussWeights[gaussPointIndex2] *
+              detJacobian *
+              (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] +
+                basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
+
+            // Eikonal equation contribution
+            if (eikonalActivationFlag !== 0) {
+              const gradientNorm = Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2 + 1e-8);
+
+              localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
+                eikonalActivationFlag *
+                  ((detJacobian *
+                    solutionDerivX *
+                    basisFunction[localNodeIndex1] *
+                    gaussWeights[gaussPointIndex1] *
+                    gaussWeights[gaussPointIndex2]) /
+                    gradientNorm) *
+                  basisFunctionDerivX[localNodeIndex2] -
+                ((detJacobian *
+                  solutionDerivY *
+                  basisFunction[localNodeIndex1] *
+                  gaussWeights[gaussPointIndex1] *
+                  gaussWeights[gaussPointIndex2]) /
+                  gradientNorm) *
+                  basisFunctionDerivY[localNodeIndex2];
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return { localJacobianMatrix, residualVector, ngl };
 }

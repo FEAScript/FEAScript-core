@@ -201,8 +201,10 @@ export function assembleSolidHeatTransferFront({ elementIndex, nop, meshData, ba
 
   // Build the mapping from local node indices to global node indices
   const ngl = Array(numNodes);
+  const localToGlobalMap = Array(numNodes);
   for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
     ngl[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]);
+    localToGlobalMap[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]) - 1;
   }
 
   // Loop over Gauss points
@@ -213,9 +215,6 @@ export function assembleSolidHeatTransferFront({ elementIndex, nop, meshData, ba
       const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(
         gaussPoints[gaussPointIndex1]
       );
-
-      // Create mapping from local element space to global mesh (convert to 0-based indexing)
-      const localToGlobalMap = ngl.map((globalIndex) => globalIndex - 1);
 
       // Perform isoparametric mapping
       const { detJacobian, basisFunctionDerivX } = performIsoparametricMapping1D({
