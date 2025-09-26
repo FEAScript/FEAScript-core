@@ -45,7 +45,6 @@ export class ThermalBoundaryConditions {
    * corresponds to the traditional load (RHS) vector.
    */
   imposeConstantTempBoundaryConditions(residualVector, jacobianMatrix) {
-    basicLog("Applying constant temperature boundary conditions");
     if (this.meshDimension === "1D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
         if (this.boundaryConditions[boundaryKey][0] === "constantTemp") {
@@ -167,8 +166,6 @@ export class ThermalBoundaryConditions {
    * @param {array} boundaryValues - Array containing boundary condition values
    */
   imposeConstantTempBoundaryConditionsFront(nodeConstraintCode, boundaryValues) {
-    basicLog("Applying constant temperature boundary conditions");
-
     if (this.meshDimension === "1D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
         if (this.boundaryConditions[boundaryKey][0] === "constantTemp") {
@@ -293,7 +290,6 @@ export class ThermalBoundaryConditions {
     nodesYCoordinates,
     basisFunctions
   ) {
-    basicLog("Applying convection boundary conditions");
     // Extract convection parameters from boundary conditions
     let convectionHeatTranfCoeff = [];
     let convectionExtTemp = [];
@@ -568,8 +564,8 @@ export class ThermalBoundaryConditions {
    * @param {array} gaussWeights - Array of Gauss weights for numerical integration
    * @param {object} basisFunctions - Object containing basis functions and their derivatives
    * @returns {object} An object containing:
-   *  - localJacobianMatrix: Local element stiffness matrix with convection contributions
-   *  - residualVector: Local element load vector with convection contributions
+   *  - localJacobianMatrix: Local Jacobian matrix with convection contributions
+   *  - residualVector: Residual vector with convection contributions
    */
   imposeConvectionBoundaryConditionsFront(
     elementIndex,
@@ -579,7 +575,6 @@ export class ThermalBoundaryConditions {
     gaussWeights,
     basisFunctions
   ) {
-    basicLog("Applying convection boundary conditions");
     // Extract convection parameters from boundary conditions
     let convectionHeatTranfCoeff = [];
     let convectionExtTemp = [];

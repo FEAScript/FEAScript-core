@@ -144,7 +144,6 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
   }
 
   // Apply boundary conditions
-  basicLog("Applying thermal boundary conditions...");
   const thermalBoundaryConditions = new ThermalBoundaryConditions(
     boundaryConditions,
     boundaryElements,
@@ -163,11 +162,9 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
     nodesYCoordinates,
     basisFunctions
   );
-  basicLog("Convection boundary conditions applied");
 
   // Impose ConstantTemp boundary conditions
   thermalBoundaryConditions.imposeConstantTempBoundaryConditions(residualVector, jacobianMatrix);
-  basicLog("Constant temperature boundary conditions applied");
   basicLog("Solid heat transfer matrix assembly completed");
 
   return {
@@ -184,8 +181,8 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
  * @param {object} basisFunctions - Object containing basis functions and their derivatives
  * @param {object} FEAData - Object containing FEA-related data
  * @returns {object} An object containing:
- *  - localJacobianMatrix: Local element stiffness matrix
- *  - residualVector: Local element load vector
+ *  - localJacobianMatrix: Local Jacobian matrix
+ *  - residualVector: Residual vector contributions
  *  - ngl: Array mapping local node indices to global node indices
  */
 export function assembleSolidHeatTransferFront({ elementIndex, nop, meshData, basisFunctions, FEAData }) {

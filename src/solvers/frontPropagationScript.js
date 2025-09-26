@@ -40,8 +40,8 @@ export function assembleFrontPropagationMat(
 
   // Calculate eikonal viscous term
   let eikonalViscousTerm = 1 - eikonalActivationFlag + baseEikonalViscousTerm; // Viscous term for the front propagation (eikonal) equation
-  basicLog(`eikonalViscousTerm: ${eikonalViscousTerm}`);
-  basicLog(`eikonalActivationFlag: ${eikonalActivationFlag}`);
+  debugLog(`eikonalViscousTerm: ${eikonalViscousTerm}`);
+  debugLog(`eikonalActivationFlag: ${eikonalActivationFlag}`);
 
   // Extract mesh data
   const {
@@ -207,12 +207,13 @@ export function assembleFrontPropagationMat(
                     ) /
                       Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2 + 1e-8)) *
                     basisFunctionDerivX[localNodeIndex2] -
-                  ((detJacobian *
-                    solutionDerivY *
-                    basisFunction[localNodeIndex1] *
-                    gaussWeights[gaussPointIndex1] *
-                    gaussWeights[gaussPointIndex2]) /
-                    Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2 + 1e-8)) *
+                  eikonalActivationFlag *
+                    ((detJacobian *
+                      solutionDerivY *
+                      basisFunction[localNodeIndex1] *
+                      gaussWeights[gaussPointIndex1] *
+                      gaussWeights[gaussPointIndex2]) /
+                      Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2 + 1e-8)) *
                     basisFunctionDerivY[localNodeIndex2];
               }
             }
@@ -223,7 +224,6 @@ export function assembleFrontPropagationMat(
   }
 
   // Apply boundary conditions
-  basicLog("Applying generic boundary conditions...");
   const genericBoundaryConditions = new GenericBoundaryConditions(
     boundaryConditions,
     boundaryElements,
@@ -234,7 +234,6 @@ export function assembleFrontPropagationMat(
 
   // Impose ConstantValue boundary conditions
   genericBoundaryConditions.imposeConstantValueBoundaryConditions(residualVector, jacobianMatrix);
-  basicLog("Constant value boundary conditions applied");
   basicLog("Front propagation matrix assembly completed");
 
   return {
@@ -253,8 +252,8 @@ export function assembleFrontPropagationMat(
  * @param {array} solutionVector - The solution vector for non-linear equations
  * @param {number} eikonalActivationFlag - Activation parameter for the eikonal equation
  * @returns {object} An object containing:
- *  - localJacobianMatrix: Local element stiffness matrix
- *  - residualVector: Local element load vector
+ *  - localJacobianMatrix: Local Jacobian matrix
+ *  - residualVector: Residual vector contributions
  *  - ngl: Array mapping local node indices to global node indices
  */
 export function assembleFrontPropagationFront({
@@ -288,12 +287,46 @@ export function assembleFrontPropagationFront({
   }
 
   // Loop over Gauss points
-  if (meshDimension === "1D") {
+  for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
     // 1D front propagation (eikonal) equation
-    for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {}
-  } else if (meshDimension === "2D") {
-    // 2D front propagation (eikonal) equation
-    for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
+    if (meshDimension === "1D") {
+      // Get basis functions for the current Gauss point
+      let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoints[gaussPointIndex1]);
+
+      // Perform isoparametric mapping
+      const mappingResult = performIsoparametricMapping1D({
+        basisFunction: basisFunctionsAndDerivatives.basisFunction,
+        basisFunctionDerivKsi: basisFunctionsAndDerivatives.basisFunctionDerivKsi,
+        nodesXCoordinates,
+        localToGlobalMap,
+        numNodes,
+      });
+
+      // Extract mapping results
+      const { detJacobian, basisFunctionDerivX } = mappingResult;
+      const basisFunction = basisFunctionsAndDerivatives.basisFunction;
+
+      // Calculate solution derivative
+      let solutionDerivX = 0;
+      for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+        solutionDerivX +=
+          solutionVector[localToGlobalMap[localNodeIndex]] * basisFunctionDerivX[localNodeIndex];
+      }
+
+      // Computation of Galerkin's residuals and Jacobian matrix
+      for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
+        let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
+        // residualVector
+        // TODO residualVector calculation here
+
+        for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
+          let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
+          // localJacobianMatrix
+          // TODO localJacobianMatrix calculation here
+        }
+      }
+      // 2D front propagation (eikonal) equation
+    } else if (meshDimension === "2D") {
       for (let gaussPointIndex2 = 0; gaussPointIndex2 < gaussPoints.length; gaussPointIndex2++) {
         // Get basis functions for the current Gauss point
         const { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta } =
@@ -324,7 +357,7 @@ export function assembleFrontPropagationFront({
         for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
           let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
           // Viscous term contribution
-          residualVector[localToGlobalMap1] +=
+          residualVector[localNodeIndex1] +=
             eikonalViscousTerm *
               gaussWeights[gaussPointIndex1] *
               gaussWeights[gaussPointIndex2] *
@@ -340,7 +373,7 @@ export function assembleFrontPropagationFront({
 
           // Eikonal equation contribution
           if (eikonalActivationFlag !== 0) {
-            residualVector[localToGlobalMap1] +=
+            residualVector[localNodeIndex1] +=
               eikonalActivationFlag *
               (gaussWeights[gaussPointIndex1] *
                 gaussWeights[gaussPointIndex2] *
@@ -365,23 +398,24 @@ export function assembleFrontPropagationFront({
 
             // Eikonal equation contribution
             if (eikonalActivationFlag !== 0) {
-              const gradientNorm = Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2 + 1e-8);
-
-              localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
+              localJacobianMatrix[localNodeIndex1][localNodeIndex2] +=
                 eikonalActivationFlag *
-                  ((detJacobian *
+                  (-(
+                    detJacobian *
                     solutionDerivX *
                     basisFunction[localNodeIndex1] *
                     gaussWeights[gaussPointIndex1] *
-                    gaussWeights[gaussPointIndex2]) /
-                    gradientNorm) *
+                    gaussWeights[gaussPointIndex2]
+                  ) /
+                    Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2 + 1e-8)) *
                   basisFunctionDerivX[localNodeIndex2] -
-                ((detJacobian *
-                  solutionDerivY *
-                  basisFunction[localNodeIndex1] *
-                  gaussWeights[gaussPointIndex1] *
-                  gaussWeights[gaussPointIndex2]) /
-                  gradientNorm) *
+                eikonalActivationFlag *
+                  ((detJacobian *
+                    solutionDerivY *
+                    basisFunction[localNodeIndex1] *
+                    gaussWeights[gaussPointIndex1] *
+                    gaussWeights[gaussPointIndex2]) /
+                    Math.sqrt(solutionDerivX ** 2 + solutionDerivY ** 2 + 1e-8)) *
                   basisFunctionDerivY[localNodeIndex2];
             }
           }

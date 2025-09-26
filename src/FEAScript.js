@@ -13,7 +13,7 @@ import { newtonRaphson } from "./methods/newtonRaphsonScript.js";
 import { solveLinearSystem } from "./methods/linearSystemSolverScript.js";
 import { prepareMesh } from "./mesh/meshUtilsScript.js";
 import { assembleFrontPropagationMat } from "./solvers/frontPropagationScript.js";
-import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
+import { assembleSolidHeatTransferMat, assembleSolidHeatTransferFront } from "./solvers/solidHeatTransferScript.js";
 import { runFrontalSolver } from "./methods/frontalSolverScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
 
@@ -94,7 +94,7 @@ export class FEAScriptModel {
 
       // Check if using frontal solver
       if (this.solverMethod === "frontal") {
-        const frontalResult = runFrontalSolver(this.meshConfig, meshData, this.boundaryConditions);
+        const frontalResult = runFrontalSolver(assembleSolidHeatTransferFront, meshData, this.boundaryConditions);
         solutionVector = frontalResult.solutionVector;
       } else {
         // Use regular linear solver methods

@@ -13,6 +13,8 @@ import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
 import { initializeFEA } from "../mesh/meshUtilsScript.js";
 import { assembleSolidHeatTransferFront } from "../solvers/solidHeatTransferScript.js";
 import { ThermalBoundaryConditions } from "../solvers/thermalBoundaryConditionsScript.js";
+import { assembleFrontPropagationFront } from "../solvers/frontPropagationScript.js";
+import { GenericBoundaryConditions } from "../solvers/genericBoundaryConditionsScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 // Create object templates
@@ -24,16 +26,17 @@ let basisFunctionsLib; // Basis functions used by assembleElementContribution
 
 /**
  * Function to run the frontal solver and obtain results for plotting
- * @param {object} meshConfig - Configuration object for the mesh
+ * @param {function} assembleFront - Matrix assembler based on the physical model
  * @param {object} meshData - Object containing mesh data
  * @param {object} boundaryConditions - Object containing boundary conditions
+ * @param {object} [options] - Additional options for the solver
  * @returns {object} An object containing the solution vector and node coordinates
  */
-export function runFrontalSolver(meshConfig, meshData, boundaryConditions) {
+export function runFrontalSolver(assembleFront, meshData, boundaryConditions, options = {}) {
   // Initialize arrays dynamically based on actual problem size
   const numNodes = meshData.nodesXCoordinates.length;
   const numElements = meshData.totalElements;
-  const maxNodesPerElement = getMaxNodesPerElement(meshConfig);
+  const maxNodesPerElement = getMaxNodesPerElement(meshData);
 
   // Calculate required array sizes
   initializeFrontalArrays(numNodes, numElements, maxNodesPerElement);
@@ -43,7 +46,7 @@ export function runFrontalSolver(meshConfig, meshData, boundaryConditions) {
   console.time("systemSolving");
 
   // Run the solver
-  runFrontalSolverMain(meshConfig, meshData, boundaryConditions);
+  runFrontalSolverMain(assembleFront, meshData, boundaryConditions, options);
 
   console.timeEnd("systemSolving");
   basicLog("System solved successfully");
@@ -60,14 +63,14 @@ export function runFrontalSolver(meshConfig, meshData, boundaryConditions) {
 
 /**
  * Function to determine the maximum number of nodes per element based on mesh configuration
- * @param {object} meshConfig - Configuration object for the mesh
+ * @param {object} meshData - Configuration object for the mesh
  * @returns {number} The maximum number of nodes per element
  */
-function getMaxNodesPerElement(meshConfig) {
-  if (meshConfig.meshDimension === "1D") {
-    return meshConfig.elementOrder === "linear" ? 2 : 3;
-  } else if (meshConfig.meshDimension === "2D") {
-    return meshConfig.elementOrder === "linear" ? 4 : 9;
+function getMaxNodesPerElement(meshData) {
+  if (meshData.meshDimension === "1D") {
+    return meshData.elementOrder === "linear" ? 2 : 3;
+  } else if (meshData.meshDimension === "2D") {
+    return meshData.elementOrder === "linear" ? 4 : 9;
   }
 }
 
@@ -137,18 +140,19 @@ function estimateFrontSize(numNodes, numElements, maxNodesPerElement) {
 
 /**
  * Function to initialize and execute the frontal solver process
- * @param {object} meshConfig - Configuration object for the mesh
+ * @param {function} assembleFront - Matrix assembler based on the physical model
  * @param {object} meshData - Object containing mesh data
  * @param {object} boundaryConditions - Object containing boundary conditions
+ * @param {object} [options] - Additional options for the solver
  */
-function runFrontalSolverMain(meshConfig, meshData, boundaryConditions) {
+function runFrontalSolverMain(assembleFront, meshData, boundaryConditions, options = {}) {
   // Initialize FEA components
   const FEAData = initializeFEA(meshData);
 
-  // Initialize basis functions with meshConfig values
+  // Initialize basis functions with meshData values
   basisFunctionsLib = new BasisFunctions({
-    meshDimension: meshConfig.meshDimension,
-    elementOrder: meshConfig.elementOrder,
+    meshDimension: meshData.meshDimension,
+    elementOrder: meshData.elementOrder,
   });
 
   // Copy node connectivity array into frontalData storage
@@ -158,29 +162,44 @@ function runFrontalSolverMain(meshConfig, meshData, boundaryConditions) {
     }
   }
 
-  // Apply boundary conditions
-  basicLog("Applying thermal boundary conditions...");
-  const thermalBoundaryConditions = new ThermalBoundaryConditions(
-    boundaryConditions,
-    meshData.boundaryElements,
-    meshData.nop,
-    meshConfig.meshDimension,
-    meshConfig.elementOrder
-  );
-
+  // Apply Dirichlet-type boundary conditions
   // Initialize all nodes with no boundary condition
   for (let nodeIndex = 0; nodeIndex < meshData.nodesXCoordinates.length; nodeIndex++) {
     frontalData.nodeConstraintCode[nodeIndex] = 0;
     frontalData.boundaryValues[nodeIndex] = 0;
   }
 
-  // Apply Dirichlet-type boundary conditions
-  thermalBoundaryConditions.imposeConstantTempBoundaryConditionsFront(
-    frontalData.nodeConstraintCode,
-    frontalData.boundaryValues
-  );
-  basicLog("Constant temperature boundary conditions applied");
+  // Handle Dirichlet-type boundary conditions differently based on which solver is being used
+  let dirichletBoundaryConditionsHandler;
+  // Solid heat transfer model (solidHeatTransferScript solver)
+  if (assembleFront === assembleSolidHeatTransferFront) {
+    dirichletBoundaryConditionsHandler = new ThermalBoundaryConditions(
+      boundaryConditions,
+      meshData.boundaryElements,
+      meshData.nop,
+      meshData.meshDimension,
+      meshData.elementOrder
+    );
 
+    dirichletBoundaryConditionsHandler.imposeConstantTempBoundaryConditionsFront(
+      frontalData.nodeConstraintCode,
+      frontalData.boundaryValues
+    );
+    // Front propagation model (frontPropagationScript solver)
+  } else if (assembleFront === assembleFrontPropagationFront) {
+    dirichletBoundaryConditionsHandler = new GenericBoundaryConditions(
+      boundaryConditions,
+      meshData.boundaryElements,
+      meshData.nop,
+      meshData.meshDimension,
+      meshData.elementOrder
+    );
+
+    dirichletBoundaryConditionsHandler.imposeConstantValueBoundaryConditionsFront(
+      frontalData.nodeConstraintCode,
+      frontalData.boundaryValues
+    );
+  }
   // Initialize global residual vector
   for (let nodeIndex = 0; nodeIndex < meshData.nodesXCoordinates.length; nodeIndex++) {
     frontalData.globalResidualVector[nodeIndex] = 0;
@@ -195,7 +214,12 @@ function runFrontalSolverMain(meshConfig, meshData, boundaryConditions) {
     frontalState.nodesPerElement[elementIndex] = FEAData.numNodes;
   }
 
-  runFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions);
+  // Parameters for non-linear assemblers
+  frontalState.currentSolutionVector = options.solutionVector;
+  frontalState.eikonalActivationFlag = options.eikonalActivationFlag;
+
+  // Pass assembleFront and dirichletBoundaryConditionsHandler to runFrontalAlgorithm
+  runFrontalAlgorithm(meshData, FEAData, dirichletBoundaryConditionsHandler, assembleFront);
 
   // Copy solution
   for (let nodeIndex = 0; nodeIndex < meshData.nodesXCoordinates.length; nodeIndex++) {
@@ -205,7 +229,7 @@ function runFrontalSolverMain(meshConfig, meshData, boundaryConditions) {
   // Output results to console for debugging
   const { nodesXCoordinates, nodesYCoordinates } = meshData;
   for (let nodeIndex = 0; nodeIndex < meshData.nodesXCoordinates.length; nodeIndex++) {
-    if (meshConfig.meshDimension === "1D") {
+    if (meshData.meshDimension === "1D") {
       // 1D case - only output X coordinates and temperature
       debugLog(
         `${nodesXCoordinates[nodeIndex].toExponential(5)}  ${frontalData.solutionVector[
@@ -228,8 +252,9 @@ function runFrontalSolverMain(meshConfig, meshData, boundaryConditions) {
  * @param {object} meshData - Object containing mesh data
  * @param {object} FEAData - Object containing FEA-related data
  * @param {object} thermalBoundaryConditions - Object containing thermal boundary conditions
+ * @param {function} assembleFront - Matrix assembler based on the physical model
  */
-function assembleElementContribution(meshData, FEAData, thermalBoundaryConditions) {
+function assembleElementContribution(meshData, FEAData, thermalBoundaryConditions, assembleFront) {
   const elementIndex = elementData.currentElementIndex - 1;
 
   // Guard against out-of-range indices
@@ -239,46 +264,53 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
   }
 
   // Domain terms
-  const { localJacobianMatrix, residualVector, ngl } = assembleSolidHeatTransferFront({
+  const { localJacobianMatrix, residualVector, ngl } = assembleFront({
     elementIndex,
     nop: frontalData.nodalNumbering,
     meshData,
     basisFunctions: basisFunctionsLib,
     FEAData,
+    // These are ignored by linear assemblers
+    solutionVector: frontalState.currentSolutionVector,
+    eikonalActivationFlag: frontalState.eikonalActivationFlag,
   });
 
-  // Check if this element is on a Robin-type boundary
-  let isOnRobinTypeBoundary = false;
-  for (const boundaryKey in meshData.boundaryElements) {
-    if (
-      thermalBoundaryConditions.boundaryConditions[boundaryKey]?.[0] === "convection" &&
-      meshData.boundaryElements[boundaryKey].some(([elemIdx, _]) => elemIdx === elementIndex)
-    ) {
-      isOnRobinTypeBoundary = true;
-      break;
-    }
-  }
-
-  // Only calculate Robin-type for elements when required
+  // Handle Robin-type boundary conditions differently based on which solver is being used
   let boundaryLocalJacobianMatrix = Array(FEAData.numNodes)
     .fill()
     .map(() => Array(FEAData.numNodes).fill(0));
   let boundaryResidualVector = Array(FEAData.numNodes).fill(0);
 
-  if (isOnRobinTypeBoundary) {
-    const { gaussPoints, gaussWeights } = FEAData;
-    const result = thermalBoundaryConditions.imposeConvectionBoundaryConditionsFront(
-      elementIndex,
-      meshData.nodesXCoordinates,
-      meshData.nodesYCoordinates,
-      gaussPoints,
-      gaussWeights,
-      basisFunctionsLib
-    );
-    boundaryLocalJacobianMatrix = result.localJacobianMatrix;
-    boundaryResidualVector = result.residualVector;
+  // solidHeatTransferScript solver
+  if (assembleFront === assembleSolidHeatTransferFront) {
+    // Check if this element is on a Robin-type boundary
+    let isOnRobinTypeBoundary = false;
+    for (const boundaryKey in meshData.boundaryElements) {
+      if (
+        thermalBoundaryConditions.boundaryConditions[boundaryKey]?.[0] === "convection" &&
+        meshData.boundaryElements[boundaryKey].some(([elemIdx, _]) => elemIdx === elementIndex)
+      ) {
+        isOnRobinTypeBoundary = true;
+        break;
+      }
+    }
 
-    basicLog("Convection boundary conditions applied");
+    // Only calculate Robin-type for elements when required
+    if (isOnRobinTypeBoundary) {
+      const { gaussPoints, gaussWeights } = FEAData;
+      const result = thermalBoundaryConditions.imposeConvectionBoundaryConditionsFront(
+        elementIndex,
+        meshData.nodesXCoordinates,
+        meshData.nodesYCoordinates,
+        gaussPoints,
+        gaussWeights,
+        basisFunctionsLib
+      );
+      boundaryLocalJacobianMatrix = result.localJacobianMatrix;
+      boundaryResidualVector = result.residualVector;
+    }
+  } else if (assembleFront === assembleFrontPropagationFront) {
+    // For now, no Robin-type boundary conditions exist for any other solver
   }
 
   // Combine domain and boundary contributions
@@ -304,8 +336,9 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
  * @param {object} meshData - Object containing mesh data
  * @param {object} FEAData - Object containing FEA-related data
  * @param {object} thermalBoundaryConditions - Object containing thermal boundary conditions
+ * @param {function} assembleFront - Matrix assembler based on the physical model
  */
-function runFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions) {
+function runFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions, assembleFront) {
   // Allocate local arrays dynamically
   const totalElements = meshData.totalElements;
   const numNodes = meshData.nodesXCoordinates.length;
@@ -377,7 +410,7 @@ function runFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions) {
 
     if (elementData.currentElementIndex < totalElements) {
       elementData.currentElementIndex++;
-      assembled = assembleElementContribution(meshData, FEAData, thermalBoundaryConditions);
+      assembled = assembleElementContribution(meshData, FEAData, thermalBoundaryConditions, assembleFront);
     }
 
     if (assembled) {

@@ -15,8 +15,8 @@
  * @param {string} solverConfig - Parameter specifying the type of solver
  * @param {string} meshDimension - The dimension of the solution
  * @param {string} plotType - The type of plot
- * @param {string} [meshType="structured"] - Type of mesh: "structured" or "unstructured"
  * @param {string} plotDivId - The id of the div where the plot will be rendered
+ * @param {string} [meshType="structured"] - Type of mesh: "structured" or "unstructured"
  */
 export function plotSolution(
   solutionVector,
@@ -24,8 +24,8 @@ export function plotSolution(
   solverConfig,
   meshDimension,
   plotType,
-  meshType = "structured",
-  plotDivId
+  plotDivId,
+  meshType = "structured"
 ) {
   const { nodesXCoordinates, nodesYCoordinates } = nodesCoordinates;
 
