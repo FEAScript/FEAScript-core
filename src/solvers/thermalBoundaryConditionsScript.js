@@ -565,7 +565,7 @@ export class ThermalBoundaryConditions {
    * @param {object} basisFunctions - Object containing basis functions and their derivatives
    * @returns {object} An object containing:
    *  - localJacobianMatrix: Local Jacobian matrix with convection contributions
-   *  - residualVector: Residual vector with convection contributions
+   *  - localResidualVector: Residual vector with convection contributions
    */
   imposeConvectionBoundaryConditionsFront(
     elementIndex,
@@ -586,12 +586,12 @@ export class ThermalBoundaryConditions {
       }
     });
 
-    // Initialize local stiffness matrix and load vector
+    // Initialize local Jacobian matrix and local residual vector
     const numNodes = this.nop[elementIndex].length;
     const localJacobianMatrix = Array(numNodes)
       .fill()
       .map(() => Array(numNodes).fill(0));
-    const residualVector = Array(numNodes).fill(0);
+    const localResidualVector = Array(numNodes).fill(0);
 
     // Check if this element is on a convection boundary
     for (const boundaryKey in this.boundaryElements) {
@@ -619,13 +619,13 @@ export class ThermalBoundaryConditions {
               nodeIndex = side === 0 ? 0 : 2;
             }
 
-            // Add contribution to local load vector and stiffness matrix
+            // Add contribution to local Jacobian matrix and local residual vector
             debugLog(
               `  - Applied convection boundary condition to node ${nodeIndex + 1} (element ${
                 elementIndex + 1
               }, local node ${nodeIndex + 1})`
             );
-            residualVector[nodeIndex] += -convectionCoeff * extTemp;
+            localResidualVector[nodeIndex] += -convectionCoeff * extTemp;
             localJacobianMatrix[nodeIndex][nodeIndex] += convectionCoeff;
           } else if (this.meshDimension === "2D") {
             // Handle 2D case
@@ -699,7 +699,7 @@ export class ThermalBoundaryConditions {
                 localNodeIndex < lastNodeIndex;
                 localNodeIndex += nodeIncrement
               ) {
-                residualVector[localNodeIndex] +=
+                localResidualVector[localNodeIndex] +=
                   -gaussWeights[0] *
                   tangentVectorLength *
                   basisFunction[localNodeIndex] *
@@ -792,7 +792,7 @@ export class ThermalBoundaryConditions {
                   localNodeIndex < lastNodeIndex;
                   localNodeIndex += nodeIncrement
                 ) {
-                  residualVector[localNodeIndex] +=
+                  localResidualVector[localNodeIndex] +=
                     -gaussWeights[gaussPointIndex] *
                     tangentVectorLength *
                     basisFunction[localNodeIndex] *
@@ -819,6 +819,6 @@ export class ThermalBoundaryConditions {
       }
     }
 
-    return { localJacobianMatrix, residualVector };
+    return { localJacobianMatrix, localResidualVector };
   }
 }

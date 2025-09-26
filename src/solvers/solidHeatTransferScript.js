@@ -182,7 +182,7 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
  * @param {object} FEAData - Object containing FEA-related data
  * @returns {object} An object containing:
  *  - localJacobianMatrix: Local Jacobian matrix
- *  - residualVector: Residual vector contributions
+ *  - localResidualVector: Residual vector contributions
  *  - ngl: Array mapping local node indices to global node indices
  */
 export function assembleSolidHeatTransferFront({ elementIndex, nop, meshData, basisFunctions, FEAData }) {
@@ -190,11 +190,11 @@ export function assembleSolidHeatTransferFront({ elementIndex, nop, meshData, ba
   const { gaussPoints, gaussWeights, numNodes } = FEAData;
   const { nodesXCoordinates, nodesYCoordinates, meshDimension } = meshData;
 
-  // Initialize local Jacobian (stiffness) and residual (load) for the current element
+  // Initialize local Jacobian matrix and local residual vector
   const localJacobianMatrix = Array(numNodes)
     .fill()
     .map(() => Array(numNodes).fill(0));
-  const residualVector = Array(numNodes).fill(0);
+  const localResidualVector = Array(numNodes).fill(0);
 
   // Build the mapping from local node indices to global node indices
   const ngl = Array(numNodes);
@@ -269,5 +269,5 @@ export function assembleSolidHeatTransferFront({ elementIndex, nop, meshData, ba
     }
   }
 
-  return { localJacobianMatrix, residualVector, ngl };
+  return { localJacobianMatrix, localResidualVector, ngl };
 }

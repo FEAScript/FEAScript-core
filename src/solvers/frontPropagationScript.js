@@ -272,11 +272,11 @@ export function assembleFrontPropagationFront({
   // Calculate eikonal viscous term
   let eikonalViscousTerm = 1 - eikonalActivationFlag + baseEikonalViscousTerm; // Viscous term for the front propagation (eikonal) equation
 
-  // Initialize local Jacobian (stiffness) and residual (load) for the current element
+  // Initialize local Jacobian matrix and local residual vector
   const localJacobianMatrix = Array(numNodes)
     .fill()
     .map(() => Array(numNodes).fill(0));
-  const residualVector = Array(numNodes).fill(0);
+  const localResidualVector = Array(numNodes).fill(0);
 
   // Build the mapping from local node indices to global node indices
   const ngl = Array(numNodes);
@@ -357,7 +357,7 @@ export function assembleFrontPropagationFront({
         for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
           let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
           // Viscous term contribution
-          residualVector[localNodeIndex1] +=
+          localResidualVector[localNodeIndex1] +=
             eikonalViscousTerm *
               gaussWeights[gaussPointIndex1] *
               gaussWeights[gaussPointIndex2] *
@@ -373,7 +373,7 @@ export function assembleFrontPropagationFront({
 
           // Eikonal equation contribution
           if (eikonalActivationFlag !== 0) {
-            residualVector[localNodeIndex1] +=
+            localResidualVector[localNodeIndex1] +=
               eikonalActivationFlag *
               (gaussWeights[gaussPointIndex1] *
                 gaussWeights[gaussPointIndex2] *
@@ -424,5 +424,5 @@ export function assembleFrontPropagationFront({
     }
   }
 
-  return { localJacobianMatrix, residualVector, ngl };
+  return { localJacobianMatrix, localResidualVector, ngl };
 }

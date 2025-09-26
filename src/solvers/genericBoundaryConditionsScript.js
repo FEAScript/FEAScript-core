@@ -45,7 +45,6 @@ export class GenericBoundaryConditions {
    * corresponds to the traditional load (RHS) vector.
    */
   imposeConstantValueBoundaryConditions(residualVector, jacobianMatrix) {
-    basicLog("Applying constant value boundary conditions");
     if (this.meshDimension === "1D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
         if (this.boundaryConditions[boundaryKey][0] === "constantValue") {
@@ -163,7 +162,6 @@ export class GenericBoundaryConditions {
    * @param {array} boundaryValues - Array containing boundary condition values
    */
   imposeConstantValueBoundaryConditionsFront(nodeConstraintCode, boundaryValues) {
-    basicLog("Applying constant value boundary conditions");
     if (this.meshDimension === "1D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
         if (this.boundaryConditions[boundaryKey][0] === "constantValue") {
