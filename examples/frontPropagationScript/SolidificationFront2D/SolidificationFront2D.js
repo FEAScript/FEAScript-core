@@ -13,7 +13,7 @@ import * as math from "mathjs";
 global.math = math;
 
 // Import FEAScript library
-import { FEAScriptModel, logSystem, VERSION } from "feascript";
+import { FEAScriptModel, VERSION } from "feascript";
 
 console.log("FEAScript Version:", VERSION);
 

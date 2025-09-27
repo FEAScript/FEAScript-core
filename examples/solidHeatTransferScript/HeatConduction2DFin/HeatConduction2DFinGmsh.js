@@ -18,7 +18,7 @@ import * as math from "mathjs";
 global.math = math;
 
 // Import FEAScript library
-import { FEAScriptModel, importGmshQuadTri, logSystem, VERSION } from "feascript";
+import { FEAScriptModel, importGmshQuadTri, VERSION } from "feascript";
 
 console.log("FEAScript Version:", VERSION);
 

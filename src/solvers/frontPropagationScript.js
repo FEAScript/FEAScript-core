@@ -78,6 +78,9 @@ export function assembleFrontPropagationMat(
     for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
       // 1D front propagation (eikonal) equation
       if (meshDimension === "1D") {
+        // Unsupported 1D front propagation
+        errorLog("1D front propagation is not yet supported");
+
         // Get basis functions for the current Gauss point
         let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoints[gaussPointIndex1]);
 
@@ -290,6 +293,9 @@ export function assembleFrontPropagationFront({
   for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
     // 1D front propagation (eikonal) equation
     if (meshDimension === "1D") {
+      // Unsupported 1D front propagation
+      errorLog("1D front propagation is not yet supported");
+
       // Get basis functions for the current Gauss point
       let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoints[gaussPointIndex1]);
 
