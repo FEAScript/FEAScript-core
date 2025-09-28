@@ -2,7 +2,15 @@
 
 Thank you for your interest in contributing! FEAScript is in early development, with continuous additions of new features and improvements. To ensure a smooth and collaborative development process, please review and follow the guidelines below.
 
-## Contribution Guidelines
+## Contents
+
+- [Development Tools](#development-tools)
+- [Coding Style](#coding-style)
+- [Variable Naming](#variable-naming)
+- [File Naming](#file-naming)
+- [File Structure](#file-structure)
+- [Branching & Workflow](#branching--workflow)
+- [Local Testing](#local-testing)
 
 1. **Development Tools:**  
    We recommend using [Visual Studio Code](https://code.visualstudio.com/) with the [Prettier plugin](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) for automatic code formatting. Additionally, use a **110-character line width** to maintain consistent formatting.
@@ -86,8 +94,8 @@ Thank you for your interest in contributing! FEAScript is in early development, 
 
    External contributors:
 
-   1. Fork the repo.  
-   2. Branch from `main` in your fork.  
+   1. Fork the repo.
+   2. Branch from `main` in your fork.
    3. Push and open a PR from your fork’s branch into `main`.
 
 7. **Local Testing:**  
@@ -97,7 +105,7 @@ Thank you for your interest in contributing! FEAScript is in early development, 
    import { FEAScriptModel, plotSolution, printVersion } from "[USER_DIRECTORY]/FEAScript-core/src/index.js";
    ```
 
-   FEAScript can be run on a local server. To start a local server, you can use [Python HTTP Server](https://docs.python.org/3/library/http.server.html):
+   FEAScript can be run on a local server. Ensure you start the server from the workspace root directory, where both `FEAScript-core` and `FEAScript-website` folders are located, to correctly resolve relative paths in the HTML files. To start a local server, you can use [Python HTTP Server](https://docs.python.org/3/library/http.server.html):
 
    ```bash
    python -m http.server
