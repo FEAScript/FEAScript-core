@@ -1,0 +1,106 @@
+name: Run FEAScript Examples
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  run-examples:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+      fail-fast: false # Continue testing other versions even if one fails
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run FEAScript examples
+        run: |
+          echo "=========================================="
+          echo "Running FEAScript examples with Node.js ${{ matrix.node-version }}"
+          echo "=========================================="
+          
+          # Counter for tracking test results
+          PASSED=0
+          FAILED=0
+          TOTAL=0
+          
+          # Array to store failed examples
+          FAILED_EXAMPLES=()
+          
+          # Find all .js files in examples directory, excluding generalFormPDEScript
+          for file in $(find examples -name "*.js" -type f | grep -v "generalFormPDEScript" | sort); do
+            TOTAL=$((TOTAL + 1))
+            LOG_FILE="${file%.js}.log"
+            echo ""
+            echo "▶ Running: $file"
+            echo "----------------------------------------"
+            
+            # Run the example and capture output to log file
+            if timeout 300 node "$file" > "$LOG_FILE" 2>&1; then
+              echo "✓ PASSED: $file"
+              PASSED=$((PASSED + 1))
+              # Show a preview of the output
+              echo "Output preview:"
+              head -n 5 "$LOG_FILE" | sed 's/^/  /'
+              if [ $(wc -l < "$LOG_FILE") -gt 5 ]; then
+                echo "  ... (see $LOG_FILE for full output)"
+              fi
+            else
+              EXIT_CODE=$?
+              echo "✗ FAILED: $file (exit code: $EXIT_CODE)"
+              FAILED=$((FAILED + 1))
+              FAILED_EXAMPLES+=("$file")
+              # Show error output for failed tests
+              echo "Error output:"
+              tail -n 20 "$LOG_FILE" | sed 's/^/  /'
+            fi
+            echo "----------------------------------------"
+          done
+          
+          # Print summary
+          echo ""
+          echo "=========================================="
+          echo "Test Summary"
+          echo "=========================================="
+          echo "Total examples run: $TOTAL"
+          echo "Passed: $PASSED"
+          echo "Failed: $FAILED"
+          echo ""
+          
+          # If there are failures, list them
+          if [ $FAILED -gt 0 ]; then
+            echo "Failed examples:"
+            for failed in "${FAILED_EXAMPLES[@]}"; do
+              echo "  - $failed"
+            done
+            echo ""
+            exit 1
+          else
+            echo "All examples passed successfully! ✓"
+          fi
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-node-${{ matrix.node-version }}
+          path: |
+            examples/**/*.log
+            examples/**/*.out
+          retention-days: 7
+          if-no-files-found: ignore
