@@ -18,9 +18,9 @@ import * as math from "mathjs";
 global.math = math;
 
 // Import FEAScript library
-import { FEAScriptModel, importGmshQuadTri, VERSION } from "feascript";
+import { FEAScriptModel, importGmshQuadTri, printVersion } from "feascript";
 
-console.log("FEAScript Version:", VERSION);
+console.log("FEAScript Version:", printVersion);
 
 // Get directory name for the current file
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
