@@ -13,9 +13,9 @@ import * as math from "mathjs";
 global.math = math;
 
 // Import FEAScript library
-import { FEAScriptModel, VERSION } from "feascript";
+import { FEAScriptModel, printVersion } from "feascript";
 
-console.log("FEAScript Version:", VERSION);
+console.log("FEAScript Version:", printVersion);
 
 // Create a new FEAScript model
 const model = new FEAScriptModel();
