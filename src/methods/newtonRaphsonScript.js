@@ -12,9 +12,13 @@
 import { euclideanNorm } from "../methods/euclideanNormScript.js";
 import { solveLinearSystem } from "./linearSystemSolverScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+import { runFrontalSolver } from "./frontalSolverScript.js";
+import { assembleFrontPropagationFront } from "../solvers/frontPropagationScript.js";
 
 /**
  * Function to solve a system of non-linear equations using the Newton-Raphson method
+ * @param {function} assembleMat - Matrix assembler based on the physical model
+ * @param {object} context - Context object containing simulation data and options
  * @param {number} [maxIterations=100] - Maximum number of iterations
  * @param {number} [tolerance=1e-4] - Convergence tolerance
  * @returns {object} An object containing:
@@ -32,7 +36,7 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
   let jacobianMatrix = [];
   let residualVector = [];
 
-  // Calculate system size from meshData instead of meshConfig
+  // Calculate system size
   let totalNodes = context.meshData.nodesXCoordinates.length;
 
   // Initialize arrays with proper size
@@ -52,17 +56,28 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
       solutionVector[i] = Number(solutionVector[i]) + Number(deltaX[i]);
     }
 
-    // Compute Jacobian and residual matrices
-    ({ jacobianMatrix, residualVector } = assembleMat(
-      context.meshData,
-      context.boundaryConditions,
-      solutionVector, // The solution vector is required in the case of a non-linear equation
-      context.eikonalActivationFlag // Currently used only in the front propagation solver (TODO refactor in case of a solver not needing it)
-    ));
+    // Check if using frontal solver
+    if (context.solverMethod === "frontal") {
+      const frontalResult = runFrontalSolver(
+        assembleFrontPropagationFront,
+        context.meshData,
+        context.boundaryConditions,
+        { solutionVector, eikonalActivationFlag: context.eikonalActivationFlag }
+      );
+      deltaX = frontalResult.solutionVector;
+    } else {
+      // Compute Jacobian and residual matrices
+      ({ jacobianMatrix, residualVector } = assembleMat(
+        context.meshData,
+        context.boundaryConditions,
+        solutionVector, // The solution vector is required in the case of a non-linear equation
+        context.eikonalActivationFlag // Currently used only in the front propagation solver (TODO refactor in case of a solver not needing it)
+      ));
 
-    // Solve the linear system based on the specified solver method
-    const linearSystemResult = solveLinearSystem(context.solverMethod, jacobianMatrix, residualVector);
-    deltaX = linearSystemResult.solutionVector;
+      // Solve the linear system based on the specified solver method
+      const linearSystemResult = solveLinearSystem(context.solverMethod, jacobianMatrix, residualVector);
+      deltaX = linearSystemResult.solutionVector;
+    }
 
     // Check convergence
     errorNorm = euclideanNorm(deltaX);

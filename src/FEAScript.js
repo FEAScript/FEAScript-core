@@ -13,7 +13,10 @@ import { newtonRaphson } from "./methods/newtonRaphsonScript.js";
 import { solveLinearSystem } from "./methods/linearSystemSolverScript.js";
 import { prepareMesh } from "./mesh/meshUtilsScript.js";
 import { assembleFrontPropagationMat } from "./solvers/frontPropagationScript.js";
-import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
+import {
+  assembleSolidHeatTransferMat,
+  assembleSolidHeatTransferFront,
+} from "./solvers/solidHeatTransferScript.js";
 import { runFrontalSolver } from "./methods/frontalSolverScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
 
@@ -60,6 +63,16 @@ export class FEAScriptModel {
       throw new Error(error);
     }
 
+    /**
+     * For consistency across both linear and nonlinear formulations,
+     * this project always refers to the assembled right-hand side vector
+     * as `residualVector` and the assembled system matrix as `jacobianMatrix`.
+     *
+     * In linear problems `jacobianMatrix` is equivalent to the
+     * classic stiffness/conductivity matrix and `residualVector`
+     * corresponds to the traditional load (RHS) vector.
+     */
+
     let jacobianMatrix = [];
     let residualVector = [];
     let solutionVector = [];
@@ -84,9 +97,11 @@ export class FEAScriptModel {
 
       // Check if using frontal solver
       if (this.solverMethod === "frontal") {
-        basicLog(`Using frontal solver method`);
-        // Call frontal solver
-        const frontalResult = runFrontalSolver(this.meshConfig, this.boundaryConditions);
+        const frontalResult = runFrontalSolver(
+          assembleSolidHeatTransferFront,
+          meshData,
+          this.boundaryConditions
+        );
         solutionVector = frontalResult.solutionVector;
       } else {
         // Use regular linear solver methods

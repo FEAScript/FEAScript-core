@@ -67,19 +67,19 @@ export function plotSolution(
   } else if (meshDimension === "2D" && plotType === "contour") {
     // Use the user-provided mesh type
     const isStructured = meshType === "structured";
-    
+
     // For auto-detection (if needed)
     const uniqueXCoords = new Set(nodesXCoordinates).size;
     const uniqueYCoords = new Set(nodesYCoordinates).size;
-    
+
     // Extract scalar values from solution vector
     let zValues;
     if (Array.isArray(solutionVector[0])) {
-      zValues = solutionVector.map(val => val[0]);
+      zValues = solutionVector.map((val) => val[0]);
     } else {
       zValues = solutionVector;
     }
-    
+
     // Common sizing parameters for both plot types
     let maxWindowWidth = Math.min(window.innerWidth, 700);
     let maxX = Math.max(...nodesXCoordinates);
@@ -87,7 +87,7 @@ export function plotSolution(
     let aspectRatio = maxY / maxX;
     let plotWidth = Math.min(maxWindowWidth, 600);
     let plotHeight = plotWidth * aspectRatio * 0.8; // Slightly reduce height for better appearance
-    
+
     // Common layout properties
     let layout = {
       title: `${plotType} plot - ${solverConfig}`,
@@ -96,9 +96,9 @@ export function plotSolution(
       xaxis: { title: "x" },
       yaxis: { title: "y" },
       margin: { l: 50, r: 50, t: 50, b: 50 },
-      hovermode: 'closest'
+      hovermode: "closest",
     };
-    
+
     if (isStructured) {
       // Calculate the number of nodes along the x-axis and y-axis
       const numNodesX = uniqueXCoords;
@@ -127,15 +127,15 @@ export function plotSolution(
         type: "contour",
         contours: {
           coloring: "heatmap",
-          showlabels: false
+          showlabels: false,
         },
         //colorscale: 'Viridis',
         colorbar: {
-          title: 'Solution'
+          title: "Solution",
         },
         x: reshapedXForPlot,
         y: reshapedYCoordinates[0],
-        name: 'Solution Field'
+        name: "Solution Field",
       };
 
       // Create the plot using Plotly
@@ -146,18 +146,18 @@ export function plotSolution(
         x: nodesXCoordinates,
         y: nodesYCoordinates,
         z: zValues,
-        type: 'contour',
+        type: "contour",
         contours: {
-          coloring: 'heatmap',
-          showlabels: false
+          coloring: "heatmap",
+          showlabels: false,
         },
         //colorscale: 'Viridis',
         colorbar: {
-          title: 'Solution'
+          title: "Solution",
         },
-        name: 'Solution Field'
+        name: "Solution Field",
       };
-      
+
       // Create the plot using only the contour fill
       Plotly.newPlot(plotDivId, [contourData], layout, { responsive: true });
     }

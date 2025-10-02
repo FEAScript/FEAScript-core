@@ -379,7 +379,6 @@ export class Mesh1D extends Mesh {
 
   generateMesh() {
     let nodesXCoordinates = [];
-    let nodesYCoordinates = [];
     const xStart = 0;
     let totalNodesX, deltaX;
 

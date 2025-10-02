@@ -57,7 +57,7 @@ export function errorLog(message) {
 /**
  * Function to handle version information and fetch the latest update date and release from GitHub
  */
-export async function printVersion() {
+export async function printVersionInformation() {
   basicLog("Fetching latest FEAScript version information...");
   try {
     const commitResponse = await fetch("https://api.github.com/repos/FEAScript/FEAScript/commits/main");
