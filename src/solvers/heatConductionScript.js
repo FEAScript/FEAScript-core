@@ -33,7 +33,7 @@ import { basicLog, debugLog } from "../utilities/loggingScript.js";
  * classic stiffness/conductivity matrix and `residualVector`
  * corresponds to the traditional load (RHS) vector.
  */
-export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
+export function assembleHeatConductionMat(meshData, boundaryConditions) {
   basicLog("Starting solid heat transfer matrix assembly...");
 
   // Extract mesh data
@@ -185,7 +185,7 @@ export function assembleSolidHeatTransferMat(meshData, boundaryConditions) {
  *  - localResidualVector: Residual vector contributions
  *  - ngl: Array mapping local node indices to global node indices
  */
-export function assembleSolidHeatTransferFront({ elementIndex, nop, meshData, basisFunctions, FEAData }) {
+export function assembleHeatConductionFront({ elementIndex, nop, meshData, basisFunctions, FEAData }) {
   // Extract numerical integration parameters and mesh coordinates
   const { gaussPoints, gaussWeights, numNodes } = FEAData;
   const { nodesXCoordinates, nodesYCoordinates, meshDimension } = meshData;

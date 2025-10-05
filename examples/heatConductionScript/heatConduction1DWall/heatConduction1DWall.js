@@ -21,7 +21,7 @@ console.log("FEAScript Version:", printVersion);
 const model = new FEAScriptModel();
 
 // Set solver configuration
-model.setSolverConfig("solidHeatTransferScript");
+model.setSolverConfig("heatConductionScript");
 
 // Define mesh configuration
 model.setMeshConfig({
