@@ -14,9 +14,9 @@ import { solveLinearSystem } from "./methods/linearSystemSolverScript.js";
 import { prepareMesh } from "./mesh/meshUtilsScript.js";
 import { assembleFrontPropagationMat } from "./solvers/frontPropagationScript.js";
 import {
-  assembleSolidHeatTransferMat,
-  assembleSolidHeatTransferFront,
-} from "./solvers/solidHeatTransferScript.js";
+  assembleHeatConductionMat,
+  assembleHeatConductionFront,
+} from "./solvers/heatConductionScript.js";
 import { runFrontalSolver } from "./methods/frontalSolverScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
 
@@ -92,20 +92,20 @@ export class FEAScriptModel {
     // Select and execute the appropriate solver based on solverConfig
     basicLog("Beginning solving process...");
     console.time("totalSolvingTime");
-    if (this.solverConfig === "solidHeatTransferScript") {
+    if (this.solverConfig === "heatConductionScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
 
       // Check if using frontal solver
       if (this.solverMethod === "frontal") {
         const frontalResult = runFrontalSolver(
-          assembleSolidHeatTransferFront,
+          assembleHeatConductionFront,
           meshData,
           this.boundaryConditions
         );
         solutionVector = frontalResult.solutionVector;
       } else {
         // Use regular linear solver methods
-        ({ jacobianMatrix, residualVector } = assembleSolidHeatTransferMat(
+        ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(
           meshData,
           this.boundaryConditions
         ));

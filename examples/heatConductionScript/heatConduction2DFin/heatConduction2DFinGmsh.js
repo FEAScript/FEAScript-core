@@ -34,7 +34,7 @@ async function main() {
   const model = new FEAScriptModel();
 
   // Set solver configuration
-  model.setSolverConfig("solidHeatTransferScript");
+  model.setSolverConfig("heatConductionScript");
 
   // Create a mock File object for Node.js environment
   const mockFile = {

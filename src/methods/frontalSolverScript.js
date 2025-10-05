@@ -11,7 +11,7 @@
 // Internal imports
 import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
 import { initializeFEA } from "../mesh/meshUtilsScript.js";
-import { assembleSolidHeatTransferFront } from "../solvers/solidHeatTransferScript.js";
+import { assembleHeatConductionFront } from "../solvers/heatConductionScript.js";
 import { ThermalBoundaryConditions } from "../solvers/thermalBoundaryConditionsScript.js";
 import { assembleFrontPropagationFront } from "../solvers/frontPropagationScript.js";
 import { GenericBoundaryConditions } from "../solvers/genericBoundaryConditionsScript.js";
@@ -68,8 +68,8 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
 
   // Handle Dirichlet-type boundary conditions differently based on which solver is being used
   let dirichletBoundaryConditionsHandler;
-  // Solid heat transfer model (solidHeatTransferScript solver)
-  if (assembleFront === assembleSolidHeatTransferFront) {
+  // Solid heat transfer model (heatConductionScript solver)
+  if (assembleFront === assembleHeatConductionFront) {
     dirichletBoundaryConditionsHandler = new ThermalBoundaryConditions(
       boundaryConditions,
       meshData.boundaryElements,
@@ -250,8 +250,8 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
     .map(() => Array(FEAData.numNodes).fill(0));
   let boundaryResidualVector = Array(FEAData.numNodes).fill(0);
 
-  // solidHeatTransferScript solver
-  if (assembleFront === assembleSolidHeatTransferFront) {
+  // heatConductionScript solver
+  if (assembleFront === assembleHeatConductionFront) {
     // Check if this element is on a Robin-type boundary
     let isOnRobinTypeBoundary = false;
     for (const boundaryKey in meshData.boundaryElements) {

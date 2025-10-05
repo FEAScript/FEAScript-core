@@ -123,7 +123,7 @@ Here is a minimal browser-based example using the JavaScript API. Adapt paths, s
       const model = new FEAScriptModel();
 
       // Set the solver type for your problem
-      model.setSolverConfig("solverType"); // Example: "solidHeatTransferScript"
+      model.setSolverConfig("solverType"); // Example: "heatConductionScript"
 
       // Configure the mesh
       model.setMeshConfig({
@@ -148,7 +148,7 @@ Here is a minimal browser-based example using the JavaScript API. Adapt paths, s
 
 **Note:** The code above uses placeholder values that you should replace with appropriate options, e.g.:
 
-- "solverType" should be replaced with an actual solver type such as "solidHeatTransferScript" for heat conduction problems
+- "solverType" should be replaced with an actual solver type such as "heatConductionScript" for heat conduction problems
 - "conditionType" should be replaced with an actual boundary condition type such as "constantTemp"
 - "boundaryIndex" should be replaced with a string identifying the boundary
 
