@@ -1,5 +1,5 @@
 <!-- Image placeholder -->
-<img src="https://feascript.github.io/FEAScript-website/assets/FEAScriptGenPDE.png" width="80" alt="FEAScript Logo">
+<img src="https://feascript.github.io/FEAScript-website/assets/FEAScriptGenPDE.png" width="80" alt="FEAScript General Form PDE Logo">
 
 ## General Form PDE Solver
 
