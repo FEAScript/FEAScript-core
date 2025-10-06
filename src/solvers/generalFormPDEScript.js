@@ -14,73 +14,6 @@ import { GenericBoundaryConditions } from "./genericBoundaryConditionsScript.js"
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**
- * Class to handle general form PDE boundary conditions application
- * Extends GenericBoundaryConditions for PDE-specific conditions
- */
-export class GeneralFormPDEBoundaryConditions extends GenericBoundaryConditions {
-  /**
-   * Constructor to initialize the GeneralFormPDEBoundaryConditions class
-   * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
-   * @param {array} boundaryElements - Array containing elements that belong to each boundary
-   * @param {array} nop - Nodal numbering (NOP) array representing the connectivity between elements and nodes
-   * @param {string} meshDimension - The dimension of the mesh (e.g., "1D")
-   * @param {string} elementOrder - The order of elements (e.g., "linear")
-   * @param {object} coefficients - Coefficient functions for the PDE
-   */
-  constructor(boundaryConditions, boundaryElements, nop, meshDimension, elementOrder, coefficients) {
-    super(boundaryConditions, boundaryElements, nop, meshDimension, elementOrder);
-    this.coefficients = coefficients;
-  }
-
-  /**
-   * Function to impose Dirichlet boundary conditions for the general form PDE
-   * @param {array} residualVector - The residual vector to be modified
-   * @param {array} jacobianMatrix - The Jacobian matrix to be modified
-   */
-  imposeDirichletBoundaryConditions(residualVector, jacobianMatrix) {
-    for (const [boundaryKey, condition] of Object.entries(this.boundaryConditions)) {
-      if (condition[0] === "constantValue") {
-        const value = condition[1];
-        const boundaryNodes = this.getBoundaryNodes(boundaryKey);
-
-        for (const nodeIndex of boundaryNodes) {
-          // Standard Dirichlet implementation
-          for (let i = 0; i < jacobianMatrix.length; i++) {
-            jacobianMatrix[nodeIndex][i] = 0;
-          }
-          jacobianMatrix[nodeIndex][nodeIndex] = 1;
-          residualVector[nodeIndex] = value;
-        }
-      }
-    }
-    debugLog("Dirichlet boundary conditions applied for general form PDE");
-  }
-
-  /**
-   * Get all nodes associated with a boundary
-   * @param {string} boundaryKey - The key identifying the boundary
-   * @returns {array} Array of node indices
-   */
-  getBoundaryNodes(boundaryKey) {
-    const boundaryNodes = new Set();
-    const elements = this.boundaryElements[boundaryKey];
-
-    if (!elements) {
-      errorLog(`Boundary ${boundaryKey} not found`);
-      return [];
-    }
-
-    for (const element of elements) {
-      for (const node of this.nop[element]) {
-        boundaryNodes.add(Math.abs(node) - 1); // Convert to 0-based indexing
-      }
-    }
-
-    return Array.from(boundaryNodes);
-  }
-}
-
-/**
  * Function to assemble the Jacobian matrix and residuals vector for the general form PDE model
  * @param {object} meshData - Object containing prepared mesh data
  * @param {object} boundaryConditions - Object containing boundary conditions
@@ -200,17 +133,16 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
   }
 
   // Apply boundary conditions
-  const pdeBoundaryConditions = new GeneralFormPDEBoundaryConditions(
+  const genericBoundaryConditions = new GenericBoundaryConditions(
     boundaryConditions,
     boundaryElements,
     nop,
     meshDimension,
-    elementOrder,
-    coefficientFunctions
+    elementOrder
   );
 
   // Apply Dirichlet boundary conditions only
-  pdeBoundaryConditions.imposeDirichletBoundaryConditions(residualVector, jacobianMatrix);
+  genericBoundaryConditions.imposeDirichletBoundaryConditions(residualVector, jacobianMatrix);
 
   basicLog("General form PDE matrix assembly completed");
 

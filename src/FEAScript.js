@@ -34,19 +34,11 @@ export class FEAScriptModel {
   }
 
   /**
-   * Sets the solver configuration and optionally PDE coefficient functions
+   * Sets the solver configuration
    * @param {string} solverConfig - Parameter specifying the type of solver
-   * @param {object} [options] - Additional solver options
-   * @param {object} [options.coefficientFunctions] - Functions A(x), B(x), C(x), D(x) for general form PDE
    */
-  setSolverConfig(solverConfig, options = {}) {
+  setSolverConfig(solverConfig = {}) {
     this.solverConfig = solverConfig;
-
-    // Store coefficient functions if provided
-    if (options.coefficientFunctions) {
-      this.coefficientFunctions = options.coefficientFunctions;
-      debugLog(`Coefficient functions set for ${solverConfig}`);
-    }
 
     debugLog(`Solver config set to: ${solverConfig}`);
   }
@@ -158,29 +150,16 @@ export class FEAScriptModel {
     } else if (this.solverConfig === "generalFormPDEScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
 
-      // Check if coefficient functions are provided
-      if (!this.coefficientFunctions) {
-        const error = "Coefficient functions must be provided for general form PDE solver";
-        errorLog(error);
-        throw new Error(error);
-      }
-
       if (this.solverMethod === "frontal") {
         // For frontal solver
-        const frontalResult = runFrontalSolver(
-          assembleGeneralFormPDEFront,
-          meshData,
-          this.boundaryConditions,
-          { coefficientFunctions: this.coefficientFunctions }
-        );
-        solutionVector = frontalResult.solutionVector;
       } else {
         // For other solver methods
-        ({ jacobianMatrix, residualVector } = assembleGeneralFormPDEMat(
-          meshData,
-          this.boundaryConditions,
-          this.coefficientFunctions
-        ));
+        ({ jacobianMatrix, residualVector } = assembleGeneralFormPDEMat(meshData, this.boundaryConditions, {
+          A: () => 1, // Diffusion coefficient
+          B: () => 1, // Advection coefficient
+          C: () => 0, // Reaction coefficient
+          D: () => 0, // Source term
+        }));
         const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
         solutionVector = linearSystemResult.solutionVector;
       }
