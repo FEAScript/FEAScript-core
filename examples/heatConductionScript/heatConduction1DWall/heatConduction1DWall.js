@@ -38,10 +38,10 @@ model.addBoundaryCondition("1", ["constantTemp", 5]);
 // Set solver method (optional)
 model.setSolverMethod("lusolve");
 
-// Solve the problem and get the solution
+// Solve the problem
 const { solutionVector, nodesCoordinates } = model.solve();
 
-// Print results to console
+// Print results
 console.log(`Number of nodes: ${nodesCoordinates.nodesXCoordinates.length}`);
 console.log("Node coordinates:", nodesCoordinates);
 console.log("Solution vector:", solutionVector);

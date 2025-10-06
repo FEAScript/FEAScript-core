@@ -58,10 +58,10 @@ async function main() {
   model.addBoundaryCondition("2", ["convection", 1, 20]); // top boundary
   model.addBoundaryCondition("3", ["symmetry"]); // left boundary
 
-  // Solve the problem and get the solution
+  // Solve the problem
   const { solutionVector, nodesCoordinates } = model.solve();
 
-  // Print results to console
+  // Print results
   console.log(`Number of nodes in mesh: ${nodesCoordinates.nodesXCoordinates.length}`);
   console.log("Node coordinates:", nodesCoordinates);
   console.log("Solution vector:", solutionVector);

@@ -20,26 +20,31 @@ console.log("FEAScript Version:", printVersion);
 // Create a new FEAScript model
 const model = new FEAScriptModel();
 
-// Set solver configuration
-model.setSolverConfig("heatConductionScript");
+// Set solver configuration with coefficient functions
+model.setSolverConfig("generalFormPDEScript", {
+  coefficientFunctions: {
+    // Define the PDE coefficients:
+    // For the equation d²u/dx² + 10 du/dx = -10 * exp(-200 * (x - 0.5)²)
+    A: (x) => 1, // Diffusion coefficient
+    B: (x) => 10, // Advection coefficient
+    C: (x) => 0, // Reaction coefficient
+    D: (x) => -10 * Math.exp(-200 * Math.pow(x - 0.5, 2)), // Source term
+  },
+});
 
 // Define mesh configuration
 model.setMeshConfig({
-  meshDimension: "2D",
-  elementOrder: "quadratic",
-  numElementsX: 8,
-  numElementsY: 4,
-  maxX: 4,
-  maxY: 2,
+  meshDimension: "1D",
+  elementOrder: "linear",
+  numElementsX: 20,
+  maxX: 1.0,
 });
 
 // Define boundary conditions
-model.addBoundaryCondition("0", ["constantTemp", 200]);
-model.addBoundaryCondition("1", ["symmetry"]);
-model.addBoundaryCondition("2", ["convection", 1, 20]);
-model.addBoundaryCondition("3", ["constantTemp", 200]);
+model.addBoundaryCondition("0", ["constantValue", 0]); // Left boundary, u(0) = 0
+model.addBoundaryCondition("1", ["constantValue", 0]); // Right boundary, u(1) = 0
 
-// Set solver method (optional)
+// Set solver method
 model.setSolverMethod("lusolve");
 
 // Solve the problem

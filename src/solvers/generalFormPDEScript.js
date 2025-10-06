@@ -8,158 +8,301 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
-// generalFormPDEScript.js
-// Solver for general 1D linear differential equations in weak form
-// User provides coefficients A(x), B(x), C(x), D(x) and boundary conditions
+// Internal imports
+import { initializeFEA, performIsoparametricMapping1D } from "../mesh/meshUtilsScript.js";
+import { GenericBoundaryConditions } from "./genericBoundaryConditionsScript.js";
+import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**
- * General 1D PDE Solver (Weak Form)
- * Solves equations of the form:
- * -->  d/dx(A(x) du/dx) + B(x) du/dx + C(x) u = D(x)
- * using the finite element method (FEM) and user-supplied coefficients.
- * @param {Object} options - Solver options
- * @param {function} options.A - Coefficient function A(x) (diffusion)
- * @param {function} options.B - Coefficient function B(x) (advection)
- * @param {function} options.C - Coefficient function C(x) (reaction)
- * @param {function} options.D - Source function D(x)
- * @param {Array<number>} options.mesh - Mesh nodes (1D array)
- * @param {Object} options.boundary - Boundary conditions
- *   { left: {type: 'dirichlet'|'neumann'|'robin', value}, right: {type, value} }
- *     - Dirichlet: value is the prescribed u
- *     - Neumann: value is the prescribed flux (A du/dx)
- *     - Robin: value is { a, b, c } for a*u + b*du/dx = c
- * @returns {Array<number>} Solution vector u at mesh nodes
+ * Class to handle general form PDE boundary conditions application
+ * Extends GenericBoundaryConditions for PDE-specific conditions
  */
-export function generalFormPDESolver({ A, B, C, D, mesh, boundary }) {
-    // Number of nodes and elements
-    const nNodes = mesh.length;
-    const nElements = nNodes - 1;
+export class GeneralFormPDEBoundaryConditions extends GenericBoundaryConditions {
+  /**
+   * Constructor to initialize the GeneralFormPDEBoundaryConditions class
+   * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
+   * @param {array} boundaryElements - Array containing elements that belong to each boundary
+   * @param {array} nop - Nodal numbering (NOP) array representing the connectivity between elements and nodes
+   * @param {string} meshDimension - The dimension of the mesh (e.g., "1D")
+   * @param {string} elementOrder - The order of elements (e.g., "linear")
+   * @param {object} coefficients - Coefficient functions for the PDE
+   */
+  constructor(boundaryConditions, boundaryElements, nop, meshDimension, elementOrder, coefficients) {
+    super(boundaryConditions, boundaryElements, nop, meshDimension, elementOrder);
+    this.coefficients = coefficients;
+  }
 
-    // Initialize global stiffness matrix and load vector
-    const K = Array.from({ length: nNodes }, () => Array(nNodes).fill(0));
-    const F = Array(nNodes).fill(0);
+  /**
+   * Function to impose Dirichlet boundary conditions for the general form PDE
+   * @param {array} residualVector - The residual vector to be modified
+   * @param {array} jacobianMatrix - The Jacobian matrix to be modified
+   */
+  imposeDirichletBoundaryConditions(residualVector, jacobianMatrix) {
+    for (const [boundaryKey, condition] of Object.entries(this.boundaryConditions)) {
+      if (condition[0] === "constantValue") {
+        const value = condition[1];
+        const boundaryNodes = this.getBoundaryNodes(boundaryKey);
 
-    // Linear basis functions for 1D elements
-    // For each element [x0, x1]
-    for (let e = 0; e < nElements; e++) {
-        const x0 = mesh[e];
-        const x1 = mesh[e + 1];
-        const h = x1 - x0;
-        // Local stiffness matrix and load vector
-        let Ke = [ [0, 0], [0, 0] ];
-        let Fe = [0, 0];
-        // 2-point Gauss quadrature for integration
-        const gaussPoints = [ -1/Math.sqrt(3), 1/Math.sqrt(3) ];
-        const gaussWeights = [ 1, 1 ];
-        for (let gp = 0; gp < 2; gp++) {
-            // Map reference [-1,1] to [x0,x1]
-            const xi = gaussPoints[gp];
-            const w = gaussWeights[gp];
-            const x = ((1 - xi) * x0 + (1 + xi) * x1) / 2;
-            const dx_dxi = h / 2;
-            // Basis functions and derivatives
-            const N = [ (1 - xi) / 2, (1 + xi) / 2 ];
-            const dN_dxi = [ -0.5, 0.5 ];
-            const dN_dx = dN_dxi.map(d => d / dx_dxi);
-            // Coefficients at integration point
-            const a = A(x);
-            const b = B(x);
-            const c = C(x);
-            const d = D(x);
-            // Element matrix assembly (weak form)
-            for (let i = 0; i < 2; i++) {
-                for (let j = 0; j < 2; j++) {
-                    Ke[i][j] += (
-                        a * dN_dx[i] * dN_dx[j] +
-                        b * dN_dx[j] * N[i] -
-                        c * N[i] * N[j]
-                    ) * w * dx_dxi;
-                }
-                Fe[i] += d * N[i] * w * dx_dxi;
-            }
+        for (const nodeIndex of boundaryNodes) {
+          // Standard Dirichlet implementation
+          for (let i = 0; i < jacobianMatrix.length; i++) {
+            jacobianMatrix[nodeIndex][i] = 0;
+          }
+          jacobianMatrix[nodeIndex][nodeIndex] = 1;
+          residualVector[nodeIndex] = value;
         }
-        // Assemble into global matrix/vector
-        K[e][e]     += Ke[0][0];
-        K[e][e+1]   += Ke[0][1];
-        K[e+1][e]   += Ke[1][0];
-        K[e+1][e+1] += Ke[1][1];
-        F[e]     += Fe[0];
-        F[e+1]   += Fe[1];
+      }
+    }
+    debugLog("Dirichlet boundary conditions applied for general form PDE");
+  }
+
+  /**
+   * Get all nodes associated with a boundary
+   * @param {string} boundaryKey - The key identifying the boundary
+   * @returns {array} Array of node indices
+   */
+  getBoundaryNodes(boundaryKey) {
+    const boundaryNodes = new Set();
+    const elements = this.boundaryElements[boundaryKey];
+
+    if (!elements) {
+      errorLog(`Boundary ${boundaryKey} not found`);
+      return [];
     }
 
-    // Apply boundary conditions (Dirichlet, Neumann, Robin)
-    // Left boundary
-    if (boundary.left) {
-        if (boundary.left.type === 'dirichlet') {
-            for (let j = 0; j < nNodes; j++) {
-                K[0][j] = 0;
-            }
-            K[0][0] = 1;
-            F[0] = boundary.left.value;
-        } else if (boundary.left.type === 'neumann') {
-            // Add Neumann flux to load vector
-            F[0] += boundary.left.value;
-        } else if (boundary.left.type === 'robin') {
-            // Robin: a*u + b*du/dx = c
-            const { a, b, c } = boundary.left.value;
-            K[0][0] += a;
-            F[0] += c;
-            K[0][0] += b;
-        }
-    }
-    // Right boundary
-    if (boundary.right) {
-        if (boundary.right.type === 'dirichlet') {
-            for (let j = 0; j < nNodes; j++) {
-                K[nNodes-1][j] = 0;
-            }
-            K[nNodes-1][nNodes-1] = 1;
-            F[nNodes-1] = boundary.right.value;
-        } else if (boundary.right.type === 'neumann') {
-            // Add Neumann flux to load vector
-            F[nNodes-1] += boundary.right.value;
-        } else if (boundary.right.type === 'robin') {
-            // Robin: a*u + b*du/dx = c
-            const { a, b, c } = boundary.right.value;
-            K[nNodes-1][nNodes-1] += a;
-            F[nNodes-1] += c;
-            K[nNodes-1][nNodes-1] += b;
-        }
+    for (const element of elements) {
+      for (const node of this.nop[element]) {
+        boundaryNodes.add(Math.abs(node) - 1); // Convert to 0-based indexing
+      }
     }
 
-    // Solve linear system Ku = F (simple Gauss elimination for small systems)
-    function solveLinearSystem(A, b) {
-        // Naive Gauss elimination (for small systems)
-        const n = b.length;
-        const x = Array(n).fill(0);
-        const M = A.map(row => row.slice());
-        const f = b.slice();
-        // Forward elimination
-        for (let i = 0; i < n; i++) {
-            let maxRow = i;
-            for (let k = i+1; k < n; k++) {
-                if (Math.abs(M[k][i]) > Math.abs(M[maxRow][i])) maxRow = k;
-            }
-            [M[i], M[maxRow]] = [M[maxRow], M[i]];
-            [f[i], f[maxRow]] = [f[maxRow], f[i]];
-            for (let k = i+1; k < n; k++) {
-                const c = M[k][i] / M[i][i];
-                for (let j = i; j < n; j++) {
-                    M[k][j] -= c * M[i][j];
-                }
-                f[k] -= c * f[i];
-            }
-        }
-        // Back substitution
-        for (let i = n-1; i >= 0; i--) {
-            let sum = 0;
-            for (let j = i+1; j < n; j++) {
-                sum += M[i][j] * x[j];
-            }
-            x[i] = (f[i] - sum) / M[i][i];
-        }
-        return x;
+    return Array.from(boundaryNodes);
+  }
+}
+
+/**
+ * Function to assemble the Jacobian matrix and residuals vector for the general form PDE model
+ * @param {object} meshData - Object containing prepared mesh data
+ * @param {object} boundaryConditions - Object containing boundary conditions
+ * @param {object} coefficientFunctions - Functions A(x), B(x), C(x), D(x) for the PDE
+ * @returns {object} An object containing:
+ *  - jacobianMatrix: The assembled Jacobian matrix
+ *  - residualVector: The assembled residual vector
+ */
+export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coefficientFunctions) {
+  basicLog("Starting general form PDE matrix assembly...");
+
+  // Extract mesh data
+  const { nodesXCoordinates, nop, boundaryElements, totalElements, meshDimension, elementOrder } = meshData;
+
+  // Extract coefficient functions
+  const { A, B, C, D } = coefficientFunctions;
+
+  // Initialize FEA components
+  const FEAData = initializeFEA(meshData);
+  const {
+    residualVector,
+    jacobianMatrix,
+    localToGlobalMap,
+    basisFunctions,
+    gaussPoints,
+    gaussWeights,
+    numNodes,
+  } = FEAData;
+
+  // Matrix assembly
+  for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {
+    // Map local element nodes to global mesh nodes
+    for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+      // Convert to 0-based indexing
+      localToGlobalMap[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]) - 1;
     }
-    const u = solveLinearSystem(K, F);
-    return u;
+
+    // Loop over Gauss points
+    for (let gaussPointIndex = 0; gaussPointIndex < gaussPoints.length; gaussPointIndex++) {
+      // Get basis functions for the current Gauss point
+      const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(
+        gaussPoints[gaussPointIndex]
+      );
+
+      // Perform isoparametric mapping
+      const { detJacobian, basisFunctionDerivX } = performIsoparametricMapping1D({
+        basisFunction,
+        basisFunctionDerivKsi,
+        nodesXCoordinates,
+        localToGlobalMap,
+        numNodes,
+      });
+
+      // Calculate the physical coordinate for this Gauss point
+      let xCoord = 0;
+      for (let i = 0; i < numNodes; i++) {
+        xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunction[i];
+      }
+
+      // Evaluate coefficient functions at this physical coordinate
+      const a = A(xCoord);
+      const b = B(xCoord);
+      const c = C(xCoord);
+      const d = D(xCoord);
+
+      // Computation of Galerkin's residuals and local Jacobian matrix
+      for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
+        const globalNodeIndex1 = localToGlobalMap[localNodeIndex1];
+
+        // Source term contribution to residual vector
+        residualVector[globalNodeIndex1] +=
+          gaussWeights[gaussPointIndex] * detJacobian * d * basisFunction[localNodeIndex1];
+
+        for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
+          const globalNodeIndex2 = localToGlobalMap[localNodeIndex2];
+
+          // Diffusion term: a * (du/dx)(dv/dx)
+          jacobianMatrix[globalNodeIndex1][globalNodeIndex2] +=
+            gaussWeights[gaussPointIndex] *
+            detJacobian *
+            a *
+            basisFunctionDerivX[localNodeIndex1] *
+            basisFunctionDerivX[localNodeIndex2];
+
+          // Advection term: b * (du/dx)v
+          jacobianMatrix[globalNodeIndex1][globalNodeIndex2] +=
+            gaussWeights[gaussPointIndex] *
+            detJacobian *
+            b *
+            basisFunctionDerivX[localNodeIndex2] *
+            basisFunction[localNodeIndex1];
+
+          // Reaction term: -c * u * v
+          jacobianMatrix[globalNodeIndex1][globalNodeIndex2] -=
+            gaussWeights[gaussPointIndex] *
+            detJacobian *
+            c *
+            basisFunction[localNodeIndex1] *
+            basisFunction[localNodeIndex2];
+        }
+      }
+    }
+  }
+
+  // Apply boundary conditions
+  const pdeBoundaryConditions = new GeneralFormPDEBoundaryConditions(
+    boundaryConditions,
+    boundaryElements,
+    nop,
+    meshDimension,
+    elementOrder,
+    coefficientFunctions
+  );
+
+  // Apply Dirichlet boundary conditions only
+  pdeBoundaryConditions.imposeDirichletBoundaryConditions(residualVector, jacobianMatrix);
+
+  basicLog("General form PDE matrix assembly completed");
+
+  return {
+    jacobianMatrix,
+    residualVector,
+  };
+}
+
+/**
+ * Function to assemble the frontal solver matrix for the general form PDE model
+ * @param {object} data - Object containing element data for the frontal solver
+ * @returns {object} An object containing local Jacobian matrix and residual vector
+ */
+export function assembleGeneralFormPDEFront({
+  elementIndex,
+  nop,
+  meshData,
+  basisFunctions,
+  FEAData,
+  coefficientFunctions,
+}) {
+  // Extract numerical integration parameters and mesh coordinates
+  const { gaussPoints, gaussWeights, numNodes } = FEAData;
+  const { nodesXCoordinates, meshDimension } = meshData;
+  const { A, B, C, D } = coefficientFunctions;
+
+  // Initialize local Jacobian matrix and local residual vector
+  const localJacobianMatrix = Array(numNodes)
+    .fill()
+    .map(() => Array(numNodes).fill(0));
+  const localResidualVector = Array(numNodes).fill(0);
+
+  // Build the mapping from local node indices to global node indices
+  const ngl = Array(numNodes);
+  const localToGlobalMap = Array(numNodes);
+  for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+    ngl[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]);
+    localToGlobalMap[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]) - 1;
+  }
+
+  // Loop over Gauss points
+  for (let gaussPointIndex = 0; gaussPointIndex < gaussPoints.length; gaussPointIndex++) {
+    // Get basis functions for the current Gauss point
+    const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(
+      gaussPoints[gaussPointIndex]
+    );
+
+    // Perform isoparametric mapping
+    const { detJacobian, basisFunctionDerivX } = performIsoparametricMapping1D({
+      basisFunction,
+      basisFunctionDerivKsi,
+      nodesXCoordinates,
+      localToGlobalMap,
+      numNodes,
+    });
+
+    // Calculate the physical coordinate for this Gauss point
+    let xCoord = 0;
+    for (let i = 0; i < numNodes; i++) {
+      xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunction[i];
+    }
+
+    // Evaluate coefficient functions at this physical coordinate
+    const a = A(xCoord);
+    const b = B(xCoord);
+    const c = C(xCoord);
+    const d = D(xCoord);
+
+    // Computation of local Jacobian matrix and residual vector
+    for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
+      // Source term contribution to local residual vector
+      localResidualVector[localNodeIndex1] +=
+        gaussWeights[gaussPointIndex] * detJacobian * d * basisFunction[localNodeIndex1];
+
+      for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
+        // Diffusion term: a * (du/dx)(dv/dx)
+        localJacobianMatrix[localNodeIndex1][localNodeIndex2] +=
+          gaussWeights[gaussPointIndex] *
+          detJacobian *
+          a *
+          basisFunctionDerivX[localNodeIndex1] *
+          basisFunctionDerivX[localNodeIndex2];
+
+        // Advection term: b * (du/dx)v
+        localJacobianMatrix[localNodeIndex1][localNodeIndex2] +=
+          gaussWeights[gaussPointIndex] *
+          detJacobian *
+          b *
+          basisFunctionDerivX[localNodeIndex2] *
+          basisFunction[localNodeIndex1];
+
+        // Reaction term: -c * u * v
+        localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
+          gaussWeights[gaussPointIndex] *
+          detJacobian *
+          c *
+          basisFunction[localNodeIndex1] *
+          basisFunction[localNodeIndex2];
+      }
+    }
+  }
+
+  return {
+    localJacobianMatrix,
+    localResidualVector,
+    ngl,
+  };
 }

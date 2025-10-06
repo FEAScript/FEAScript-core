@@ -42,10 +42,10 @@ model.addBoundaryCondition("3", ["constantValue", 0]); // Right
 // Set solver method (optional)
 model.setSolverMethod("lusolve");
 
-// Solve the problem and get the solution
+// Solve the problem
 const { solutionVector, nodesCoordinates } = model.solve();
 
-// Print results to console
+// Print results
 console.log(`Number of nodes in mesh: ${nodesCoordinates.nodesXCoordinates.length}`);
 console.log("Node coordinates:", nodesCoordinates);
 console.log("Solution vector:", solutionVector);

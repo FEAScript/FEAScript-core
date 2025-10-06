@@ -235,8 +235,8 @@ export function assembleFrontPropagationMat(
     elementOrder
   );
 
-  // Impose ConstantValue boundary conditions
-  genericBoundaryConditions.imposeConstantValueBoundaryConditions(residualVector, jacobianMatrix);
+  // Impose Dirichlet boundary conditions
+  genericBoundaryConditions.imposeDirichletBoundaryConditions(residualVector, jacobianMatrix);
   basicLog("Front propagation matrix assembly completed");
 
   return {
