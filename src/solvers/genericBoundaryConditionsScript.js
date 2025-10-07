@@ -32,7 +32,7 @@ export class GenericBoundaryConditions {
   }
 
   /**
-   * Function to impose constant value boundary conditions (Dirichlet type)
+   * Function to impose Dirichlet boundary conditions
    * @param {array} residualVector - The residual vector to be modified
    * @param {array} jacobianMatrix - The Jacobian matrix to be modified
    *
@@ -44,7 +44,7 @@ export class GenericBoundaryConditions {
    * classic stiffness/conductivity matrix and `residualVector`
    * corresponds to the traditional load (RHS) vector.
    */
-  imposeConstantValueBoundaryConditions(residualVector, jacobianMatrix) {
+  imposeDirichletBoundaryConditions(residualVector, jacobianMatrix) {
     if (this.meshDimension === "1D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
         if (this.boundaryConditions[boundaryKey][0] === "constantValue") {

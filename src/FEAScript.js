@@ -13,10 +13,8 @@ import { newtonRaphson } from "./methods/newtonRaphsonScript.js";
 import { solveLinearSystem } from "./methods/linearSystemSolverScript.js";
 import { prepareMesh } from "./mesh/meshUtilsScript.js";
 import { assembleFrontPropagationMat } from "./solvers/frontPropagationScript.js";
-import {
-  assembleHeatConductionMat,
-  assembleHeatConductionFront,
-} from "./solvers/heatConductionScript.js";
+import { assembleGeneralFormPDEMat, assembleGeneralFormPDEFront } from "./solvers/generalFormPDEScript.js";
+import { assembleHeatConductionMat, assembleHeatConductionFront } from "./solvers/heatConductionScript.js";
 import { runFrontalSolver } from "./methods/frontalSolverScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
 
@@ -33,11 +31,24 @@ export class FEAScriptModel {
     this.meshConfig = {};
     this.boundaryConditions = {};
     this.solverMethod = "lusolve"; // Default solver method
+    this.coefficientFunctions = null; // Add storage for coefficient functions
     basicLog("FEAScriptModel instance created");
   }
 
-  setSolverConfig(solverConfig) {
+  /**
+   * Sets the solver configuration
+   * @param {string} solverConfig - Parameter specifying the type of solver
+   * @param {object} [options] - Optional additional configuration
+   */
+  setSolverConfig(solverConfig, options = {}) {
     this.solverConfig = solverConfig;
+
+    // Store coefficient functions if provided
+    if (options && options.coefficientFunctions) {
+      this.coefficientFunctions = options.coefficientFunctions;
+      debugLog("Coefficient functions set");
+    }
+
     debugLog(`Solver config set to: ${solverConfig}`);
   }
 
@@ -105,10 +116,7 @@ export class FEAScriptModel {
         solutionVector = frontalResult.solutionVector;
       } else {
         // Use regular linear solver methods
-        ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(
-          meshData,
-          this.boundaryConditions
-        ));
+        ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(meshData, this.boundaryConditions));
         const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
         solutionVector = linearSystemResult.solutionVector;
       }
@@ -147,6 +155,24 @@ export class FEAScriptModel {
 
         // Increment for next iteration
         eikonalActivationFlag += 1 / eikonalExteralIterations;
+      }
+    } else if (this.solverConfig === "generalFormPDEScript") {
+      basicLog(`Using solver: ${this.solverConfig}`);
+      // Check if using frontal solver
+      if (this.solverMethod === "frontal") {
+        errorLog(
+          "Frontal solver is not yet supported for generalFormPDEScript. Please use 'lusolve' or 'jacobi'."
+        );
+      } else {
+        // Use regular linear solver methods
+        ({ jacobianMatrix, residualVector } = assembleGeneralFormPDEMat(
+          meshData,
+          this.boundaryConditions,
+          this.coefficientFunctions
+        ));
+
+        const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
+        solutionVector = linearSystemResult.solutionVector;
       }
     }
     console.timeEnd("totalSolvingTime");

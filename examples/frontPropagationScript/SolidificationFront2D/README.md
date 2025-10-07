@@ -1,8 +1,8 @@
-<img src="https://feascript.github.io/FEAScript-website/assets/FEAScriptFrontPropagation.png" width="80" alt="FEAScript Logo">
+<img src="https://feascript.github.io/FEAScript-website/assets/FEAScriptFrontPropagation.png" width="80" alt="FEAScript Front Propagation Logo">
 
-## Solidification Front Propagation in a Two-Dimensional Domain
+## Solidification Front Propagation in a 2D Domain
 
-This example demonstrates solving an eikonal equation in a two-dimensional domain using the FEAScript library. The problem represents a typical solidification front propagation scenario, where the objective is to track the movement of an interface, such as in metal cooling or crystal growth processes.
+This example demonstrates solving an eikonal equation in a 2D domain using the FEAScript library. The problem represents a typical solidification front propagation scenario, where the objective is to track the movement of an interface, such as in metal cooling or crystal growth processes.
 
 ### Instructions
 
@@ -26,4 +26,4 @@ This example requires the `feascript` npm package and its peer dependencies (`ma
    node SolidificationFront2D.js
    ```
 
-**Note:** For detailed information on the model setup, boundary conditions, and simulation results, refer to the comments in the JavaScript files and the corresponding standard [tutorial](https://feascript.com/tutorials/SolidificationFront2D.html).
+**Note:** For detailed information on the model setup, boundary conditions, and simulation results, refer to the comments in the JavaScript files and the corresponding [tutorial](https://feascript.com/tutorials/SolidificationFront2D.html).

@@ -1,4 +1,4 @@
-<img src="https://feascript.github.io/FEAScript-website/assets/FEAScriptHeatTransfer.png" width="80" alt="FEAScript Logo">
+<img src="https://feascript.github.io/FEAScript-website/assets/FEAScriptHeatTransfer.png" width="80" alt="FEAScript Heat Conduction Logo">
 
 ## Heat Conduction Through a Wall
 
@@ -14,7 +14,7 @@ The example requires the `feascript` npm package and its peer dependencies (`mat
    echo '{"type":"module"}' > package.json
    ```
 
-2. **Install FEAScript and dependencies:**
+2. **Install dependencies:**
 
    ```bash
    npm install feascript mathjs
@@ -25,4 +25,4 @@ The example requires the `feascript` npm package and its peer dependencies (`mat
    node HeatConduction1DWall.js
    ```
 
-**Note:** For an HTML version of this example, and additional details, refer to the corresponding [tutorial](https://feascript.com/tutorials/HeatConduction1DWall.html).
+   **Note:** For detailed information on the model setup, boundary conditions, and simulation results, refer to the comments in the JavaScript files and the corresponding [tutorial](https://feascript.com/tutorials/HeatConduction1DWall.html).

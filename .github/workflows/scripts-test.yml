@@ -1,10 +1,21 @@
+#   ______ ______           _____           _       _
+#  |  ____|  ____|   /\    / ____|         (_)     | |
+#  | |__  | |__     /  \  | (___   ___ ____ _ ____ | |_
+#  |  __| |  __|   / /\ \  \___ \ / __|  __| |  _ \| __|
+#  | |    | |____ / ____ \ ____) | (__| |  | | |_) | |
+#  |_|    |______/_/    \_\_____/ \___|_|  |_|  __/| |
+#                                            | |   | |
+#                                            |_|   | |_
+#       Website: https://feascript.com/             \__|
+#
+
 name: Run FEAScript Examples
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   run-examples:
@@ -33,17 +44,17 @@ jobs:
           echo "=========================================="
           echo "Running FEAScript examples with Node.js ${{ matrix.node-version }}"
           echo "=========================================="
-          
+
           # Counter for tracking test results
           PASSED=0
           FAILED=0
           TOTAL=0
-          
+
           # Array to store failed examples
           FAILED_EXAMPLES=()
-          
-          # Find all .js files in examples directory, excluding generalFormPDEScript
-          for file in $(find examples -name "*.js" -type f | grep -v "generalFormPDEScript" | sort); do
+
+          # Find all .js files in examples directory
+          for file in $(find examples -name "*.js" -type f | sort); do
             TOTAL=$((TOTAL + 1))
             LOG_FILE="${file%.js}.log"
             echo ""
@@ -71,7 +82,7 @@ jobs:
             fi
             echo "----------------------------------------"
           done
-          
+
           # Print summary
           echo ""
           echo "=========================================="
@@ -81,7 +92,7 @@ jobs:
           echo "Passed: $PASSED"
           echo "Failed: $FAILED"
           echo ""
-          
+
           # If there are failures, list them
           if [ $FAILED -gt 0 ]; then
             echo "Failed examples:"
