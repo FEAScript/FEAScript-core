@@ -118,7 +118,7 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
               basisFunction[localNodeIndex1];
 
             // Reaction term
-            jacobianMatrix[globalNodeIndex1][globalNodeIndex2] +=
+            jacobianMatrix[globalNodeIndex1][globalNodeIndex2] -=
               gaussWeights[gaussPointIndex] *
               detJacobian *
               c *
@@ -240,7 +240,7 @@ export function assembleGeneralFormPDEFront({
             basisFunction[localNodeIndex1];
 
           // Reaction term
-          localJacobianMatrix[localNodeIndex1][localNodeIndex2] +=
+          localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
             gaussWeights[gaussPointIndex] *
             detJacobian *
             c *
