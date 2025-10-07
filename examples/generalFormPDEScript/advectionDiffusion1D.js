@@ -23,8 +23,7 @@ const model = new FEAScriptModel();
 // Set solver configuration with coefficient functions
 model.setSolverConfig("generalFormPDEScript", {
   coefficientFunctions: {
-    // Define the PDE coefficients:
-    // For the equation d²u/dx² + 10 du/dx = -10 * exp(-200 * (x - 0.5)²)
+    // Equation d²u/dx² + 10 du/dx = -10 * exp(-200 * (x - 0.5)²)
     A: (x) => 1, // Diffusion coefficient
     B: (x) => 10, // Advection coefficient
     C: (x) => 0, // Reaction coefficient
@@ -35,14 +34,14 @@ model.setSolverConfig("generalFormPDEScript", {
 // Define mesh configuration
 model.setMeshConfig({
   meshDimension: "1D",
-  elementOrder: "linear",
+  elementOrder: "quadratic",
   numElementsX: 20,
   maxX: 1.0,
 });
 
 // Define boundary conditions
-model.addBoundaryCondition("0", ["constantValue", 0]); // Left boundary, u(0) = 0
-model.addBoundaryCondition("1", ["constantValue", 0]); // Right boundary, u(1) = 0
+model.addBoundaryCondition("0", ["constantValue", 1]); // Left boundary, u(0) = 1
+model.addBoundaryCondition("1", "zeroGradient"); // Right boundary, zero gradient (du/dx = 0)
 
 // Set solver method
 model.setSolverMethod("lusolve");

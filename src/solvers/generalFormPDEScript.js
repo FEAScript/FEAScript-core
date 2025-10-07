@@ -101,7 +101,7 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
           for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
             const globalNodeIndex2 = localToGlobalMap[localNodeIndex2];
 
-            // Diffusion term: a * (du/dx)(dv/dx)
+            // Diffusion term
             jacobianMatrix[globalNodeIndex1][globalNodeIndex2] +=
               gaussWeights[gaussPointIndex] *
               detJacobian *
@@ -109,7 +109,7 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
               basisFunctionDerivX[localNodeIndex1] *
               basisFunctionDerivX[localNodeIndex2];
 
-            // Advection term: b * (du/dx)v
+            // Advection term
             jacobianMatrix[globalNodeIndex1][globalNodeIndex2] +=
               gaussWeights[gaussPointIndex] *
               detJacobian *
@@ -117,7 +117,7 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
               basisFunctionDerivX[localNodeIndex2] *
               basisFunction[localNodeIndex1];
 
-            // Reaction term: -c * u * v
+            // Reaction term
             jacobianMatrix[globalNodeIndex1][globalNodeIndex2] -=
               gaussWeights[gaussPointIndex] *
               detJacobian *
@@ -129,6 +129,7 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
       }
     }
   } else if (meshDimension === "2D") {
+    errorLog("2D general form PDE is not yet supported in assembleGeneralFormPDEMat.");
     // 2D general form PDE - empty for now
   }
 
@@ -222,7 +223,7 @@ export function assembleGeneralFormPDEFront({
           gaussWeights[gaussPointIndex] * detJacobian * d * basisFunction[localNodeIndex1];
 
         for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
-          // Diffusion term: a * (du/dx)(dv/dx)
+          // Diffusion term
           localJacobianMatrix[localNodeIndex1][localNodeIndex2] +=
             gaussWeights[gaussPointIndex] *
             detJacobian *
@@ -230,7 +231,7 @@ export function assembleGeneralFormPDEFront({
             basisFunctionDerivX[localNodeIndex1] *
             basisFunctionDerivX[localNodeIndex2];
 
-          // Advection term: b * (du/dx)v
+          // Advection term
           localJacobianMatrix[localNodeIndex1][localNodeIndex2] +=
             gaussWeights[gaussPointIndex] *
             detJacobian *
@@ -238,7 +239,7 @@ export function assembleGeneralFormPDEFront({
             basisFunctionDerivX[localNodeIndex2] *
             basisFunction[localNodeIndex1];
 
-          // Reaction term: -c * u * v
+          // Reaction term
           localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
             gaussWeights[gaussPointIndex] *
             detJacobian *
@@ -249,6 +250,7 @@ export function assembleGeneralFormPDEFront({
       }
     }
   } else if (meshDimension === "2D") {
+    errorLog("2D general form PDE is not yet supported in assembleGeneralFormPDEFront.");
     // 2D general form PDE - empty for now
   }
 

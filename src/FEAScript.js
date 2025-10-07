@@ -13,6 +13,7 @@ import { newtonRaphson } from "./methods/newtonRaphsonScript.js";
 import { solveLinearSystem } from "./methods/linearSystemSolverScript.js";
 import { prepareMesh } from "./mesh/meshUtilsScript.js";
 import { assembleFrontPropagationMat } from "./solvers/frontPropagationScript.js";
+import { assembleGeneralFormPDEMat, assembleGeneralFormPDEFront } from "./solvers/generalFormPDEScript.js";
 import { assembleHeatConductionMat, assembleHeatConductionFront } from "./solvers/heatConductionScript.js";
 import { runFrontalSolver } from "./methods/frontalSolverScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
@@ -30,15 +31,23 @@ export class FEAScriptModel {
     this.meshConfig = {};
     this.boundaryConditions = {};
     this.solverMethod = "lusolve"; // Default solver method
+    this.coefficientFunctions = null; // Add storage for coefficient functions
     basicLog("FEAScriptModel instance created");
   }
 
   /**
    * Sets the solver configuration
    * @param {string} solverConfig - Parameter specifying the type of solver
+   * @param {object} [options] - Optional additional configuration
    */
-  setSolverConfig(solverConfig = {}) {
+  setSolverConfig(solverConfig, options = {}) {
     this.solverConfig = solverConfig;
+
+    // Store coefficient functions if provided
+    if (options && options.coefficientFunctions) {
+      this.coefficientFunctions = options.coefficientFunctions;
+      debugLog("Coefficient functions set");
+    }
 
     debugLog(`Solver config set to: ${solverConfig}`);
   }
@@ -149,17 +158,19 @@ export class FEAScriptModel {
       }
     } else if (this.solverConfig === "generalFormPDEScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
-
+      // Check if using frontal solver
       if (this.solverMethod === "frontal") {
-        // For frontal solver
+        errorLog(
+          "Frontal solver is not yet supported for generalFormPDEScript. Please use 'lusolve' or 'jacobi'."
+        );
       } else {
-        // For other solver methods
-        ({ jacobianMatrix, residualVector } = assembleGeneralFormPDEMat(meshData, this.boundaryConditions, {
-          A: () => 1, // Diffusion coefficient
-          B: () => 1, // Advection coefficient
-          C: () => 0, // Reaction coefficient
-          D: () => 0, // Source term
-        }));
+        // Use regular linear solver methods
+        ({ jacobianMatrix, residualVector } = assembleGeneralFormPDEMat(
+          meshData,
+          this.boundaryConditions,
+          this.coefficientFunctions
+        ));
+
         const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
         solutionVector = linearSystemResult.solutionVector;
       }
