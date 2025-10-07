@@ -5,7 +5,7 @@
 This example demonstrates solving a one-dimensional advection-diffusion problem with a Gaussian source term using the FEAScript library. The problem models the transport equation:
 
 $$
-\frac{d^2u}{dx^2} + 10 \frac{du}{dx} = -10 \cdot e^{-200 \cdot (x - 0.5)^2}
+\frac{d^2u}{dx^2} - 10 \frac{du}{dx} = 10 \cdot e^{-200 \cdot (x - 0.5)^2}
 $$
 
 This can be written in the general form as:
@@ -17,9 +17,9 @@ $$
 where:
 
 - $A(x) = 1$ (diffusion coefficient)
-- $B(x) = 10$ (advection coefficient)
+- $B(x) = -10$ (advection coefficient)
 - $C(x) = 0$ (no reaction term)
-- $D(x) = -10 \cdot e^{-200 \cdot (x - 0.5)^2}$ (Gaussian source term centered at x = 0.5)
+- $D(x) = 10 \cdot e^{-200 \cdot (x - 0.5)^2}$ (Gaussian source term centered at x = 0.5)
 
 ### Instructions
 

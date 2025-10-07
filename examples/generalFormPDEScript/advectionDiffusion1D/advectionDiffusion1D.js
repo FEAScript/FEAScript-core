@@ -23,11 +23,11 @@ const model = new FEAScriptModel();
 // Set solver configuration with coefficient functions
 model.setSolverConfig("generalFormPDEScript", {
   coefficientFunctions: {
-    // Equation d²u/dx² + 10 du/dx = -10 * exp(-200 * (x - 0.5)²)
+    // Equation d²u/dx² - 10 du/dx = 10 * exp(-200 * (x - 0.5)²)
     A: (x) => 1, // Diffusion coefficient
-    B: (x) => 10, // Advection coefficient
+    B: (x) => -10, // Advection coefficient
     C: (x) => 0, // Reaction coefficient
-    D: (x) => -10 * Math.exp(-200 * Math.pow(x - 0.5, 2)), // Source term
+    D: (x) => 10 * Math.exp(-200 * Math.pow(x - 0.5, 2)), // Source term
   },
 });
 
