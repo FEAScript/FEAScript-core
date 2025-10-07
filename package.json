@@ -19,7 +19,7 @@
   "scripts": {
     "build": "rollup -c",
     "prepublishOnly": "npm run build",
-    "test": "echo \"No tests configured\" && exit 0"
+    "test": "for file in $(find examples -name '*.js' -type f | sort); do echo 'Running' \"$file\"; if node \"$file\" > /dev/null 2>&1; then echo 'Success'; else echo 'Failed'; fi; done"
   },
   "repository": {
     "type": "git",
@@ -44,6 +44,14 @@
     {
       "name": "Felipe Ferrari",
       "url": "https://github.com/ferrari212"
+    },
+    {
+      "name": "Akhilesh Tiwari",
+      "url": "https://github.com/silky-x0"
+    },
+    {
+      "name": "Priyank Bansal",
+      "url": "https://github.com/Stu-ops"
     }
   ],
   "license": "MIT",
