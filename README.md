@@ -156,8 +156,11 @@ Here is a minimal browser-based example using the JavaScript API. Adapt paths, s
 
 > 💖 **If you find FEAScript useful, please consider supporting its development through a donation:**
 
+<a href="https://github.com/sponsors/FEAScript">
+  <img alt="GitHub Sponsors" src="https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/feascript">
+</a>
 <a href="https://liberapay.com/FEAScript/donate">
-  <img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg">
+  <img alt="Donate using Liberapay" src="https://img.shields.io/badge/Liberapay-F6C915?logo=liberapay&logoColor=black">
 </a>
 
 Your support helps ensure the continued development and maintenance of this project.
