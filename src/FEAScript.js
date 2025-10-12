@@ -16,7 +16,7 @@ import { assembleFrontPropagationMat } from "./solvers/frontPropagationScript.js
 import { assembleGeneralFormPDEMat, assembleGeneralFormPDEFront } from "./solvers/generalFormPDEScript.js";
 import { assembleHeatConductionMat, assembleHeatConductionFront } from "./solvers/heatConductionScript.js";
 import { runFrontalSolver } from "./methods/frontalSolverScript.js";
-import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
+import { basicLog, debugLog, warnLog, errorLog } from "./utilities/loggingScript.js";
 
 /**
  * Class to implement finite element analysis in JavaScript
@@ -32,6 +32,9 @@ export class FEAScriptModel {
     this.boundaryConditions = {};
     this.solverMethod = "lusolve"; // Default solver method
     this.coefficientFunctions = null; // Add storage for coefficient functions
+    warnLog(
+      "FEAScript is provided “as is” without any warranty. The authors are not responsible for any damages or losses that may result from using the software. See the license for more details: https://github.com/FEAScript/FEAScript-core/blob/main/LICENSE"
+    );
     basicLog("FEAScriptModel instance created");
   }
 

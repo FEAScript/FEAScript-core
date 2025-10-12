@@ -34,7 +34,7 @@ export function logSystem(level) {
  */
 export function debugLog(message) {
   if (currentLogLevel === "debug") {
-    console.log("%c[DEBUG] " + message, "color: #2196F3; font-weight: bold;"); // Blue color for debug
+    console.log("%c[DEBUG] " + message, "color: #2196F3; font-weight: bold;");
   }
 }
 
@@ -43,7 +43,7 @@ export function debugLog(message) {
  * @param {string} message - Message to log
  */
 export function basicLog(message) {
-  console.log("%c[INFO] " + message, "color: #4CAF50; font-weight: bold;"); // Green color for basic info
+  console.log("%c[INFO] " + message, "color: #4CAF50; font-weight: bold;");
 }
 
 /**
@@ -51,7 +51,15 @@ export function basicLog(message) {
  * @param {string} message - Message to log
  */
 export function errorLog(message) {
-  console.log("%c[ERROR] " + message, "color: #F44336; font-weight: bold;"); // Red color for errors
+  console.log("%c[ERROR] " + message, "color: #F44336; font-weight: bold;");
+}
+
+/**
+ * Function to log warning messages
+ * @param {string} message - Message to log
+ */
+export function warnLog(message) {
+  console.log("%c[WARN] " + message, "color: #FF9800; font-weight: bold;");
 }
 
 /**
