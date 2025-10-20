@@ -6,7 +6,7 @@ This directory contains Node.js examples demonstrating how to use the FEAScript 
 
 ## Examples
 
-#### 1. Solidification Front Propagation in a 2D Domain
+#### 1. Solidification Front Propagation in a 2D Domain (solidificationFront2D)
 
 This example demonstrates solving an eikonal equation in a 2D domain to track the movement of a solidification interface. For detailed information on the model setup refer to the corresponding [tutorial](https://feascript.com/tutorials/solidification-front-2d.html) in the FEAScript website.
 
@@ -29,3 +29,5 @@ npm install feascript mathjs
 ```bash
 node SolidificationFront2D.js
 ```
+
+(for the "Solidification Front Propagation in a 2D Domain" example)

@@ -6,11 +6,11 @@ This directory contains Node.js examples demonstrating how to use the FEAScript 
 
 ## Examples
 
-#### 1. Heat Conduction Through a Wall
+#### 1. Heat Conduction Through a Wall (heatConduction1DWall)
 
 This example demonstrates a heat flow case through a building wall. For detailed information on the model setup refer to the corresponding [tutorial](https://feascript.com/tutorials/heat-conduction-1d-wall.html) in the FEAScript website.
 
-#### 2. Heat Conduction in a 2D Fin
+#### 2. Heat Conduction in a 2D Fin (heatConduction2DFin)
 
 This example demonstrates a typical cooling fin scenario. For detailed information on the model setup refer to the corresponding [tutorial](https://feascript.com/tutorials/heat-conduction-2d-fin.html) in the FEAScript website. There are two Node.js implementations:
 
@@ -42,4 +42,4 @@ npm install feascript mathjs
 node HeatConduction1DWall.js
 ```
 
-(for the "Heat Conduction Through a Wall" case)
+(for the "Heat Conduction Through a Wall" example)
