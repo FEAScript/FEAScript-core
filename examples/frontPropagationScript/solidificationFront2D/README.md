@@ -1,4 +1,4 @@
-<img src="https://feascript.github.io/FEAScript-website/assets/FEAScriptFrontPropagation.png" width="80" alt="FEAScript Front Propagation Logo">
+<img src="https://feascript.github.io/FEAScript-website/assets/feascript-logo.png" width="80" alt="FEAScript Logo">
 
 ## Solidification Front Propagation in a 2D Domain
 

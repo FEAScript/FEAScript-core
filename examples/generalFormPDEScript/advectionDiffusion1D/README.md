@@ -1,4 +1,4 @@
-<img src="https://feascript.github.io/FEAScript-website/assets/FEAScriptGeneralFormPDE.png" width="80" alt="FEAScript General Form PDE Logo">
+<img src="https://feascript.github.io/FEAScript-website/assets/feascript-logo.png" width="80" alt="FEAScript Logo">
 
 ## Advection-Diffusion with Gaussian Source
 
