@@ -21,7 +21,7 @@ import { WebGPUComputeEngine } from "../utilities/webgpuComputeEngine.js";
  * @param {number} [tolerance=1e-7] - Convergence tolerance
  * @param {boolean} [useFloat64=true] - Whether to use Float64Array for higher precision
  * @returns {object} An object containing:
- *  - solution: The solution vector
+ *  - solutionVector: The solution vector
  *  - iterations: The number of iterations performed
  *  - converged: Boolean indicating whether the method converged
  */

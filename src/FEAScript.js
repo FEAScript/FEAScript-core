@@ -82,13 +82,24 @@ export class FEAScriptModel {
     let solutionVector = [];
     let nodesCoordinates = {};
 
+    // Prepare the mesh
+    basicLog("Preparing mesh...");
+    const meshData = prepareMesh(this.meshConfig);
+    basicLog("Mesh preparation completed");
+
+    // Extract node coordinates from meshData
+    nodesCoordinates = {
+      nodesXCoordinates: meshData.nodesXCoordinates,
+      nodesYCoordinates: meshData.nodesYCoordinates,
+    };
+
     // Assembly matrices
     basicLog("Beginning matrix assembly...");
     console.time("assemblyMatrices");
     if (this.solverConfig === "solidHeatTransferScript") {
       basicLog(`Using solver: ${this.solverConfig}`);
-      ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleSolidHeatTransferMat(
-        this.meshConfig,
+      ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(
+        meshData,
         this.boundaryConditions
       ));
     }

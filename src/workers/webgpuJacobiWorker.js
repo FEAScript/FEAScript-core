@@ -65,7 +65,7 @@ class WebGPUJacobiWorker {
       xNew = await xNewField.toArray();
 
       // Check convergence by computing max difference
-      const diffField = ti.field(ti.f32, [n]);
+      const absDiffField = ti.field(ti.f32, [n]);
       diffField.fromArray(xNew.map((val, i) => val - x[i]));
 
       ti.addToKernelScope({diffField, absDiffField});
