@@ -70,6 +70,54 @@ export class FEAScriptModel {
     debugLog(`Solver method set to: ${solverMethod}`);
   }
 
+  async solveWithWebGPU(computeEngine) {
+    if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
+      const error = "Solver config, mesh config, and boundary conditions must be set before solving.";
+      console.error(error);
+      throw new Error(error);
+    }
+
+    let jacobianMatrix = [];
+    let residualVector = [];
+    let solutionVector = [];
+    let nodesCoordinates = {};
+
+    // Assembly matrices
+    basicLog("Beginning matrix assembly...");
+    console.time("assemblyMatrices");
+    if (this.solverConfig === "solidHeatTransferScript") {
+      basicLog(`Using solver: ${this.solverConfig}`);
+      ({ jacobianMatrix, residualVector, nodesCoordinates } = assembleSolidHeatTransferMat(
+        this.meshConfig,
+        this.boundaryConditions
+      ));
+    }
+    console.timeEnd("assemblyMatrices");
+    basicLog("Matrix assembly completed");
+
+    // System solving with WebGPU CG
+    basicLog("Solving system using WebGPU Jacobi...");
+    console.time("systemSolving");
+
+    // Convert matrices to arrays for WebGPU
+    const A = Array.isArray(jacobianMatrix) ? jacobianMatrix : jacobianMatrix.toArray();
+    const b = Array.isArray(residualVector) ? residualVector : residualVector.toArray();
+
+    // For heat conduction FEM, the matrix might be negative definite
+    // Use Jacobi method instead of CG for better stability
+    console.log("Matrix diagonal sample:", A.slice(0, 5).map((row, i) => row[i]));
+    console.log("RHS sample:", b.slice(0, 5));
+
+    // Use WebGPU Jacobi method
+    const initialGuess = new Array(b.length).fill(0);
+    solutionVector = await computeEngine.jacobiSolve(A, b, initialGuess, 10000, 1e-3);
+
+    console.timeEnd("systemSolving");
+    basicLog("System solved successfully with WebGPU Jacobi");
+
+    return { solutionVector, nodesCoordinates };
+  }
+
   solve() {
     if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
       const error = "Solver config, mesh config, and boundary conditions must be set before solving.";

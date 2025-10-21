@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGPU Compute Engine Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .result {
+            background-color: #f5f5f5;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .success { color: green; }
+        .error { color: red; }
+        button {
+            background-color: #007acc;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #005aa3; }
+    </style>
+</head>
+<body>
+    <h1>WebGPU Compute Engine Test</h1>
+    <p>This page tests the basic functionality of the WebGPU compute engine.</p>
+
+    <div class="test-section">
+        <h2>Vector Addition Test</h2>
+        <button id="vecAddBtn">Test Vector Addition</button>
+        <div id="vecAddResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Matrix-Vector Multiplication Test</h2>
+        <button id="matVecBtn">Test Matrix-Vector Multiplication</button>
+        <div id="matVecResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Dot Product Test</h2>
+        <button id="dotProductBtn">Test Dot Product</button>
+        <div id="dotProductResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Vector Norm Test</h2>
+        <button id="normBtn">Test Vector Norm</button>
+        <div id="normResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Vector Normalization Test</h2>
+        <button id="normalizeBtn">Test Vector Normalization</button>
+        <div id="normalizeResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Matrix-Matrix Multiplication Test</h2>
+        <button id="matMatBtn">Test Matrix-Matrix Multiplication</button>
+        <div id="matMatResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Matrix Transpose Test</h2>
+        <button id="transposeBtn">Test Matrix Transpose</button>
+        <div id="transposeResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Matrix Diagonal Test</h2>
+        <button id="diagonalBtn">Test Matrix Diagonal</button>
+        <div id="diagonalResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Sparse Matrix-Vector Multiplication Test</h2>
+        <button id="sparseMatVecBtn">Test Sparse Matrix-Vector Multiplication</button>
+        <div id="sparseMatVecResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Copy Test</h2>
+        <button id="copyBtn">Test Copy</button>
+        <div id="copyResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Fill Test</h2>
+        <button id="fillBtn">Test Fill</button>
+        <div id="fillResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Scale Test</h2>
+        <button id="scaleBtn">Test Scale</button>
+        <div id="scaleResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Conjugate Gradient Solver Test</h2>
+        <button id="cgBtn">Test CG Solver</button>
+        <div id="cgResult" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Cleanup</h2>
+        <button id="cleanupBtn">Cleanup GPU Resources</button>
+        <div id="cleanupResult" class="result"></div>
+    </div>
+
+    <script type="module">
+        import * as Comlink from './src/vendor/comlink.mjs';
+
+        const worker = new Worker('./src/workers/webgpuComputeWorker.js', { type: 'module' });
+        const computeEngine = Comlink.wrap(worker);
+
+        async function initializeEngine() {
+            try {
+                await computeEngine.initialize();
+                console.log('WebGPU compute engine initialized successfully');
+                return true;
+            } catch (error) {
+                console.error('Failed to initialize WebGPU:', error);
+                return false;
+            }
+        }
+
+        window.testVecAdd = async function() {
+            const resultDiv = document.getElementById('vecAddResult');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                if (!await initializeEngine()) {
+                    resultDiv.innerHTML = '<span class="error">WebGPU not supported</span>';
+                    return;
+                }
+
+                const a = [1, 2, 3, 4, 5];
+                const b = [5, 4, 3, 2, 1];
+
+                const result = await computeEngine.vecAdd(a, b);
+
+                const expected = [6, 6, 6, 6, 6];
+                const success = result.every((val, i) => Math.abs(val - expected[i]) < 1e-6);
+
+                resultDiv.innerHTML = `
+                    <div>Input A: [${a.join(', ')}]</div>
+                    <div>Input B: [${b.join(', ')}]</div>
+                    <div>Result: [${result.map(x => x.toFixed(1)).join(', ')}]</div>
+                    <div>Expected: [${expected.join(', ')}]</div>
+                    <div class="${success ? 'success' : 'error'}">${success ? '✓ PASSED' : '✗ FAILED'}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        };
+
+        window.testMatVecMul = async function() {
+            const resultDiv = document.getElementById('matVecResult');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                if (!await initializeEngine()) {
+                    resultDiv.innerHTML = '<span class="error">WebGPU not supported</span>';
+                    return;
+                }
+
+                // Simple 3x3 matrix
+                const A = [
+                    [2, 0, 1],
+                    [1, 1, 0],
+                    [0, 1, 2]
+                ];
+                const x = [1, 2, 3];
+
+                const result = await computeEngine.matVecMul(A, x);
+
+                // Expected: A * x = [2*1 + 0*2 + 1*3, 1*1 + 1*2 + 0*3, 0*1 + 1*2 + 2*3] = [5, 3, 8]
+                const expected = [5, 3, 8];
+                const success = result.every((val, i) => Math.abs(val - expected[i]) < 1e-5);
+
+                resultDiv.innerHTML = `
+                    <div>Matrix A:</div>
+                    <div style="margin-left: 20px;">[${A[0].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${A[1].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${A[2].join(', ')}]</div>
+                    <div>Vector x: [${x.join(', ')}]</div>
+                    <div>Result: [${result.map(x => x.toFixed(1)).join(', ')}]</div>
+                    <div>Expected: [${expected.join(', ')}]</div>
+                    <div class="${success ? 'success' : 'error'}">${success ? '✓ PASSED' : '✗ FAILED'}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        };
+
+        window.testDotProduct = async function() {
+            const resultDiv = document.getElementById('dotProductResult');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                if (!await initializeEngine()) {
+                    resultDiv.innerHTML = '<span class="error">WebGPU not supported</span>';
+                    return;
+                }
+
+                const a = [1, 2, 3, 4];
+                const b = [4, 3, 2, 1];
+
+                const result = await computeEngine.dotProduct(a, b);
+
+                // Expected: 1*4 + 2*3 + 3*2 + 4*1 = 4 + 6 + 6 + 4 = 20
+                const expected = 20;
+                const success = Math.abs(result - expected) < 1e-5;
+
+                resultDiv.innerHTML = `
+                    <div>Input A: [${a.join(', ')}]</div>
+                    <div>Input B: [${b.join(', ')}]</div>
+                    <div>Result: ${result.toFixed(1)}</div>
+                    <div>Expected: ${expected}</div>
+                    <div class="${success ? 'success' : 'error'}">${success ? '✓ PASSED' : '✗ FAILED'}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        };
+
+        window.testNorm = async function() {
+            const resultDiv = document.getElementById('normResult');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                if (!await initializeEngine()) {
+                    resultDiv.innerHTML = '<span class="error">WebGPU not supported</span>';
+                    return;
+                }
+
+                const a = [3, 4]; // Should have norm = 5
+
+                const result = await computeEngine.norm(a);
+
+                const expected = 5.0;
+                const success = Math.abs(result - expected) < 1e-5;
+
+                resultDiv.innerHTML = `
+                    <div>Input Vector: [${a.join(', ')}]</div>
+                    <div>Result: ${result.toFixed(6)}</div>
+                    <div>Expected: ${expected}</div>
+                    <div class="${success ? 'success' : 'error'}">${success ? '✓ PASSED' : '✗ FAILED'}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        };
+
+        window.testNormalize = async function() {
+            const resultDiv = document.getElementById('normalizeResult');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                if (!await initializeEngine()) {
+                    resultDiv.innerHTML = '<span class="error">WebGPU not supported</span>';
+                    return;
+                }
+
+                const a = [3, 4]; // Norm = 5, so normalized should be [0.6, 0.8]
+
+                const result = await computeEngine.normalize(a);
+
+                const expected = [0.6, 0.8];
+                const success = result.every((val, i) => Math.abs(val - expected[i]) < 1e-5);
+
+                resultDiv.innerHTML = `
+                    <div>Input Vector: [${a.join(', ')}]</div>
+                    <div>Result: [${result.map(x => x.toFixed(6)).join(', ')}]</div>
+                    <div>Expected: [${expected.join(', ')}]</div>
+                    <div class="${success ? 'success' : 'error'}">${success ? '✓ PASSED' : '✗ FAILED'}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        };
+
+        window.testMatMatMul = async function() {
+            const resultDiv = document.getElementById('matMatResult');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                if (!await initializeEngine()) {
+                    resultDiv.innerHTML = '<span class="error">WebGPU not supported</span>';
+                    return;
+                }
+
+                // 2x3 matrix A
+                const A = [
+                    [1, 2, 3],
+                    [4, 5, 6]
+                ];
+                // 3x2 matrix B
+                const B = [
+                    [7, 8],
+                    [9, 10],
+                    [11, 12]
+                ];
+
+                const result = await computeEngine.matMatMul(A, B);
+
+                // Expected: A * B = [[1*7+2*9+3*11, 1*8+2*10+3*12], [4*7+5*9+6*11, 4*8+5*10+6*12]] = [[58, 64], [139, 154]]
+                const expected = [
+                    [58, 64],
+                    [139, 154]
+                ];
+                const success = result.every((row, i) => row.every((val, j) => Math.abs(val - expected[i][j]) < 1e-4));
+
+                resultDiv.innerHTML = `
+                    <div>Matrix A:</div>
+                    <div style="margin-left: 20px;">[${A[0].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${A[1].join(', ')}]</div>
+                    <div>Matrix B:</div>
+                    <div style="margin-left: 20px;">[${B[0].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${B[1].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${B[2].join(', ')}]</div>
+                    <div>Result:</div>
+                    <div style="margin-left: 20px;">[${result[0].map(x => x.toFixed(1)).join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${result[1].map(x => x.toFixed(1)).join(', ')}]</div>
+                    <div>Expected:</div>
+                    <div style="margin-left: 20px;">[${expected[0].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${expected[1].join(', ')}]</div>
+                    <div class="${success ? 'success' : 'error'}">${success ? '✓ PASSED' : '✗ FAILED'}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        };
+
+        window.testTranspose = async function() {
+            const resultDiv = document.getElementById('transposeResult');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                if (!await initializeEngine()) {
+                    resultDiv.innerHTML = '<span class="error">WebGPU not supported</span>';
+                    return;
+                }
+
+                const A = [
+                    [1, 2, 3],
+                    [4, 5, 6]
+                ];
+
+                const result = await computeEngine.transpose(A);
+
+                const expected = [
+                    [1, 4],
+                    [2, 5],
+                    [3, 6]
+                ];
+                const success = result.every((row, i) => row.every((val, j) => Math.abs(val - expected[i][j]) < 1e-6));
+
+                resultDiv.innerHTML = `
+                    <div>Input Matrix A:</div>
+                    <div style="margin-left: 20px;">[${A[0].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${A[1].join(', ')}]</div>
+                    <div>Result (A^T):</div>
+                    <div style="margin-left: 20px;">[${result[0].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${result[1].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${result[2].join(', ')}]</div>
+                    <div>Expected:</div>
+                    <div style="margin-left: 20px;">[${expected[0].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${expected[1].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${expected[2].join(', ')}]</div>
+                    <div class="${success ? 'success' : 'error'}">${success ? '✓ PASSED' : '✗ FAILED'}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        };
+
+        window.testDiagonal = async function() {
+            const resultDiv = document.getElementById('diagonalResult');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                if (!await initializeEngine()) {
+                    resultDiv.innerHTML = '<span class="error">WebGPU not supported</span>';
+                    return;
+                }
+
+                const A = [
+                    [1, 2, 3],
+                    [4, 5, 6],
+                    [7, 8, 9]
+                ];
+
+                const result = await computeEngine.diagonal(A);
+
+                const expected = [1, 5, 9];
+                const success = result.every((val, i) => Math.abs(val - expected[i]) < 1e-6);
+
+                resultDiv.innerHTML = `
+                    <div>Input Matrix A:</div>
+                    <div style="margin-left: 20px;">[${A[0].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${A[1].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${A[2].join(', ')}]</div>
+                    <div>Result (diagonal): [${result.map(x => x.toFixed(1)).join(', ')}]</div>
+                    <div>Expected: [${expected.join(', ')}]</div>
+                    <div class="${success ? 'success' : 'error'}">${success ? '✓ PASSED' : '✗ FAILED'}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        };
+
+        window.testSparseMatVecMul = async function() {
+            const resultDiv = document.getElementById('sparseMatVecResult');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                if (!await initializeEngine()) {
+                    resultDiv.innerHTML = '<span class="error">WebGPU not supported</span>';
+                    return;
+                }
+
+                // Example sparse matrix in CSR format
+                // Matrix: [[1, 0, 2], [0, 3, 0], [4, 0, 5]]
+                // values: [1, 2, 3, 4, 5]
+                // col_indices: [0, 2, 1, 0, 2]
+                // row_indices: [0, 0, 1, 2, 2] (computed from row_ptr)
+                // row_ptr: [0, 2, 3, 5]
+                const sparseMatrix = {
+                    values: [1, 2, 3, 4, 5],
+                    col_indices: [0, 2, 1, 0, 2],
+                    row_indices: [0, 0, 1, 2, 2],
+                    rows: 3,
+                    cols: 3
+                };
+                const x = [1, 2, 3];
+
+                const result = await computeEngine.sparseMatVecMul(sparseMatrix, x);
+
+                // Expected: [1*1 + 0*2 + 2*3, 0*1 + 3*2 + 0*3, 4*1 + 0*2 + 5*3] = [7, 6, 19]
+                const expected = [7, 6, 19];
+                const success = result.every((val, i) => Math.abs(val - expected[i]) < 1e-5);
+
+                resultDiv.innerHTML = `
+                    <div>Sparse Matrix (CSR format):</div>
+                    <div style="margin-left: 20px;">values: [${sparseMatrix.values.join(', ')}]</div>
+                    <div style="margin-left: 20px;">col_indices: [${sparseMatrix.col_indices.join(', ')}]</div>
+                    <div style="margin-left: 20px;">row_indices: [${sparseMatrix.row_indices.join(', ')}]</div>
+                    <div>Vector x: [${x.join(', ')}]</div>
+                    <div>Result: [${result.map(x => x.toFixed(1)).join(', ')}]</div>
+                    <div>Expected: [${expected.join(', ')}]</div>
+                    <div class="${success ? 'success' : 'error'}">${success ? '✓ PASSED' : '✗ FAILED'}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        };
+
+        window.testCopy = async function() {
+            const resultDiv = document.getElementById('copyResult');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                if (!await initializeEngine()) {
+                    resultDiv.innerHTML = '<span class="error">WebGPU not supported</span>';
+                    return;
+                }
+
+                const vector = [1, 2, 3, 4];
+                const matrix = [[1, 2], [3, 4]];
+
+                const copiedVector = await computeEngine.copy(vector);
+                const copiedMatrix = await computeEngine.copy(matrix);
+
+                const vecSuccess = copiedVector.every((val, i) => val === vector[i]);
+                const matSuccess = copiedMatrix.every((row, i) => row.every((val, j) => val === matrix[i][j]));
+
+                resultDiv.innerHTML = `
+                    <div>Original Vector: [${vector.join(', ')}]</div>
+                    <div>Copied Vector: [${copiedVector.join(', ')}]</div>
+                    <div>Original Matrix:</div>
+                    <div style="margin-left: 20px;">[${matrix[0].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${matrix[1].join(', ')}]</div>
+                    <div>Copied Matrix:</div>
+                    <div style="margin-left: 20px;">[${copiedMatrix[0].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${copiedMatrix[1].join(', ')}]</div>
+                    <div class="${vecSuccess && matSuccess ? 'success' : 'error'}">${vecSuccess && matSuccess ? '✓ PASSED' : '✗ FAILED'}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        };
+
+        window.testFill = async function() {
+            const resultDiv = document.getElementById('fillResult');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                if (!await initializeEngine()) {
+                    resultDiv.innerHTML = '<span class="error">WebGPU not supported</span>';
+                    return;
+                }
+
+                const vector = [0, 0, 0, 0];
+                const matrix = [[0, 0], [0, 0]];
+
+                const filledVector = await computeEngine.fill(vector, 5);
+                const filledMatrix = await computeEngine.fill(matrix, 7);
+
+                const vecSuccess = filledVector.every(val => val === 5);
+                const matSuccess = filledMatrix.every(row => row.every(val => val === 7));
+
+                resultDiv.innerHTML = `
+                    <div>Filled Vector: [${filledVector.join(', ')}]</div>
+                    <div>Filled Matrix:</div>
+                    <div style="margin-left: 20px;">[${filledMatrix[0].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${filledMatrix[1].join(', ')}]</div>
+                    <div class="${vecSuccess && matSuccess ? 'success' : 'error'}">${vecSuccess && matSuccess ? '✓ PASSED' : '✗ FAILED'}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        };
+
+        window.testScale = async function() {
+            const resultDiv = document.getElementById('scaleResult');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                if (!await initializeEngine()) {
+                    resultDiv.innerHTML = '<span class="error">WebGPU not supported</span>';
+                    return;
+                }
+
+                const vector = [1, 2, 3];
+                const matrix = [[1, 2], [3, 4]];
+
+                const scaledVector = await computeEngine.scale(vector, 3);
+                const scaledMatrix = await computeEngine.scale(matrix, 2);
+
+                const vecExpected = [3, 6, 9];
+                const matExpected = [[2, 4], [6, 8]];
+                const vecSuccess = scaledVector.every((val, i) => val === vecExpected[i]);
+                const matSuccess = scaledMatrix.every((row, i) => row.every((val, j) => val === matExpected[i][j]));
+
+                resultDiv.innerHTML = `
+                    <div>Original Vector: [${vector.join(', ')}]</div>
+                    <div>Scaled Vector (x3): [${scaledVector.join(', ')}]</div>
+                    <div>Original Matrix:</div>
+                    <div style="margin-left: 20px;">[${matrix[0].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${matrix[1].join(', ')}]</div>
+                    <div>Scaled Matrix (x2):</div>
+                    <div style="margin-left: 20px;">[${scaledMatrix[0].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${scaledMatrix[1].join(', ')}]</div>
+                    <div class="${vecSuccess && matSuccess ? 'success' : 'error'}">${vecSuccess && matSuccess ? '✓ PASSED' : '✗ FAILED'}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        };
+
+        window.testCG = async function() {
+            const resultDiv = document.getElementById('cgResult');
+            resultDiv.innerHTML = 'Testing...';
+
+            try {
+                if (!await initializeEngine()) {
+                    resultDiv.innerHTML = '<span class="error">WebGPU not supported</span>';
+                    return;
+                }
+
+                // Simple 3x3 SPD matrix for testing
+                const A = [
+                    [4, 1, 0],
+                    [1, 3, 1],
+                    [0, 1, 2]
+                ];
+                const b = [1, 2, 3];
+                const x_exact = [0.1, 0.3, 1.1]; // Approximate solution
+
+                const x = await computeEngine.conjugateGradient(A, b, null, 1e-6, 100);
+
+                // Compute residual to check accuracy
+                const residual = await computeEngine.residual(A, x, b);
+                const residualNorm = await computeEngine.norm(residual);
+
+                const success = residualNorm < 1e-5;
+
+                resultDiv.innerHTML = `
+                    <div>Matrix A:</div>
+                    <div style="margin-left: 20px;">[${A[0].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${A[1].join(', ')}]</div>
+                    <div style="margin-left: 20px;">[${A[2].join(', ')}]</div>
+                    <div>Vector b: [${b.join(', ')}]</div>
+                    <div>Solution x: [${x.map(v => v.toFixed(4)).join(', ')}]</div>
+                    <div>Residual norm: ${residualNorm.toFixed(8)}</div>
+                    <div class="${success ? 'success' : 'error'}">${success ? '✓ PASSED' : '✗ FAILED'}</div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        };
+
+        window.cleanupGPU = async function() {
+            const resultDiv = document.getElementById('cleanupResult');
+            try {
+                await computeEngine.destroy();
+                worker.terminate();
+                resultDiv.innerHTML = '<span class="success">✓ GPU resources cleaned up</span>';
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Error: ${error.message}</span>`;
+            }
+        };
+
+        // Add event listeners
+        document.getElementById('vecAddBtn').addEventListener('click', window.testVecAdd);
+        document.getElementById('matVecBtn').addEventListener('click', window.testMatVecMul);
+        document.getElementById('dotProductBtn').addEventListener('click', window.testDotProduct);
+        document.getElementById('normBtn').addEventListener('click', window.testNorm);
+        document.getElementById('normalizeBtn').addEventListener('click', window.testNormalize);
+        document.getElementById('matMatBtn').addEventListener('click', window.testMatMatMul);
+        document.getElementById('transposeBtn').addEventListener('click', window.testTranspose);
+        document.getElementById('diagonalBtn').addEventListener('click', window.testDiagonal);
+        document.getElementById('sparseMatVecBtn').addEventListener('click', window.testSparseMatVecMul);
+        document.getElementById('copyBtn').addEventListener('click', window.testCopy);
+        document.getElementById('fillBtn').addEventListener('click', window.testFill);
+        document.getElementById('scaleBtn').addEventListener('click', window.testScale);
+        document.getElementById('cgBtn').addEventListener('click', window.testCG);
+        document.getElementById('cleanupBtn').addEventListener('click', window.cleanupGPU);
+    </script>
+</body>
+</html>
