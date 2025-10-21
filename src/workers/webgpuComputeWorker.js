@@ -18,8 +18,14 @@ class WebGPUComputeWorker {
     this.initialized = false;
   }
 
-  async initialize() {
+  async initialize(powerPreference = 'high-performance') {
     if (!this.initialized) {
+      // Override the requestAdapter to set power preference
+      const originalRequestAdapter = navigator.gpu.requestAdapter;
+      navigator.gpu.requestAdapter = async (options = {}) => {
+        return originalRequestAdapter({ ...options, powerPreference });
+      };
+
       await ti.init();
       this.initialized = true;
     }
