@@ -1,4 +1,7 @@
 examples/
 test/
 .gitignore
+README.md
+LICENSE
+dist/
 package-lock.json

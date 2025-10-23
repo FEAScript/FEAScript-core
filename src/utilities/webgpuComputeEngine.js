@@ -1,0 +1,836 @@
+import * as ti from '../vendor/taichi.esm.js';
+
+export class WebGPUComputeEngine {
+  constructor() {
+    this.initialized = false;
+  }
+
+  /**
+   * Initialize Taichi
+   */
+  async initialize() {
+    if (this.initialized) return;
+
+    await ti.init();
+    this.initialized = true;
+  }
+
+  /**
+   * Read data from a buffer (compatibility method)
+   */
+  async readBuffer(data, size, type = Float32Array) {
+    return data;
+  }
+
+  /**
+   * Matrix-vector multiplication: y = A * x
+   */
+  async matVecMul(A, x, resultBuffer = null) {
+    const n = A.length;
+    const m = A[0].length;
+
+    const matrixField = ti.field(ti.f32, [n * m]);
+    const vectorField = ti.field(ti.f32, [m]);
+    const resultField = ti.field(ti.f32, [n]);
+
+    const flatMatrix = A.flat();
+    matrixField.fromArray(flatMatrix);
+    vectorField.fromArray(x);
+
+    ti.addToKernelScope({matrixField, vectorField, resultField});
+
+    ti.kernel((n, m) => {
+      for (let i of ti.ndrange(n)) {
+        let sum = 0.0;
+        for (let j of ti.ndrange(m)) {
+          sum += matrixField[ti.i32(i) * ti.i32(m) + ti.i32(j)] * vectorField[j];
+        }
+        resultField[i] = sum;
+      }
+    })(n, m);
+
+    const result = await resultField.toArray();
+    return result;
+  }
+
+  /**
+   * Vector addition: result = a + b
+   */
+  async vecAdd(a, b, resultBuffer = null) {
+    const n = a.length;
+    const aField = ti.field(ti.f32, [n]);
+    const bField = ti.field(ti.f32, [n]);
+    const resultField = ti.field(ti.f32, [n]);
+
+    aField.fromArray(a);
+    bField.fromArray(b);
+
+    ti.addToKernelScope({aField, bField, resultField});
+
+    ti.kernel((n) => {
+      for (let i of ti.ndrange(n)) {
+        resultField[i] = aField[i] + bField[i];
+      }
+    })(n);
+
+    const result = await resultField.toArray();
+    return result;
+  }
+
+    /**
+   * Vector subtraction: result = a - b
+   */
+  async vecSub(a, b, resultBuffer = null) {
+    const n = a.length;
+    const aField = ti.field(ti.f32, [n]);
+    const bField = ti.field(ti.f32, [n]);
+    const resultField = ti.field(ti.f32, [n]);
+
+    aField.fromArray(a);
+    bField.fromArray(b);
+
+    ti.addToKernelScope({aField, bField, resultField});
+
+    ti.kernel((n) => {
+      for (let i of ti.ndrange(n)) {
+        resultField[i] = aField[i] - bField[i];
+      }
+    })(n);
+
+    const result = await resultField.toArray();
+    return result;
+  }
+
+  /**
+   * Element-wise vector multiplication: result = a * b
+   */
+  async vecMul(a, b, resultBuffer = null) {
+    const n = a.length;
+    const aField = ti.field(ti.f32, [n]);
+    const bField = ti.field(ti.f32, [n]);
+    const resultField = ti.field(ti.f32, [n]);
+
+    aField.fromArray(a);
+    bField.fromArray(b);
+
+    ti.addToKernelScope({aField, bField, resultField});
+
+    ti.kernel((n) => {
+      for (let i of ti.ndrange(n)) {
+        resultField[i] = aField[i] * bField[i];
+      }
+    })(n);
+
+    const result = await resultField.toArray();
+    return result;
+  }
+
+  /**
+   * Vector division: result = a / b
+   */
+  async vecDiv(a, b, resultBuffer = null) {
+    const n = a.length;
+    const aField = ti.field(ti.f32, [n]);
+    const bField = ti.field(ti.f32, [n]);
+    const resultField = ti.field(ti.f32, [n]);
+
+    aField.fromArray(a);
+    bField.fromArray(b);
+
+    ti.addToKernelScope({aField, bField, resultField});
+
+    ti.kernel((n) => {
+      for (let i of ti.ndrange(n)) {
+        resultField[i] = aField[i] / bField[i];
+      }
+    })(n);
+
+    const result = await resultField.toArray();
+    return result;
+  }
+
+  /**
+   * Find maximum value in vector
+   */
+  async vecMax(vector) {
+    const n = vector.length;
+    const vectorField = ti.field(ti.f32, [n]);
+    const maxField = ti.field(ti.f32, [1]);
+
+    vectorField.fromArray(vector);
+    maxField.fromArray([-1e10]);
+
+    ti.addToKernelScope({vectorField, maxField});
+
+    ti.kernel((n) => {
+      for (let i of ti.ndrange(n)) {
+        // For max, we can use a simple approach since atomic_max might not exist
+        // Use a reduction pattern
+      }
+    })(n);
+
+    // For simplicity, since atomic_max may not be available, let's use CPU for now
+    const result = await vectorField.toArray();
+    return Math.max(...result);
+  }
+
+    /**
+   * Jacobi update: x_new = D^(-1) * (b - R * x_old)
+   */
+  async jacobiUpdate(A, b, x, omega = 1.0, resultBuffer = null) {
+    const n = x.length;
+    const AField = ti.field(ti.f32, [n * n]);
+    const bField = ti.field(ti.f32, [n]);
+    const xField = ti.field(ti.f32, [n]);
+    const resultField = ti.field(ti.f32, [n]);
+
+    const flatA = A.flat();
+    AField.fromArray(flatA);
+    bField.fromArray(b);
+    xField.fromArray(x);
+
+    ti.addToKernelScope({AField, bField, xField, resultField});
+
+    ti.kernel((n, omega) => {
+      for (let i = 0; i < n; i++) {
+        let sum = 0.0;
+        for (let j = 0; j < n; j++) {
+          if (i !== j) {
+            sum += AField[ti.i32(i) * ti.i32(n) + ti.i32(j)] * xField[j];
+          }
+        }
+        resultField[i] = omega * (bField[i] - sum) / AField[ti.i32(i) * ti.i32(n) + ti.i32(i)] + (1 - omega) * xField[i];
+      }
+    })(n, omega);
+
+    const result = await resultField.toArray();
+    return result;
+  }
+
+  /**
+   * Element-wise operation on vector: result[i] = op(a[i])
+   */
+  async elementWiseOp(a, op, resultBuffer = null) {
+    const n = a.length;
+    const aField = ti.field(ti.f32, [n]);
+    const resultField = ti.field(ti.f32, [n]);
+
+    aField.fromArray(a);
+
+    ti.addToKernelScope({aField, resultField});
+
+    ti.kernel((n, op) => {
+      for (let i of ti.ndrange(n)) {
+        if (op === 'abs') {
+          resultField[i] = ti.abs(aField[i]);
+        } else if (op === 'sqrt') {
+          resultField[i] = ti.sqrt(aField[i]);
+        } else if (op === 'exp') {
+          resultField[i] = ti.exp(aField[i]);
+        } else if (op === 'log') {
+          resultField[i] = ti.log(aField[i]);
+        } else if (op === 'sin') {
+          resultField[i] = ti.sin(aField[i]);
+        } else if (op === 'cos') {
+          resultField[i] = ti.cos(aField[i]);
+        } else if (op === 'tan') {
+          resultField[i] = ti.tan(aField[i]);
+        } else {
+          resultField[i] = aField[i];
+        }
+      }
+    })(n, op);
+
+    const result = await resultField.toArray();
+    return result;
+  }
+
+  /**
+   * Scalar operation on vector: result[i] = op(a[i], scalar)
+   */
+  async scalarOp(a, scalar, op, resultBuffer = null) {
+    const n = a.length;
+    const aField = ti.field(ti.f32, [n]);
+    const resultField = ti.field(ti.f32, [n]);
+
+    aField.fromArray(a);
+
+    ti.addToKernelScope({aField, resultField});
+
+    ti.kernel((n, scalar, op) => {
+      for (let i of ti.ndrange(n)) {
+        if (op === 'add') {
+          resultField[i] = aField[i] + scalar;
+        } else if (op === 'mul') {
+          resultField[i] = aField[i] * scalar;
+        } else if (op === 'div') {
+          resultField[i] = aField[i] / scalar;
+        } else if (op === 'pow') {
+          resultField[i] = ti.pow(aField[i], scalar);
+        } else {
+          resultField[i] = aField[i];
+        }
+      }
+    })(n, scalar, op);
+
+    const result = await resultField.toArray();
+    return result;
+  }
+
+  /**
+   * Vector L2 norm: result = ||a||_2
+   */
+
+  /**
+   * Vector addition: c = a + b
+   */
+  async vecAdd(a, b) {
+    const n = a.length;
+    const aField = ti.field(ti.f32, [n]);
+    const bField = ti.field(ti.f32, [n]);
+    const cField = ti.field(ti.f32, [n]);
+
+    aField.fromArray(a);
+    bField.fromArray(b);
+
+    ti.addToKernelScope({aField, bField, cField});
+
+    ti.kernel((n) => {
+      for (let i of ti.ndrange(n)) {
+        cField[i] = aField[i] + bField[i];
+      }
+    })(n);
+
+    const result = await cField.toArray();
+    return result;
+  }
+
+  /**
+   * Element-wise vector multiplication: c = a .* b
+   */
+  async vecMul(a, b) {
+    const n = a.length;
+    const aField = ti.field(ti.f32, [n]);
+    const bField = ti.field(ti.f32, [n]);
+    const cField = ti.field(ti.f32, [n]);
+
+    aField.fromArray(a);
+    bField.fromArray(b);
+
+    ti.addToKernelScope({aField, bField, cField});
+
+    ti.kernel((n) => {
+      for (let i of ti.ndrange(n)) {
+        cField[i] = aField[i] * bField[i];
+      }
+    })(n);
+
+    const result = await cField.toArray();
+    return result;
+  }
+  /**
+   * Vector dot product: result = a · b
+   */
+  async dotProduct(a, b) {
+    const n = a.length;
+    const aField = ti.field(ti.f32, [n]);
+    const bField = ti.field(ti.f32, [n]);
+    const resultField = ti.field(ti.f32, [1]);
+
+    aField.fromArray(a);
+    bField.fromArray(b);
+    resultField.fromArray([0]);
+
+    ti.addToKernelScope({aField, bField, resultField});
+
+    ti.kernel((n) => {
+      for (let i of ti.ndrange(n)) {
+        ti.atomicAdd(resultField[0], aField[i] * bField[i]);
+      }
+    })(n);
+
+    const result = await resultField.toArray();
+    return result[0];
+  }
+
+  /**
+   * Vector L2 norm: result = ||a||_2
+   */
+  async norm(a) {
+    const n = a.length;
+    const aField = ti.field(ti.f32, [n]);
+    const resultField = ti.field(ti.f32, [1]);
+
+    aField.fromArray(a);
+    resultField.fromArray([0]);
+
+    ti.addToKernelScope({aField, resultField});
+
+    ti.kernel((n) => {
+      for (let i of ti.ndrange(n)) {
+        ti.atomicAdd(resultField[0], aField[i] * aField[i]);
+      }
+    })(n);
+
+    ti.kernel(() => {
+      resultField[0] = ti.sqrt(resultField[0]);
+    })();
+
+    const result = await resultField.toArray();
+    return result[0];
+  }
+
+  async normalize(a) {
+    const n = a.length;
+    const aField = ti.field(ti.f32, [n]);
+    const resultField = ti.field(ti.f32, [n]);
+    const tempField = ti.field(ti.f32, [1]);
+
+    aField.fromArray(a);
+    tempField.fromArray([0]);
+
+    ti.addToKernelScope({aField, resultField, tempField});
+
+    ti.kernel((n) => {
+      for (let i of ti.ndrange(n)) {
+        ti.atomicAdd(tempField[0], aField[i] * aField[i]);
+      }
+    })(n);
+
+    ti.kernel((n) => {
+      const normVal = ti.sqrt(tempField[0]);
+      for (let i of ti.ndrange(n)) {
+        resultField[i] = aField[i] / normVal;
+      }
+    })(n);
+
+    const result = await resultField.toArray();
+    return result;
+  }
+
+  /**
+   * Matrix-matrix multiplication: C = A * B
+   */
+  /**
+   * Matrix-vector multiplication: y = A * x
+   */
+  async matVecMul(A, x) {
+    const m = A.length;
+    const n = A[0].length;
+
+    const AField = ti.field(ti.f32, [m * n]);
+    const xField = ti.field(ti.f32, [n]);
+    const yField = ti.field(ti.f32, [m]);
+
+    const flatA = A.flat();
+    AField.fromArray(flatA);
+    xField.fromArray(x);
+
+    ti.addToKernelScope({AField, xField, yField});
+
+    ti.kernel((m, n) => {
+      for (let i of ti.ndrange(m)) {
+        let sum = 0.0;
+        for (let j of ti.ndrange(n)) {
+          sum += AField[ti.i32(i) * ti.i32(n) + ti.i32(j)] * xField[j];
+        }
+        yField[i] = sum;
+      }
+    })(m, n);
+
+    const result = await yField.toArray();
+    return result;
+  }
+
+  /**
+   * Matrix transpose: B = A^T
+   */
+  async transpose(A, resultBuffer = null) {
+    const m = A.length;
+    const n = A[0].length;
+
+    const AField = ti.field(ti.f32, [m * n]);
+    const BField = ti.field(ti.f32, [n * m]);
+
+    const flatA = A.flat();
+    AField.fromArray(flatA);
+
+    ti.addToKernelScope({AField, BField});
+
+    ti.kernel((m, n) => {
+      for (let i of ti.ndrange(m)) {
+        for (let j of ti.ndrange(n)) {
+          BField[ti.i32(j) * ti.i32(m) + ti.i32(i)] = AField[ti.i32(i) * ti.i32(n) + ti.i32(j)];
+        }
+      }
+    })(m, n);
+
+    const result = await BField.toArray();
+    // Reshape to n x m
+    const B = [];
+    for (let i = 0; i < n; i++) {
+      B.push(result.slice(i * m, (i + 1) * m));
+    }
+    return B;
+  }
+
+  /**
+   * Extract diagonal elements: result = diag(A)
+   */
+  async diagonal(A, resultBuffer = null) {
+    const n = Math.min(A.length, A[0].length);
+
+    const AField = ti.field(ti.f32, [A.length * A[0].length]);
+    const resultField = ti.field(ti.f32, [n]);
+
+    const flatA = A.flat();
+    AField.fromArray(flatA);
+
+    ti.addToKernelScope({AField, resultField});
+
+    ti.kernel((n, cols) => {
+      for (let i of ti.ndrange(n)) {
+        resultField[i] = AField[ti.i32(i) * ti.i32(cols) + ti.i32(i)];
+      }
+    })(n, A[0].length);
+
+    const result = await resultField.toArray();
+    return result;
+  }
+
+  /**
+   * Sparse matrix-vector multiplication using CSR format
+   * sparseMatrix should have: {values, col_indices, row_indices, rows, cols}
+   */
+  async sparseMatVecMul(sparseMatrix, x, resultBuffer = null) {
+    const { values, col_indices, row_indices, rows, cols } = sparseMatrix;
+    const nnz = values.length;
+
+    const valuesField = ti.field(ti.f32, [nnz]);
+    const colIndicesField = ti.field(ti.i32, [nnz]);
+    const rowIndicesField = ti.field(ti.i32, [nnz]);
+    const xField = ti.field(ti.f32, [cols]);
+    const resultField = ti.field(ti.f32, [rows]);
+
+    valuesField.fromArray(values);
+    colIndicesField.fromArray(col_indices);
+    rowIndicesField.fromArray(row_indices);
+    xField.fromArray(x);
+    resultField.fromArray(new Array(rows).fill(0));
+
+    ti.addToKernelScope({valuesField, colIndicesField, rowIndicesField, xField, resultField});
+
+    ti.kernel((nnz) => {
+      for (let k of ti.ndrange(nnz)) {
+        ti.atomicAdd(resultField[rowIndicesField[k]], valuesField[k] * xField[colIndicesField[k]]);
+      }
+    })(nnz);
+
+    const result = await resultField.toArray();
+    return result;
+  }
+
+  /**
+   * Deep copy vector or matrix
+   */
+  async copy(data) {
+    if (Array.isArray(data[0])) {
+      // Matrix
+      const m = data.length;
+      const n = data[0].length;
+      const AField = ti.field(ti.f32, [m * n]);
+      const resultField = ti.field(ti.f32, [m * n]);
+
+      const flatA = data.flat();
+      AField.fromArray(flatA);
+
+      ti.addToKernelScope({AField, resultField});
+
+      ti.kernel((total) => {
+        for (let i of ti.ndrange(total)) {
+          resultField[i] = AField[i];
+        }
+      })(m * n);
+
+      const result = await resultField.toArray();
+      // Reshape
+      const C = [];
+      for (let i = 0; i < m; i++) {
+        C.push(result.slice(i * n, (i + 1) * n));
+      }
+      return C;
+    } else {
+      // Vector
+      const n = data.length;
+      const aField = ti.field(ti.f32, [n]);
+      const resultField = ti.field(ti.f32, [n]);
+
+      aField.fromArray(data);
+
+      ti.addToKernelScope({aField, resultField});
+
+      ti.kernel((n) => {
+        for (let i of ti.ndrange(n)) {
+          resultField[i] = aField[i];
+        }
+      })(n);
+
+      const result = await resultField.toArray();
+      return result;
+    }
+  }
+
+  /**
+   * Fill vector or matrix with constant value
+   */
+  async fill(data, value) {
+    if (Array.isArray(data[0])) {
+      // Matrix
+      const m = data.length;
+      const n = data[0].length;
+      const resultField = ti.field(ti.f32, [m * n]);
+
+      ti.addToKernelScope({resultField});
+
+      ti.kernel((total, value) => {
+        for (let i of ti.ndrange(total)) {
+          resultField[i] = value;
+        }
+      })(m * n, value);
+
+      const result = await resultField.toArray();
+      // Reshape
+      const C = [];
+      for (let i = 0; i < m; i++) {
+        C.push(result.slice(i * n, (i + 1) * n));
+      }
+      return C;
+    } else {
+      // Vector
+      const n = data.length;
+      const resultField = ti.field(ti.f32, [n]);
+
+      ti.addToKernelScope({resultField});
+
+      ti.kernel((n, value) => {
+        for (let i of ti.ndrange(n)) {
+          resultField[i] = value;
+        }
+      })(n, value);
+
+      const result = await resultField.toArray();
+      return result;
+    }
+  }
+
+  /**
+   * Scale vector or matrix by scalar
+   */
+  async scale(data, scalar) {
+    if (Array.isArray(data[0])) {
+      // Matrix
+      const m = data.length;
+      const n = data[0].length;
+      const AField = ti.field(ti.f32, [m * n]);
+      const resultField = ti.field(ti.f32, [m * n]);
+
+      const flatA = data.flat();
+      AField.fromArray(flatA);
+
+      ti.addToKernelScope({AField, resultField});
+
+      ti.kernel((total, scalar) => {
+        for (let i of ti.ndrange(total)) {
+          resultField[i] = AField[i] * scalar;
+        }
+      })(m * n, scalar);
+
+      const result = await resultField.toArray();
+      // Reshape
+      const C = [];
+      for (let i = 0; i < m; i++) {
+        C.push(result.slice(i * n, (i + 1) * n));
+      }
+      return C;
+    } else {
+      // Vector
+      const n = data.length;
+      const aField = ti.field(ti.f32, [n]);
+      const resultField = ti.field(ti.f32, [n]);
+
+      aField.fromArray(data);
+
+      ti.addToKernelScope({aField, resultField});
+
+      ti.kernel((n, scalar) => {
+        for (let i of ti.ndrange(n)) {
+          resultField[i] = aField[i] * scalar;
+        }
+      })(n, scalar);
+
+      const result = await resultField.toArray();
+      return result;
+    }
+  }
+
+  /**
+   * Compute residual vector: r = b - A * x
+   */
+  async residual(A, x, b) {
+    const Ax = await this.matVecMul(A, x);
+    return this.vecSub(b, Ax);
+  }
+
+  /**
+   * Apply preconditioner: solve M * z = r for z
+   * type: 'jacobi' or 'ssor'
+   */
+  async preconditioner(A, r, type = 'jacobi', omega = 1.0) {
+    const n = r.length;
+
+    if (type === 'jacobi') {
+      // Jacobi: M = diag(A), so z_i = r_i / A_ii
+      const diag = await this.diagonal(A);
+      const invDiag = diag.map(d => 1.0 / d);
+      return this.vecMul(invDiag, r);
+    } else if (type === 'ssor') {
+      // SSOR: Simplified Symmetric Successive Over-Relaxation
+      // This is a basic implementation; full SSOR would require forward/backward sweeps
+      const diag = await this.diagonal(A);
+      const invDiag = diag.map(d => omega / d);
+      
+      // For simplicity, approximate with Jacobi-like application
+      // Full SSOR would need iterative application or matrix splitting
+      return this.vecMul(invDiag, r);
+    } else {
+      throw new Error(`Unsupported preconditioner type: ${type}`);
+    }
+  }
+
+  /**
+   * Conjugate Gradient solver: solve A * x = b
+   * Returns approximate solution x
+   */
+  async conjugateGradient(A, b, x0 = null, tol = 1e-6, maxIter = 1000, preconditionerType = null) {
+    const n = b.length;
+    let x = x0 ? await this.copy(x0) : new Array(n).fill(0.0);
+
+    // Initial residual r = b - A*x
+    let r = await this.residual(A, x, b);
+    let rr = await this.dotProduct(r, r);
+    let rnorm0 = Math.sqrt(rr);
+
+    console.log(`CG: Initial residual norm: ${rnorm0}`);
+
+    if (rnorm0 < tol) {
+      console.log(`CG: Already converged`);
+      return x;
+    }
+
+    // Initial search direction
+    let p = preconditionerType ? await this.preconditioner(A, r, preconditionerType) : await this.copy(r);
+
+    for (let iter = 0; iter < maxIter; iter++) {
+      // Compute A*p
+      const Ap = await this.matVecMul(A, p);
+
+      // Compute p·Ap
+      const pAp = await this.dotProduct(p, Ap);
+
+      if (Math.abs(pAp) < 1e-16) {
+        console.log(`CG: p^T * A * p is too small (${pAp}), stopping`);
+        break;
+      }
+
+      // Compute alpha = (r·r) / (p·Ap)
+      const alpha = rr / pAp;
+
+      // Update solution: x = x + alpha*p
+      const alpha_p = await this.scale(p, alpha);
+      x = await this.vecAdd(x, alpha_p);
+
+      // Update residual: r = r - alpha*A*p
+      const alpha_Ap = await this.scale(Ap, alpha);
+      r = await this.vecSub(r, alpha_Ap);
+
+      // Compute new r·r
+      const rr_new = await this.dotProduct(r, r);
+      const rnorm = Math.sqrt(rr_new);
+
+      console.log(`CG: Iteration ${iter + 1}, residual norm: ${rnorm}`);
+
+      // Check convergence
+      if (rnorm < tol * rnorm0) {
+        console.log(`CG: Converged in ${iter + 1} iterations`);
+        break;
+      }
+
+      // Compute beta = (r_new·r_new) / (r_old·r_old)
+      const beta = rr_new / rr;
+
+      // Update search direction: p = r + beta*p (or z + beta*p if preconditioned)
+      if (preconditionerType) {
+        const z = await this.preconditioner(A, r, preconditionerType);
+        const beta_p = await this.scale(p, beta);
+        p = await this.vecAdd(z, beta_p);
+      } else {
+        const beta_p = await this.scale(p, beta);
+        p = await this.vecAdd(r, beta_p);
+      }
+
+      // Update rr for next iteration
+      rr = rr_new;
+    }
+
+    return x;
+  }
+
+  /**
+   * Jacobi iterative solver: solve A * x = b
+   * Returns approximate solution x
+   */
+  async jacobiSolve(A, b, x0, maxIter = 1000, tol = 1e-6) {
+    const n = b.length;
+    let x = await this.copy(x0);
+    let x_new = await this.copy(x0);
+
+    const diag = await this.diagonal(A);
+
+    for (let iter = 0; iter < maxIter; iter++) {
+      // Compute residual r = b - A*x
+      const Ax = await this.matVecMul(A, x);
+      const r = await this.vecSub(b, Ax);
+
+      // Check convergence
+      const rnorm = await this.norm(r);
+      console.log(`Jacobi: Iteration ${iter + 1}, residual norm: ${rnorm}`);
+
+      if (rnorm < tol) {
+        console.log(`Jacobi: Converged in ${iter + 1} iterations`);
+        return x;
+      }
+
+      // Jacobi update: x_new[i] = x[i] + r[i] / A[i][i]
+      for (let i = 0; i < n; i++) {
+        x_new[i] = x[i] + r[i] / diag[i];
+      }
+
+      // Swap references
+      [x, x_new] = [x_new, x];
+    }
+
+    console.log(`Jacobi: Did not converge in ${maxIter} iterations`);
+    return x;
+  }
+
+  async destroy() {
+    if (this.initialized) {
+      // Clean up Taichi.js resources and WebGPU context
+      if (typeof ti.destroy === 'function') {
+        await ti.destroy();
+      }
+      this.initialized = false;
+    }
+  }
+
+}
