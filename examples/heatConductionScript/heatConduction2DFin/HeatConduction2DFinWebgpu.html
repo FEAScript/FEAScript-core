@@ -2,45 +2,165 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Heat Conduction 2D Fin - GPU Jacobi Solver</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/5.0.0/math.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .result {
-            background-color: #f5f5f5;
-            padding: 10px;
-            margin: 10px 0;
-            border-radius: 3px;
-        }
-
-        .success {
-            color: green;
-        }
-
-        .error {
-            color: red;
-        }
-    </style>
+    <title>FEAScript: Heat Conduction in a 2D Fin (WebGPU)</title>
+    <link rel="icon" type="image/x-icon" href="../../../../FEAScript-website/assets/favicon.ico" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="description"
+        content="This example demonstrates solving a steady-state heat transfer problem using the FEAScript library with WebGPU for accelerated computation." />
+    <meta name="keywords"
+        content="finite elements, fem, galerkin, computational mechanics, javascript, webgpu, 2D heat transfer" />
+    <meta name="viewport" content="width=device-width" />
+    <!-- Link to the CSS files -->
+    <link href="../../../../FEAScript-website/feascript-website.css" rel="stylesheet" type="text/css" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
+    <!-- Import the Plotly.js library for plotting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.3/plotly.min.js"></script>
+    <!-- Import MathJax for writing equations -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- Import the run_prettify.js library for JavaScript code coloring -->
+    <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script>
 </head>
 
 <body>
-    <h1>Heat Conduction in 2D Fin - GPU Jacobi Solver</h1>
-    <div id="solutionPlot"></div>
-    <div id="result" class="result"></div>
+    <h1 class="top">
+        <a href="../../../../FEAScript-website/index.html">
+            <img src="../../../../FEAScript-website/assets/feascript-logo.png" alt="FEAScript Logo" id="responsive-logo"
+                style="vertical-align: middle" />
+        </a>
+        <div class="social-icons-top-right">
+            <ul>
+                <li>
+                    <a href="https://blog.feascript.com/" title="FEAScript blog">
+                        <img src="../../../../FEAScript-website/assets/blog-icon-feascript.png" alt="Blog icon"
+                            style="height: 18px; vertical-align: middle" />
+                    </a>
+                </li>
+                <li>
+                    <a href="https://www.youtube.com/@FEAScript" title="FEAScript YouTube">
+                        <img src="../../../../FEAScript-website/assets/youtube-icon-feascript.svg" alt="YouTube icon"
+                            style="height: 18px; vertical-align: middle" />
+                    </a>
+                </li>
+                <li>
+                    <a href="https://www.linkedin.com/company/feascript/" title="FEAScript LinkedIn">
+                        <img src="../../../../FEAScript-website/assets/linkedin-icon-feascript.png" alt="LinkedIn icon"
+                            style="height: 18px; vertical-align: middle" />
+                    </a>
+                </li>
+                <li>
+                    <a href="https://discord.gg/3DVjNcuW4f" title="FEAScript Discord">
+                        <img src="../../../../FEAScript-website/assets/discord-icon-feascript.png" alt="Discord icon"
+                            style="height: 18px; vertical-align: middle" />
+                    </a>
+                </li>
+                <li>
+                    <a href="https://github.com/FEAScript/FEAScript-core" title="FEAScript GitHub">
+                        <img src="../../../../FEAScript-website/assets/github-icon-feascript.png" alt="GitHub icon"
+                            style="height: 20px; vertical-align: middle" />
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </h1>
+    <h1>Heat Conduction in a 2D Fin Tutorial (WebGPU)</h1>
+
+    <ul id="menu">
+        <li><a href="#webgpuimplementation">WebGPU Implementation</a></li>
+        <li><a href="#results">Results</a></li>
+    </ul>
+
+    <div class="highlight-container">
+        <p>
+            This page demonstrates solving the 2D heat conduction fin problem using FEAScript with a WebGPU-accelerated
+            Jacobi solver. For the mathematical formulation and theory, see the
+            <a href="../../../../FEAScript-website/tutorials/heat-conduction-2d-fin.html">basic tutorial</a>.
+        </p>
+        <p>
+            <strong>⚠️ Important:</strong> This feature is experimental and requires a browser that supports WebGPU.
+        </p>
+    </div>
+
+    <h2 id="webgpuimplementation">WebGPU Implementation</h2>
+    <p>
+        The code below shows how to use FEAScript with the WebGPU-accelerated Jacobi solver. The solution is plotted as
+        a 2D contour.
+    </p>
+
+    <pre class="prettyprint">
+&lt;script type="module"&gt;
+  // Import FEAScript library
+  import { FEAScriptModel, plotSolution } from "../../../src/index.js";
+  
+  window.addEventListener("DOMContentLoaded", async () =&gt; {
+
+    // Create and configure model
+    const model = new FEAScriptModel();
+    model.setSolverConfig("heatConductionScript");
+    model.setMeshConfig({
+      meshDimension: "2D",
+      elementOrder: "quadratic",
+      numElementsX: 20,
+      numElementsY: 10,
+      maxX: 4,
+      maxY: 2,
+    });
+
+    // Apply boundary conditions
+    model.addBoundaryCondition("0", ["constantTemp", 200]);
+    model.addBoundaryCondition("1", ["symmetry"]);
+    model.addBoundaryCondition("2", ["convection", 1, 20]);
+    model.addBoundaryCondition("3", ["constantTemp", 200]);
+
+    // Set solver method to use the GPU-accelerated Jacobi solver
+    model.setSolverMethod("jacobi-gpu");
+
+    // Solve
+    const { solutionVector, nodesCoordinates } = await model.solveAsync({
+      maxIterations: 10000,
+      tolerance: 1e-3,
+    });
+
+    // Plot results
+    plotSolution(
+      solutionVector,
+      nodesCoordinates,
+      "heatConductionScript",
+      "2D",
+      "contour",
+      "resultsCanvas"
+    );
+  });
+&lt;/script&gt;</pre>
+
+    <h2 id="results">Results</h2>
+    <p>
+        Below is the 2D contour plot of the computed temperature distribution. This plot is generated in real time using
+        FEAScript.
+    </p>
+
+    <div id="loading">
+        <div class="spinner"></div>
+        Solving...
+    </div>
+    <div id="resultsCanvas"></div>
+    <div id="timeDisplay" style="margin-top: 1em"></div>
+
+    <ul id="menu">
+        <li><a href="../../../../FEAScript-website/index.html">Home</a></li>
+        <li><a href="../../../../FEAScript-website/tutorials/heat-conduction-2d-fin.html">All Tutorials</a></li>
+    </ul>
 
     <script type="module">
         import { FEAScriptModel, plotSolution } from "../../../src/index.js";
 
         window.addEventListener("DOMContentLoaded", async () => {
+            const resultDiv = document.getElementById("loading");
+            const timeDiv = document.getElementById("timeDisplay");
+            resultDiv.style.display = "block";
+
+            const startTime = performance.now();
+
             const model = new FEAScriptModel();
             model.setSolverConfig("heatConductionScript");
 
@@ -49,8 +169,8 @@
                 elementOrder: "quadratic",
                 numElementsX: 20,
                 numElementsY: 10,
-                maxX: 4000,
-                maxY: 2000,
+                maxX: 4,
+                maxY: 2,
             });
 
             model.addBoundaryCondition("0", ["constantTemp", 200]);
@@ -58,24 +178,17 @@
             model.addBoundaryCondition("2", ["convection", 1, 20]);
             model.addBoundaryCondition("3", ["constantTemp", 200]);
 
-            const resultDiv = document.getElementById("result");
-            resultDiv.innerHTML = "Assembling system and solving with GPU Jacobi...";
-
-            // GPU Jacobi; worker is managed internally by solveLinearSystemAsync
             model.setSolverMethod("jacobi-gpu");
 
-            // Keep the first arg undefined: the API still accepts an optional computeEngine
             const { solutionVector, nodesCoordinates } = await model.solveAsync({
                 maxIterations: 10000,
                 tolerance: 1e-3,
             });
 
-            const n = solutionVector.length;
-            resultDiv.innerHTML = `
-          <div>System size: ${n} x ${n}</div>
-          <div>Solution computed with WebGPU Jacobi</div>
-          <div class="success">SOLUTION COMPLETED</div>
-        `;
+            const endTime = performance.now();
+            const solvingTime = ((endTime - startTime) / 1000).toFixed(3);
+            timeDiv.innerHTML = `Solving time: ${solvingTime} seconds`;
+            resultDiv.style.display = "none";
 
             plotSolution(
                 solutionVector,
@@ -83,9 +196,16 @@
                 model.solverConfig,
                 model.meshConfig.meshDimension,
                 "contour",
-                "solutionPlot"
+                "resultsCanvas"
             );
         });
+    </script>
+
+    <footer>
+        <p>&#169; 2023-<span id="currentYear"></span> FEAScript</p>
+    </footer>
+    <script>
+        document.getElementById("currentYear").innerHTML = new Date().getFullYear();
     </script>
 </body>
 
