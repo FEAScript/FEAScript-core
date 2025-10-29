@@ -13,7 +13,7 @@ import { euclideanNorm } from "../methods/euclideanNormScript.js";
 import { solveLinearSystem } from "./linearSystemSolverScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 import { runFrontalSolver } from "./frontalSolverScript.js";
-import { assembleFrontPropagationFront } from "../solvers/frontPropagationScript.js";
+import { assembleFrontPropagationFront } from "../models/frontPropagationScript.js";
 
 /**
  * Function to solve a system of non-linear equations using the Newton-Raphson method

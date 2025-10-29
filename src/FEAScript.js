@@ -13,9 +13,9 @@ import { newtonRaphson } from "./methods/newtonRaphsonScript.js";
 import { solveLinearSystem } from "./methods/linearSystemSolverScript.js";
 import { solveLinearSystemAsync } from "./methods/linearSystemSolverScript.js";
 import { prepareMesh } from "./mesh/meshUtilsScript.js";
-import { assembleFrontPropagationMat } from "./solvers/frontPropagationScript.js";
-import { assembleGeneralFormPDEMat, assembleGeneralFormPDEFront } from "./solvers/generalFormPDEScript.js";
-import { assembleHeatConductionMat, assembleHeatConductionFront } from "./solvers/heatConductionScript.js";
+import { assembleFrontPropagationMat } from "./models/frontPropagationScript.js";
+import { assembleGeneralFormPDEMat, assembleGeneralFormPDEFront } from "./models/generalFormPDEScript.js";
+import { assembleHeatConductionMat, assembleHeatConductionFront } from "./models/heatConductionScript.js";
 import { runFrontalSolver } from "./methods/frontalSolverScript.js";
 import { basicLog, debugLog, warnLog, errorLog } from "./utilities/loggingScript.js";
 
@@ -119,7 +119,7 @@ export class FEAScriptModel {
 
     // Use WebGPU Jacobi method
     const initialGuess = new Array(b.length).fill(0);
-    solutionVector = await computeEngine.jacobiSolve(A, b, initialGuess, 10000, 1e-3);
+    solutionVector = await computeEngine.webgpuJacobiSolver(A, b, initialGuess, 10000, 1e-3);
 
     console.timeEnd("systemSolving");
     basicLog("System solved successfully with WebGPU Jacobi");

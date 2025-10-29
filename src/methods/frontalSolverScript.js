@@ -11,10 +11,10 @@
 // Internal imports
 import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
 import { initializeFEA } from "../mesh/meshUtilsScript.js";
-import { assembleHeatConductionFront } from "../solvers/heatConductionScript.js";
-import { ThermalBoundaryConditions } from "../solvers/thermalBoundaryConditionsScript.js";
-import { assembleFrontPropagationFront } from "../solvers/frontPropagationScript.js";
-import { GenericBoundaryConditions } from "../solvers/genericBoundaryConditionsScript.js";
+import { assembleHeatConductionFront } from "../models/heatConductionScript.js";
+import { ThermalBoundaryConditions } from "../models/thermalBoundaryConditionsScript.js";
+import { assembleFrontPropagationFront } from "../models/frontPropagationScript.js";
+import { GenericBoundaryConditions } from "../models/genericBoundaryConditionsScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 // Create object templates

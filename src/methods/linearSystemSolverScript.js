@@ -74,7 +74,7 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
 
 // Helper to lazily create a default WebGPU compute engine (Comlink + worker)
 async function createDefaultComputeEngine() {
-  const worker = new Worker(new URL("../workers/webgpuComputeWorker.js", import.meta.url), {
+  const worker = new Worker(new URL("../workers/webgpuWorkerScript.js", import.meta.url), {
     type: "module",
   });
   const computeEngine = Comlink.wrap(worker);
@@ -108,11 +108,11 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
     const x0 = new Array(b.length).fill(0);
     let result;
 
-    if (computeEngine && typeof computeEngine.jacobiSolve === "function") {
-      result = await computeEngine.jacobiSolve(A, b, x0, maxIterations, tolerance);
+    if (computeEngine && typeof computeEngine.webgpuJacobiSolver === "function") {
+      result = await computeEngine.webgpuJacobiSolver(A, b, x0, maxIterations, tolerance);
     } else {
       // Fallback to CPU Jacobi
-      warnLog("Falling back to CPU Jacobi: computeEngine.jacobiSolve not available");
+      warnLog("Falling back to CPU Jacobi: computeEngine.webgpuJacobiSolver not available");
       const cpu = jacobiSolver(A, b, x0, { maxIterations, tolerance });
       result = { x: cpu.solutionVector, converged: cpu.converged, iterations: cpu.iterations };
     }
