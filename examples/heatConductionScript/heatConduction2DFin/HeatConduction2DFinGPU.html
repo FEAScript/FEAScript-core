@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Heat Conduction 2D Fin - GPU Jacobi Solver</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/5.0.0/math.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .result {
+            background-color: #f5f5f5;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Heat Conduction in 2D Fin - GPU Jacobi Solver</h1>
+    <div id="solutionPlot"></div>
+    <div id="result" class="result"></div>
+
+    <script type="module">
+        import { FEAScriptModel, plotSolution } from "../../../src/index.js";
+
+        window.addEventListener("DOMContentLoaded", async () => {
+            const model = new FEAScriptModel();
+            model.setSolverConfig("heatConductionScript");
+
+            model.setMeshConfig({
+                meshDimension: "2D",
+                elementOrder: "quadratic",
+                numElementsX: 20,
+                numElementsY: 10,
+                maxX: 4000,
+                maxY: 2000,
+            });
+
+            model.addBoundaryCondition("0", ["constantTemp", 200]);
+            model.addBoundaryCondition("1", ["symmetry"]);
+            model.addBoundaryCondition("2", ["convection", 1, 20]);
+            model.addBoundaryCondition("3", ["constantTemp", 200]);
+
+            const resultDiv = document.getElementById("result");
+            resultDiv.innerHTML = "Assembling system and solving with GPU Jacobi...";
+
+            // GPU Jacobi; worker is managed internally by solveLinearSystemAsync
+            model.setSolverMethod("jacobi-gpu");
+
+            // Keep the first arg undefined: the API still accepts an optional computeEngine
+            const { solutionVector, nodesCoordinates } = await model.solveAsync({
+                maxIterations: 10000,
+                tolerance: 1e-3,
+            });
+
+            const n = solutionVector.length;
+            resultDiv.innerHTML = `
+          <div>System size: ${n} x ${n}</div>
+          <div>Solution computed with WebGPU Jacobi</div>
+          <div class="success">SOLUTION COMPLETED</div>
+        `;
+
+            plotSolution(
+                solutionVector,
+                nodesCoordinates,
+                model.solverConfig,
+                model.meshConfig.meshDimension,
+                "contour",
+                "solutionPlot"
+            );
+        });
+    </script>
+</body>
+
+</html>

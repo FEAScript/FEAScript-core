@@ -11,6 +11,7 @@
 // Internal imports
 import { jacobiSolver } from "./jacobiSolverScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+import * as Comlink from "../vendor/comlink.mjs";
 
 /**
  * Function to solve a system of linear equations using different solver methods
@@ -67,6 +68,74 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
 
   console.timeEnd("systemSolving");
   basicLog("System solved successfully");
+
+  return { solutionVector, converged, iterations };
+}
+
+// Helper to lazily create a default WebGPU compute engine (Comlink + worker)
+async function createDefaultComputeEngine() {
+  const worker = new Worker(new URL("../workers/webgpuComputeWorker.js", import.meta.url), {
+    type: "module",
+  });
+  const computeEngine = Comlink.wrap(worker);
+  await computeEngine.initialize();
+  return { computeEngine, worker };
+}
+
+// Async variant of solveLinearSystem
+export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, residualVector, options = {}) {
+  const { maxIterations = 10000, tolerance = 1e-3 } = options;
+
+  basicLog(`Solving system using ${solverMethod}...`);
+  console.time("systemSolving");
+
+  // Normalize inputs
+  const A = Array.isArray(jacobianMatrix) ? jacobianMatrix : jacobianMatrix?.toArray?.() ?? jacobianMatrix;
+  const b = Array.isArray(residualVector) ? residualVector : residualVector?.toArray?.() ?? residualVector;
+
+  let created = null;
+  let computeEngine = null;
+
+  let solutionVector = [];
+  let converged = true;
+  let iterations;
+
+  if (solverMethod === "jacobi-gpu") {
+    // Spin up a worker-backed compute engine
+    created = await createDefaultComputeEngine();
+    computeEngine = created.computeEngine;
+
+    const x0 = new Array(b.length).fill(0);
+    let result;
+
+    if (computeEngine && typeof computeEngine.jacobiSolve === "function") {
+      result = await computeEngine.jacobiSolve(A, b, x0, maxIterations, tolerance);
+    } else {
+      // Fallback to CPU Jacobi
+      warnLog("Falling back to CPU Jacobi: computeEngine.jacobiSolve not available");
+      const cpu = jacobiSolver(A, b, x0, { maxIterations, tolerance });
+      result = { x: cpu.solutionVector, converged: cpu.converged, iterations: cpu.iterations };
+    }
+
+    if (Array.isArray(result)) {
+      solutionVector = result;
+    } else {
+      solutionVector = result?.x ?? result?.solutionVector ?? [];
+      converged = result?.converged ?? true;
+      iterations = result?.iterations;
+    }
+  } else {
+    errorLog(`Unknown solver method: ${solverMethod}`);
+  }
+
+  // Success-only logging and cleanup
+  console.timeEnd("systemSolving");
+  basicLog(`System solved successfully (${solverMethod})`);
+
+  if (created) {
+    await computeEngine?.destroy?.().catch(() => { });
+    created.worker.terminate();
+  }
 
   return { solutionVector, converged, iterations };
 }

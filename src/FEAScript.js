@@ -11,6 +11,7 @@
 // Internal imports
 import { newtonRaphson } from "./methods/newtonRaphsonScript.js";
 import { solveLinearSystem } from "./methods/linearSystemSolverScript.js";
+import { solveLinearSystemAsync } from "./methods/linearSystemSolverScript.js";
 import { prepareMesh } from "./mesh/meshUtilsScript.js";
 import { assembleFrontPropagationMat } from "./solvers/frontPropagationScript.js";
 import { assembleGeneralFormPDEMat, assembleGeneralFormPDEFront } from "./solvers/generalFormPDEScript.js";
@@ -23,7 +24,7 @@ import { basicLog, debugLog, warnLog, errorLog } from "./utilities/loggingScript
  * @param {string} solverConfig - Parameter specifying the type of solver
  * @param {object} meshConfig - Object containing computational mesh details
  * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
- * @returns {object} An object containing the solution vector and additional mesh information
+ * @returns {object} An object containifng the solution vector and additional mesh information
  */
 export class FEAScriptModel {
   constructor() {
@@ -70,11 +71,9 @@ export class FEAScriptModel {
     debugLog(`Solver method set to: ${solverMethod}`);
   }
 
-  async solveWithWebGPU(computeEngine) {
+  async solveWithWebgpu(computeEngine) {
     if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
-      const error = "Solver config, mesh config, and boundary conditions must be set before solving.";
-      console.error(error);
-      throw new Error(error);
+      errorLog("Solver config, mesh config, and boundary conditions must be set before solving.");
     }
 
     let jacobianMatrix = [];
@@ -106,7 +105,7 @@ export class FEAScriptModel {
     console.timeEnd("assemblyMatrices");
     basicLog("Matrix assembly completed");
 
-    // System solving with WebGPU CG
+    // System solving with WebGPU Jacobi
     basicLog("Solving system using WebGPU Jacobi...");
     console.time("systemSolving");
 
@@ -115,7 +114,6 @@ export class FEAScriptModel {
     const b = Array.isArray(residualVector) ? residualVector : residualVector.toArray();
 
     // For heat conduction FEM, the matrix might be negative definite
-    // Use Jacobi method instead of CG for better stability
     console.log("Matrix diagonal sample:", A.slice(0, 5).map((row, i) => row[i]));
     console.log("RHS sample:", b.slice(0, 5));
 
@@ -131,9 +129,7 @@ export class FEAScriptModel {
 
   solve() {
     if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
-      const error = "Solver config, mesh config, and boundary conditions must be set before solving.";
-      console.error(error);
-      throw new Error(error);
+      errorLog("Solver config, mesh config, and boundary conditions must be set before solving.");
     }
 
     /**
@@ -235,6 +231,48 @@ export class FEAScriptModel {
 
         const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
         solutionVector = linearSystemResult.solutionVector;
+      }
+    }
+    console.timeEnd("totalSolvingTime");
+    basicLog("Solving process completed");
+
+    return { solutionVector, nodesCoordinates };
+  }
+
+  async solveAsync(computeEngine, options = {}) {
+    if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
+      errorLog("Solver config, mesh config, and boundary conditions must be set before solving.");
+    }
+
+    let jacobianMatrix = [];
+    let residualVector = [];
+    let solutionVector = [];
+
+    basicLog("Preparing mesh...");
+    const meshData = prepareMesh(this.meshConfig);
+    basicLog("Mesh preparation completed");
+    const nodesCoordinates = {
+      nodesXCoordinates: meshData.nodesXCoordinates,
+      nodesYCoordinates: meshData.nodesYCoordinates,
+    };
+
+    basicLog("Beginning solving process...");
+    console.time("totalSolvingTime");
+
+    if (this.solverConfig === "heatConductionScript") {
+
+      ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(meshData, this.boundaryConditions));
+
+      if (this.solverMethod === "jacobi-gpu") {
+        const { solutionVector: x } = await solveLinearSystemAsync("jacobi-gpu", jacobianMatrix, residualVector, {
+          computeEngine,
+          maxIterations: options.maxIterations,
+          tolerance: options.tolerance,
+        });
+        solutionVector = x;
+      } else {
+        const { solutionVector: x } = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
+        solutionVector = x;
       }
     }
     console.timeEnd("totalSolvingTime");

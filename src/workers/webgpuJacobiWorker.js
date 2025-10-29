@@ -23,7 +23,7 @@ class WebGPUJacobiWorker {
     this.initialized = true;
   }
 
-  async jacobiMethod(A, b, x0, maxIterations = 100, tolerance = 1e-7) {
+  async jacobiWebgpuSolver(A, b, x0, maxIterations = 100, tolerance = 1e-7) {
     await this.initialize();
 
     const n = A.length;

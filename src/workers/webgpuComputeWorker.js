@@ -20,8 +20,7 @@ class WebGPUComputeWorker {
 
   async initialize(powerPreference = 'high-performance') {
     if (!this.initialized) {
-      // Override the requestAdapter to set power preference
-      const originalRequestAdapter = navigator.gpu.requestAdapter;
+      const originalRequestAdapter = navigator.gpu.requestAdapter.bind(navigator.gpu);
       navigator.gpu.requestAdapter = async (options = {}) => {
         return originalRequestAdapter({ ...options, powerPreference });
       };
@@ -31,7 +30,6 @@ class WebGPUComputeWorker {
     }
     if (!this.computeEngine) {
       this.computeEngine = new WebGPUComputeEngine();
-      // Don't initialize again, already done
     }
   }
 
@@ -76,7 +74,7 @@ class WebGPUComputeWorker {
     bField.fromArray(b);
     resultField.fromArray([0]);
 
-    ti.addToKernelScope({aField, bField, resultField});
+    ti.addToKernelScope({ aField, bField, resultField });
 
     ti.kernel((n) => {
       for (let i of ti.ndrange(n)) {
@@ -97,7 +95,7 @@ class WebGPUComputeWorker {
     aField.fromArray(vector);
     resultField.fromArray([0]);
 
-    ti.addToKernelScope({aField, resultField});
+    ti.addToKernelScope({ aField, resultField });
 
     ti.kernel((n) => {
       for (let i of ti.ndrange(n)) {
@@ -123,7 +121,7 @@ class WebGPUComputeWorker {
     aField.fromArray(vector);
     tempField.fromArray([0]);
 
-    ti.addToKernelScope({aField, resultField, tempField});
+    ti.addToKernelScope({ aField, resultField, tempField });
 
     ti.kernel((n) => {
       for (let i of ti.ndrange(n)) {

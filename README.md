@@ -4,8 +4,6 @@
 
 [![npm version](https://img.shields.io/npm/v/feascript)](https://www.npmjs.com/package/feascript)
 
-<!-- [![liberapay](https://img.shields.io/liberapay/receives/FEAScript.svg?logo=liberapay)](https://liberapay.com/FEAScript/) -->
-
 [FEAScript](https://feascript.com/) is a lightweight finite element simulation library written in JavaScript. It empowers users to perform simulations for physics and engineering applications in both browser-based and server-side environments. This is the core library of the FEAScript project.
 
 > 🚧 **FEAScript is currently under heavy development.** Its functionality and interfaces may change rapidly as new features and enhancements are introduced.
@@ -13,11 +11,11 @@
 ## Contents
 
 - [Ways to Use FEAScript](#ways-to-use-feascript)
-  - [JavaScript API (FEAScript Core)](#javascript-api-feascript-core)
+  - [FEAScript API](#feascript-api)
     - [Use FEAScript in the Browser](#use-feascript-in-the-browser)
     - [Use FEAScript with Node.js](#use-feascript-with-nodejs)
-    - [Use FEAScript with Scribbler](#use-feascript-with-scribbler)
-  - [Visual Editor (FEAScript Platform)](#visual-editor-feascript-platform)
+    - [Use FEAScript in JavaScript Playgrounds](#use-feascript-in-javascript-playgrounds)
+  - [FEAScript Platform](#feascript-platform)
 - [Quick Example](#quick-example)
 - [Support FEAScript](#support-feascript)
 - [Contributing](#contributing)
@@ -27,28 +25,36 @@
 
 FEAScript offers two main approaches to creating simulations:
 
-1. **[JavaScript API (FEAScript Core)](#javascript-api-feascript-core)** – For developers comfortable with coding, providing full programmatic control in browsers, Node.js, or interactive notebooks.
-2. **[Visual Editor (FEAScript Platform)](#visual-editor-feascript-platform)** – For users who prefer a no-code approach, offering a block-based visual interface built with [Blockly](https://developers.google.com/blockly).
+1. **[FEAScript API](#feascript-api)** – For developers comfortable with coding, providing full programmatic control in browsers, Node.js, or interactive notebooks.
+2. **[FEAScript Platform](#feascript-platform)** – For users who prefer a no-code approach, offering a block-based visual interface built with [Blockly](https://blockly.com/).
 
 Each approach is explained in detail below.
 
-### JavaScript API (FEAScript Core)
+### FEAScript API
 
-The JavaScript API is the core programmatic interface for FEAScript. Written entirely in pure JavaScript, it runs in three environments:
+The FEAScript API is the core programmatic interface for FEAScript. Written entirely in pure JavaScript, it runs in three environments:
 
 1. **[In the browser](#use-feascript-in-the-browser)** – Use FEAScript in a simple HTML page, running simulations locally without additional installations or cloud services.
 2. **[With Node.js](#use-feascript-with-nodejs)** – Use FEAScript in server-side JavaScript applications or CLI tools.
-3. **[With Scribbler](#use-feascript-with-scribbler)** – Use FEAScript in the [Scribbler](https://scribbler.live/) interactive JavaScript notebook environment.
+3. **[In JavaScript playgrounds](#use-feascript-in-javascript-playgrounds)** – Use FEAScript in the [Scribbler](https://scribbler.live/) interactive JavaScript notebook environment.
 
 #### Use FEAScript in the Browser
 
-You can use FEAScript in browser environments in two ways:
+You can use FEAScript in browser environments in three ways:
 
 - **Import from Hosted ESM Build:**
 
   ```html
   <script type="module">
     import { FEAScriptModel } from "https://core.feascript.com/dist/feascript.esm.js";
+  </script>
+  ```
+
+- **Import from CDN:**
+
+  ```html
+  <script type="module">
+    import { FEAScriptModel } from "https://cdn.jsdelivr.net/gh/FEAScript/FEAScript-core/dist/feascript.esm.js";
   </script>
   ```
 
@@ -89,27 +95,29 @@ When running examples from within this repository, this step isn’t needed as t
 
 👉 Explore Node.js use cases on the [examples directory](https://github.com/FEAScript/FEAScript-core/tree/main/examples).
 
-#### Use FEAScript with Scribbler
+#### Use FEAScript in JavaScript Playgrounds
 
-FEAScript also works well in interactive JavaScript notebook environments where you can write code, visualize results inline, and share your work with others. [Scribbler](https://scribbler.live/) is one such platform that comes with preloaded scientific libraries, making it an excellent choice for FEAScript simulations.
+FEAScript works well in interactive JavaScript playgrounds where you can write code, visualize results inline, and share your work.
 
-👉 Explore FEAScript notebook examples on the [Scribbler Hub](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples).
+👉 Explore the following examples: 
+- [CodePen (interactive pens)](https://codepen.io/FEAScript)
+- [Scribbler (notebooks)](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples)
 
-### Visual Editor (FEAScript Platform)
+### FEAScript Platform
 
-For users who prefer a visual approach to creating simulations, we offer the [FEAScript Platform](https://platform.feascript.com/) - a browser-based visual editor built on the [Blockly](https://developers.google.com/blockly) library. This no-code interface allows you to:
+For users who prefer a visual approach to creating simulations, we offer the [FEAScript Platform](https://feascript.com/feascript-platform.html) - a browser-based visual editor built on the [Blockly](https://blockly.com/) library. This no-code interface allows you to:
 
 - Build and run finite element simulations directly in your browser by connecting visual blocks together.
 - Create complex simulations without writing any JavaScript code.
 - Save and load projects in XML format for easy sharing and reuse.
 
-While FEAScript's JavaScript API offers full programmatic control for advanced customization, the FEAScript Platform provides an accessible entry point for users without coding experience.
+While FEAScript API offers full programmatic control for advanced customization, the FEAScript Platform provides an accessible entry point for users without coding experience.
 
-👉 Explore FEAScript Platform examples on our [website](https://feascript.com/#tutorials).
+<!-- > Note: The FEAScript Platform is not yet available -->
 
 ## Quick Example
 
-Here is a minimal browser-based example using the JavaScript API. Adapt paths, solver types, and boundary conditions as needed for your specific problem:
+Here is a minimal browser-based example using the FEAScript API. Adapt paths, solver types, and boundary conditions as needed for your specific problem:
 
 ```html
 <body>
