@@ -8,9 +8,6 @@
 //                                            |_|   | |_   //
 //       Website: https://feascript.com/             \__|  //
 
-const math = window.math;
-const Plotly = window.Plotly;
-
 /**
  * Function to create plots of the solution vector
  * @param {*} solutionVector - The computed solution vector
