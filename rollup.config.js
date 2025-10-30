@@ -1,6 +1,8 @@
+import typescript from "rollup-plugin-typescript2";
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
 import { terser } from "rollup-plugin-terser";
+import wasm from "rollup-plugin-wasm";
 
 export default {
   input: "src/index.js",
@@ -9,7 +11,6 @@ export default {
       file: "dist/feascript.cjs.js",
       format: "cjs",
       sourcemap: true,
-
     },
     {
       file: "dist/feascript.esm.js",
@@ -21,10 +22,6 @@ export default {
       format: "umd",
       name: "FEAScript",
       sourcemap: true,
-      globals: {
-        mathjs: "math",
-        "plotly.js": "Plotly"
-      },
     },
   ],
   plugins: [
@@ -33,7 +30,14 @@ export default {
       preferBuiltins: false,
     }),
     commonjs(),
+    wasm({
+      maxFileSize: 14000000,
+    }),
+    typescript({
+      useTsconfigDeclarationDir: true,
+      clean: true,
+    }),
     terser(),
   ],
-  external: ["mathjs", "plotly.js"],
+  external: [],
 };

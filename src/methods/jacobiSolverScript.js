@@ -9,11 +9,11 @@
 //       Website: https://feascript.com/             \__|  //
 
 /**
- * Function to solve a system of linear equations using the Jacobi iterative method
- * @param {array} jacobianMatrix - The coefficient matrix (must be square)
- * @param {array} residualVector - The right-hand side vector
- * @param {array} initialGuess - Initial guess for solution vector
- * @param {object} [options] - Options for the solver
+ * Function to solve a system of linear equations using the Jacobi iterative method (CPU synchronous version)
+ * @param {array} A - The coefficient matrix (must be square)
+ * @param {array} b - The right-hand side vector
+ * @param {array} x0 - Initial guess for solution vector
+ * @param {object} [options] - Additional options for the solver
  * @param {number} [options.maxIterations=1000] - Maximum number of iterations
  * @param {number} [options.tolerance=1e-6] - Convergence tolerance
  * @returns {object} An object containing:
@@ -21,49 +21,34 @@
  *  - iterations: The number of iterations performed
  *  - converged: Boolean indicating whether the method converged
  */
-export function jacobiSolver(jacobianMatrix, residualVector, initialGuess, options = {}) {
+export function jacobiSolver(A, b, x0, options = {}) {
   const { maxIterations = 1000, tolerance = 1e-6 } = options;
-  const n = jacobianMatrix.length; // Size of the square matrix
-  let x = [...initialGuess]; // Current solution (starts with initial guess)
-  let xNew = new Array(n); // Next iteration's solution
+  const n = A.length;
+  let x = [...x0];
+  let xNew = new Array(n);
 
-  for (let iteration = 0; iteration < maxIterations; iteration++) {
-    // Perform one iteration
+  for (let iter = 0; iter < maxIterations; iter++) {
     for (let i = 0; i < n; i++) {
       let sum = 0;
-      // Calculate sum of jacobianMatrix[i][j] * x[j] for j ≠ i
       for (let j = 0; j < n; j++) {
-        if (j !== i) {
-          sum += jacobianMatrix[i][j] * x[j];
+        if (i !== j) {
+          sum += A[i][j] * x[j];
         }
       }
-      // Update xNew[i] using the Jacobi formula
-      xNew[i] = (residualVector[i] - sum) / jacobianMatrix[i][i];
+      xNew[i] = (b[i] - sum) / A[i][i];
     }
 
-    // Check convergence
     let maxDiff = 0;
     for (let i = 0; i < n; i++) {
       maxDiff = Math.max(maxDiff, Math.abs(xNew[i] - x[i]));
     }
 
-    // Update x for next iteration
     x = [...xNew];
 
-    // Successfully converged if maxDiff is less than tolerance
     if (maxDiff < tolerance) {
-      return {
-        solutionVector: x,
-        iterations: iteration + 1,
-        converged: true,
-      };
+      return { solutionVector: x, iterations: iter + 1, converged: true };
     }
   }
 
-  // maxIterations were reached without convergence
-  return {
-    solutionVector: x,
-    iterations: maxIterations,
-    converged: false,
-  };
+  return { solutionVector: x, iterations: maxIterations, converged: false };
 }
