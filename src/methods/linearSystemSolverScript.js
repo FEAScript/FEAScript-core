@@ -19,15 +19,15 @@ import * as Comlink from "../vendor/comlink.mjs";
  * @param {Array} jacobianMatrix - The coefficient matrix
  * @param {Array} residualVector - The right-hand side vector
  * @param {object} [options] - Additional options for the solver
- * @param {number} [options.maxIterations=1000] - Maximum iterations for iterative methods
- * @param {number} [options.tolerance=1e-6] - Convergence tolerance for iterative methods
+ * @param {number} [options.maxIterations=10000] - Maximum iterations for iterative methods
+ * @param {number} [options.tolerance=1e-3] - Convergence tolerance for iterative methods
  * @returns {object} An object containing:
  *  - solutionVector: The solution vector
  *  - converged: Boolean indicating whether the method converged (for iterative methods)
  *  - iterations: Number of iterations performed (for iterative methods)
  */
 export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, options = {}) {
-  const { maxIterations = 1000, tolerance = 1e-6 } = options;
+  const { maxIterations = 10000, tolerance = 1e-3 } = options;
 
   let solutionVector = [];
   let converged = true;
@@ -128,7 +128,6 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
     errorLog(`Unknown solver method: ${solverMethod}`);
   }
 
-  // Success-only logging and cleanup
   console.timeEnd("systemSolving");
   basicLog(`System solved successfully (${solverMethod})`);
 

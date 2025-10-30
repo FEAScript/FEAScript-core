@@ -11,6 +11,9 @@
 // External imports
 import * as ti from '../vendor/taichi.esm.js';
 
+// Internal imports
+import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+
 export class WebGPUComputeEngine {
   constructor() {
     this.initialized = false;
@@ -799,7 +802,8 @@ export class WebGPUComputeEngine {
       // Full SSOR would need iterative application or matrix splitting
       return this.vecMul(invDiag, r);
     } else {
-      throw new Error(`Unsupported preconditioner type: ${type}`);
+      errorLog(`Unsupported preconditioner type: ${type}`);
+      return null;
     }
   }
 
@@ -813,7 +817,7 @@ export class WebGPUComputeEngine {
    * @param {string} [preconditionerType=null] - The type of preconditioner to use
    * @returns {array} The solution vector
    */
-  async webgpuConjugateGradientSolver(A, b, x0 = null, tol = 1e-6, maxIter = 1000, preconditionerType = null) {
+  async webgpuConjugateGradientSolver(A, b, x0 = null, tol, maxIter, preconditionerType = null) {
     const n = b.length;
     let x = x0 ? await this.copy(x0) : new Array(n).fill(0.0);
 
@@ -822,10 +826,10 @@ export class WebGPUComputeEngine {
     let rr = await this.dotProduct(r, r);
     let rnorm0 = Math.sqrt(rr);
 
-    console.log(`CG: Initial residual norm: ${rnorm0}`);
+    basicLog(`CG: Initial residual norm: ${rnorm0}`);
 
     if (rnorm0 < tol) {
-      console.log(`CG: Already converged`);
+      basicLog(`CG: Already converged`);
       return x;
     }
 
@@ -840,7 +844,7 @@ export class WebGPUComputeEngine {
       const pAp = await this.dotProduct(p, Ap);
 
       if (Math.abs(pAp) < 1e-16) {
-        console.log(`CG: p^T * A * p is too small (${pAp}), stopping`);
+        errorLog(`CG: p^T * A * p is too small (${pAp}), stopping`);
         break;
       }
 
@@ -859,11 +863,11 @@ export class WebGPUComputeEngine {
       const rr_new = await this.dotProduct(r, r);
       const rnorm = Math.sqrt(rr_new);
 
-      console.log(`CG: Iteration ${iter + 1}, residual norm: ${rnorm}`);
+      basicLog(`CG: Iteration ${iter + 1}, residual norm: ${rnorm}`);
 
       // Check convergence
       if (rnorm < tol * rnorm0) {
-        console.log(`CG: Converged in ${iter + 1} iterations`);
+        basicLog(`CG: Converged in ${iter + 1} iterations`);
         break;
       }
 
@@ -897,7 +901,7 @@ export class WebGPUComputeEngine {
    * @param {number} [tol=1e-6] - Convergence tolerance
    * @returns {array} The solution vector
    */
-  async webgpuJacobiSolver(A, b, x0, maxIter = 1000, tol = 1e-6) {
+  async webgpuJacobiSolver(A, b, x0, maxIter, tol) {
     const n = b.length;
     let x = await this.copy(x0);
     let x_new = await this.copy(x0);
@@ -911,10 +915,10 @@ export class WebGPUComputeEngine {
 
       // Check convergence
       const rnorm = await this.norm(r);
-      console.log(`Jacobi: Iteration ${iter + 1}, residual norm: ${rnorm}`);
+      basicLog(`Jacobi: Iteration ${iter + 1}, residual norm: ${rnorm}`);
 
       if (rnorm < tol) {
-        console.log(`Jacobi: Converged in ${iter + 1} iterations`);
+        basicLog(`Jacobi: Converged in ${iter + 1} iterations`);
         return x;
       }
 
@@ -927,7 +931,7 @@ export class WebGPUComputeEngine {
       [x, x_new] = [x_new, x];
     }
 
-    console.log(`Jacobi: Did not converge in ${maxIter} iterations`);
+    errorLog(`Jacobi: Did not converge in ${maxIter} iterations`);
     return x;
   }
 
