@@ -82,7 +82,19 @@ async function createDefaultComputeEngine() {
   return { computeEngine, worker };
 }
 
-// Async variant of solveLinearSystem
+/**
+ * Function to solve asynchronously a system of linear equations using different solver methods
+ * @param {string} solverMethod - The solver method to use (e.g., "jacobi-gpu")
+ * @param {Array|object} jacobianMatrix - The coefficient matrix
+ * @param {Array|object} residualVector - The right-hand side vector
+ * @param {object} [options] - Additional options for the solver
+ * @param {number} [options.maxIterations=10000] - Maximum iterations for iterative methods
+ * @param {number} [options.tolerance=1e-3] - Convergence tolerance for iterative methods
+ * @returns {Promise<object>} A promise that resolves to an object containing:
+ *  - solutionVector: The solution vector
+ *  - converged: Boolean indicating whether the method converged (for iterative methods)
+ *  - iterations: Number of iterations performed (for iterative methods)
+ */
 export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, residualVector, options = {}) {
   const { maxIterations = 10000, tolerance = 1e-3 } = options;
 
@@ -108,21 +120,16 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
     const x0 = new Array(b.length).fill(0);
     let result;
 
-    if (computeEngine && typeof computeEngine.webgpuJacobiSolver === "function") {
-      result = await computeEngine.webgpuJacobiSolver(A, b, x0, maxIterations, tolerance);
-    } else {
-      // Fallback to CPU Jacobi
-      warnLog("Falling back to CPU Jacobi: computeEngine.webgpuJacobiSolver not available");
-      const cpu = jacobiSolver(A, b, x0, { maxIterations, tolerance });
-      result = { x: cpu.solutionVector, converged: cpu.converged, iterations: cpu.iterations };
-    }
+    result = await computeEngine.webgpuJacobiSolver(A, b, x0, maxIterations, tolerance);
+    solutionVector = result.solutionVector;
+    converged = result.converged;
+    iterations = result.iterations;
 
-    if (Array.isArray(result)) {
-      solutionVector = result;
+    // Log convergence information
+    if (converged) {
+      debugLog(`Jacobi method converged in ${iterations} iterations`);
     } else {
-      solutionVector = result?.x ?? result?.solutionVector ?? [];
-      converged = result?.converged ?? true;
-      iterations = result?.iterations;
+      errorLog(`Jacobi method did not converge after ${iterations} iterations`);
     }
   } else {
     errorLog(`Unknown solver method: ${solverMethod}`);
@@ -132,7 +139,7 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
   basicLog(`System solved successfully (${solverMethod})`);
 
   if (created) {
-    await computeEngine?.destroy?.().catch(() => { });
+    await computeEngine?.destroy?.().catch(() => {});
     created.worker.terminate();
   }
 

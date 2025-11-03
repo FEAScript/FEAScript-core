@@ -919,7 +919,7 @@ export class WebGPUComputeEngine {
 
       if (rnorm < tol) {
         basicLog(`Jacobi: Converged in ${iter + 1} iterations`);
-        return x;
+        return { solutionVector: x, iterations: iter + 1, converged: true };
       }
 
       // Jacobi update: x_new[i] = x[i] + r[i] / A[i][i]
@@ -932,7 +932,7 @@ export class WebGPUComputeEngine {
     }
 
     errorLog(`Jacobi: Did not converge in ${maxIter} iterations`);
-    return x;
+    return { solutionVector: x, iterations: maxIter, converged: false };
   }
 
   /**
