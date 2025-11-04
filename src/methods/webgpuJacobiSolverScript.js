@@ -1,12 +1,10 @@
-//   ______ ______           _____           _       _     //
-//  |  ____|  ____|   /\    / ____|         (_)     | |    //
-//  | |__  | |__     /  \  | (___   ___ ____ _ ____ | |_   //
-//  |  __| |  __|   / /\ \  \___ \ / __|  __| |  _ \| __|  //
-//  | |    | |____ / ____ \ ____) | (__| |  | | |_) | |    //
-//  |_|    |______/_/    \_\_____/ \___|_|  |_|  __/| |    //
-//                                            | |   | |    //
-//                                            |_|   | |_   //
-//       Website: https://feascript.com/             \__|  //
+/**
+ * ════════════════════════════════════════════════════════════
+ *  FEAScript Library
+ *  Lightweight Finite Element Simulation in JavaScript
+ *  Version: 0.1.4 | https://feascript.com
+ * ════════════════════════════════════════════════════════════
+ */
 
 // External imports
 import * as ti from "../vendor/taichi.esm.js";
@@ -46,7 +44,7 @@ export class WebGPUComputeEngine {
    * @param {number[]} x0 - Initial guess for solution vector (length n)
    * @param {number} maxIter - Maximum number of iterations
    * @param {number} tol - Convergence tolerance for the residual norm
-   * @returns {Promise<{solutionVector: number[], iterations: number, converged: boolean}>} Result object containing the solution, iteration count, and convergence flag
+   * @returns {Promise<object>} Result object containing the solution, iteration count, and convergence flag
    */
   async webgpuJacobiSolver(A, b, x0, maxIter, tol) {
     const n = b.length;

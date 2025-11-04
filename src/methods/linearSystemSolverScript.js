@@ -1,12 +1,10 @@
-//   ______ ______           _____           _       _     //
-//  |  ____|  ____|   /\    / ____|         (_)     | |    //
-//  | |__  | |__     /  \  | (___   ___ ____ _ ____ | |_   //
-//  |  __| |  __|   / /\ \  \___ \ / __|  __| |  _ \| __|  //
-//  | |    | |____ / ____ \ ____) | (__| |  | | |_) | |    //
-//  |_|    |______/_/    \_\_____/ \___|_|  |_|  __/| |    //
-//                                            | |   | |    //
-//                                            |_|   | |_   //
-//       Website: https://feascript.com/             \__|  //
+/**
+ * ════════════════════════════════════════════════════════════
+ *  FEAScript Library
+ *  Lightweight Finite Element Simulation in JavaScript
+ *  Version: 0.1.4 | https://feascript.com
+ * ════════════════════════════════════════════════════════════
+ */
 
 // Internal imports
 import { jacobiSolver } from "./jacobiSolverScript.js";
@@ -85,8 +83,8 @@ async function createDefaultComputeEngine() {
 /**
  * Function to solve asynchronously a system of linear equations using different solver methods
  * @param {string} solverMethod - The solver method to use (e.g., "jacobi-gpu")
- * @param {Array|object} jacobianMatrix - The coefficient matrix
- * @param {Array|object} residualVector - The right-hand side vector
+ * @param {array} jacobianMatrix - The coefficient matrix
+ * @param {array} residualVector - The right-hand side vector
  * @param {object} [options] - Additional options for the solver
  * @param {number} [options.maxIterations=10000] - Maximum iterations for iterative methods
  * @param {number} [options.tolerance=1e-3] - Convergence tolerance for iterative methods

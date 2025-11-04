@@ -1,19 +1,17 @@
-//   ______ ______           _____           _       _     //
-//  |  ____|  ____|   /\    / ____|         (_)     | |    //
-//  | |__  | |__     /  \  | (___   ___ ____ _ ____ | |_   //
-//  |  __| |  __|   / /\ \  \___ \ / __|  __| |  _ \| __|  //
-//  | |    | |____ / ____ \ ____) | (__| |  | | |_) | |    //
-//  |_|    |______/_/    \_\_____/ \___|_|  |_|  __/| |    //
-//                                            | |   | |    //
-//                                            |_|   | |_   //
-//       Website: https://feascript.com/             \__|  //
+/**
+ * ════════════════════════════════════════════════════════════
+ *  FEAScript Library
+ *  Lightweight Finite Element Simulation in JavaScript
+ *  Version: 0.1.4 | https://feascript.com
+ * ════════════════════════════════════════════════════════════
+ */
 
 // External imports
 import * as Comlink from "../vendor/comlink.mjs";
 import * as ti from "../vendor/taichi.esm.js";
 
 // Internal imports
-import { WebGPUComputeEngine } from "../methods/webgpuComputeEngineScript.js";
+import { WebGPUComputeEngine } from "../methods/webgpuJacobiSolverScript.js";
 
 /**
  * Worker for handling FEAScript WebGPU Jacobi solver computations
