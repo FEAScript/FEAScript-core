@@ -95,8 +95,8 @@ export class FEAScriptModel {
     // Assembly matrices
     basicLog("Beginning matrix assembly...");
     console.time("assemblyMatrices");
+    basicLog(`Using solver: ${this.solverConfig}`);
     if (this.solverConfig === "solidHeatTransferScript") {
-      basicLog(`Using solver: ${this.solverConfig}`);
       ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(
         meshData,
         this.boundaryConditions
@@ -161,9 +161,8 @@ export class FEAScriptModel {
     // Select and execute the appropriate solver based on solverConfig
     basicLog("Beginning solving process...");
     console.time("totalSolvingTime");
+    basicLog(`Using solver: ${this.solverConfig}`);
     if (this.solverConfig === "heatConductionScript") {
-      basicLog(`Using solver: ${this.solverConfig}`);
-
       // Check if using frontal solver
       if (this.solverMethod === "frontal") {
         const frontalResult = runFrontalSolver(
@@ -179,8 +178,6 @@ export class FEAScriptModel {
         solutionVector = linearSystemResult.solutionVector;
       }
     } else if (this.solverConfig === "frontPropagationScript") {
-      basicLog(`Using solver: ${this.solverConfig}`);
-
       // Initialize eikonalActivationFlag
       let eikonalActivationFlag = 0;
       const eikonalExteralIterations = 5; // Number of incremental steps for the eikonal equation
@@ -215,7 +212,6 @@ export class FEAScriptModel {
         eikonalActivationFlag += 1 / eikonalExteralIterations;
       }
     } else if (this.solverConfig === "generalFormPDEScript") {
-      basicLog(`Using solver: ${this.solverConfig}`);
       // Check if using frontal solver
       if (this.solverMethod === "frontal") {
         errorLog(
@@ -259,8 +255,8 @@ export class FEAScriptModel {
     basicLog("Beginning solving process...");
     console.time("totalSolvingTime");
 
+    basicLog(`Using solver: ${this.solverConfig}`);
     if (this.solverConfig === "heatConductionScript") {
-
       ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(meshData, this.boundaryConditions));
 
       if (this.solverMethod === "jacobi-gpu") {

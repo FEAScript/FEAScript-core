@@ -207,18 +207,15 @@ class webgpuFEAScriptWorker {
    * @param {array} A - The system matrix
    * @param {array} b - The right-hand side vector
    * @param {array} x0 - The initial guess
-   * @param {number} [maxIter=1000] - The maximum number of iterations
-   * @param {number} [tol=1e-6] - The convergence tolerance
-   * @returns {array} The solution vector
+   * @param {object} [options] - Additional options for the solver
+   * @param {number} [options.maxIterations=1000] - The maximum number of iterations
+   * @param {number} [options.tolerance=1e-6] - The convergence tolerance
+   * @returns {Promise<object>} An object containing the solution vector, iterations, and convergence status
    */
-  async webgpuJacobiSolver(A, b, x0, maxIter = 1000, tol = 1e-6) {
+  async webgpuJacobiSolver(A, b, x0, options = {}) {
     await this.initialize();
-    try {
-      return await this.computeEngine.webgpuJacobiSolver(A, b, x0, maxIter, tol);
-    } catch (e) {
-      console.error('Error in webgpuJacobiSolver:', e);
-      throw new Error('Jacobi solve failed: ' + e.message);
-    }
+    const { maxIterations, tolerance } = options;
+    return this.computeEngine.webgpuJacobiSolver(A, b, x0, maxIterations, tolerance);
   }
 
   /**

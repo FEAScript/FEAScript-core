@@ -120,7 +120,7 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
     const x0 = new Array(b.length).fill(0);
     let result;
 
-    result = await computeEngine.webgpuJacobiSolver(A, b, x0, maxIterations, tolerance);
+    result = await computeEngine.webgpuJacobiSolver(A, b, x0, { maxIterations, tolerance });
     solutionVector = result.solutionVector;
     converged = result.converged;
     iterations = result.iterations;

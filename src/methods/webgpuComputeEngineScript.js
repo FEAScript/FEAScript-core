@@ -9,12 +9,21 @@
 //       Website: https://feascript.com/             \__|  //
 
 // External imports
-import * as ti from '../vendor/taichi.esm.js';
+import * as ti from "../vendor/taichi.esm.js";
 
 // Internal imports
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
+/**
+ * Class providing GPU-accelerated linear algebra utilities using Taichi.js/WebGPU.
+ * Methods are asynchronous to align with GPU buffer operations but computations are kept
+ * functionally identical to their CPU counterparts elsewhere in the project.
+ */
 export class WebGPUComputeEngine {
+  /**
+   * Constructor to create the compute engine instance.
+   * The engine is lazily initialized via initialize().
+   */
   constructor() {
     this.initialized = false;
   }
@@ -24,7 +33,6 @@ export class WebGPUComputeEngine {
    */
   async initialize() {
     if (this.initialized) return;
-
     await ti.init();
     this.initialized = true;
   }
@@ -76,34 +84,6 @@ export class WebGPUComputeEngine {
   }
 
   /**
-   * Function to perform vector addition: result = a + b
-   * @param {array} a - The first vector
-   * @param {array} b - The second vector
-   * @param {object} [resultBuffer=null] - Optional buffer to store the result
-   * @returns {array} The resulting vector
-   */
-  async vecAdd(a, b, resultBuffer = null) {
-    const n = a.length;
-    const aField = ti.field(ti.f32, [n]);
-    const bField = ti.field(ti.f32, [n]);
-    const resultField = ti.field(ti.f32, [n]);
-
-    aField.fromArray(a);
-    bField.fromArray(b);
-
-    ti.addToKernelScope({ aField, bField, resultField });
-
-    ti.kernel((n) => {
-      for (let i of ti.ndrange(n)) {
-        resultField[i] = aField[i] + bField[i];
-      }
-    })(n);
-
-    const result = await resultField.toArray();
-    return result;
-  }
-
-  /**
    * Function to perform vector subtraction: result = a - b
    * @param {array} a - The first vector
    * @param {array} b - The second vector
@@ -124,34 +104,6 @@ export class WebGPUComputeEngine {
     ti.kernel((n) => {
       for (let i of ti.ndrange(n)) {
         resultField[i] = aField[i] - bField[i];
-      }
-    })(n);
-
-    const result = await resultField.toArray();
-    return result;
-  }
-
-  /**
-   * Function to perform element-wise vector multiplication: result = a * b
-   * @param {array} a - The first vector
-   * @param {array} b - The second vector
-   * @param {object} [resultBuffer=null] - Optional buffer to store the result
-   * @returns {array} The resulting vector
-   */
-  async vecMul(a, b, resultBuffer = null) {
-    const n = a.length;
-    const aField = ti.field(ti.f32, [n]);
-    const bField = ti.field(ti.f32, [n]);
-    const resultField = ti.field(ti.f32, [n]);
-
-    aField.fromArray(a);
-    bField.fromArray(b);
-
-    ti.addToKernelScope({ aField, bField, resultField });
-
-    ti.kernel((n) => {
-      for (let i of ti.ndrange(n)) {
-        resultField[i] = aField[i] * bField[i];
       }
     })(n);
 
@@ -245,7 +197,9 @@ export class WebGPUComputeEngine {
             sum += AField[ti.i32(i) * ti.i32(n) + ti.i32(j)] * xField[j];
           }
         }
-        resultField[i] = omega * (bField[i] - sum) / AField[ti.i32(i) * ti.i32(n) + ti.i32(i)] + (1 - omega) * xField[i];
+        resultField[i] =
+          (omega * (bField[i] - sum)) / AField[ti.i32(i) * ti.i32(n) + ti.i32(i)] +
+          (1 - omega) * xField[i];
       }
     })(n, omega);
 
@@ -271,19 +225,19 @@ export class WebGPUComputeEngine {
 
     ti.kernel((n, op) => {
       for (let i of ti.ndrange(n)) {
-        if (op === 'abs') {
+        if (op === "abs") {
           resultField[i] = ti.abs(aField[i]);
-        } else if (op === 'sqrt') {
+        } else if (op === "sqrt") {
           resultField[i] = ti.sqrt(aField[i]);
-        } else if (op === 'exp') {
+        } else if (op === "exp") {
           resultField[i] = ti.exp(aField[i]);
-        } else if (op === 'log') {
+        } else if (op === "log") {
           resultField[i] = ti.log(aField[i]);
-        } else if (op === 'sin') {
+        } else if (op === "sin") {
           resultField[i] = ti.sin(aField[i]);
-        } else if (op === 'cos') {
+        } else if (op === "cos") {
           resultField[i] = ti.cos(aField[i]);
-        } else if (op === 'tan') {
+        } else if (op === "tan") {
           resultField[i] = ti.tan(aField[i]);
         } else {
           resultField[i] = aField[i];
@@ -314,13 +268,13 @@ export class WebGPUComputeEngine {
 
     ti.kernel((n, scalar, op) => {
       for (let i of ti.ndrange(n)) {
-        if (op === 'add') {
+        if (op === "add") {
           resultField[i] = aField[i] + scalar;
-        } else if (op === 'mul') {
+        } else if (op === "mul") {
           resultField[i] = aField[i] * scalar;
-        } else if (op === 'div') {
+        } else if (op === "div") {
           resultField[i] = aField[i] / scalar;
-        } else if (op === 'pow') {
+        } else if (op === "pow") {
           resultField[i] = ti.pow(aField[i], scalar);
         } else {
           resultField[i] = aField[i];
@@ -500,7 +454,8 @@ export class WebGPUComputeEngine {
         for (let j of ti.ndrange(n)) {
           let sum = 0.0;
           for (let p of ti.ndrange(k)) {
-            sum += AField[ti.i32(i) * ti.i32(k) + ti.i32(p)] *
+            sum +=
+              AField[ti.i32(i) * ti.i32(k) + ti.i32(p)] *
               BField[ti.i32(p) * ti.i32(n) + ti.i32(j)];
           }
           CField[ti.i32(i) * ti.i32(n) + ti.i32(j)] = sum;
@@ -586,7 +541,8 @@ export class WebGPUComputeEngine {
    * @returns {array} The resulting vector
    */
   async sparseMatVecMul(sparseMatrix, x, resultBuffer = null) {
-    const { values, col_indices, row_indices, rows, cols } = sparseMatrix;
+    // Convert incoming snake_case keys to internal camelCase for code style
+    const { values, col_indices: colIndices, row_indices: rowIndices, rows, cols } = sparseMatrix;
     const nnz = values.length;
 
     const valuesField = ti.field(ti.f32, [nnz]);
@@ -596,8 +552,8 @@ export class WebGPUComputeEngine {
     const resultField = ti.field(ti.f32, [rows]);
 
     valuesField.fromArray(values);
-    colIndicesField.fromArray(col_indices);
-    rowIndicesField.fromArray(row_indices);
+    colIndicesField.fromArray(colIndices);
+    rowIndicesField.fromArray(rowIndices);
     xField.fromArray(x);
     resultField.fromArray(new Array(rows).fill(0));
 
@@ -784,19 +740,19 @@ export class WebGPUComputeEngine {
    * @param {number} [omega=1.0] - The relaxation factor for SSOR
    * @returns {array} The vector z
    */
-  async preconditioner(A, r, type = 'jacobi', omega = 1.0) {
+  async preconditioner(A, r, type = "jacobi", omega = 1.0) {
     const n = r.length;
 
-    if (type === 'jacobi') {
+    if (type === "jacobi") {
       // Jacobi: M = diag(A), so z_i = r_i / A_ii
       const diag = await this.diagonal(A);
-      const invDiag = diag.map(d => 1.0 / d);
+      const invDiag = diag.map((d) => 1.0 / d);
       return this.vecMul(invDiag, r);
-    } else if (type === 'ssor') {
+    } else if (type === "ssor") {
       // SSOR: Simplified Symmetric Successive Over-Relaxation
       // This is a basic implementation; full SSOR would require forward/backward sweeps
       const diag = await this.diagonal(A);
-      const invDiag = diag.map(d => omega / d);
+      const invDiag = diag.map((d) => omega / d);
 
       // For simplicity, approximate with Jacobi-like application
       // Full SSOR would need iterative application or matrix splitting
@@ -852,18 +808,18 @@ export class WebGPUComputeEngine {
       const alpha = rr / pAp;
 
       // Update solution: x = x + alpha*p
-      const alpha_p = await this.scale(p, alpha);
-      x = await this.vecAdd(x, alpha_p);
+      const alphaP = await this.scale(p, alpha);
+      x = await this.vecAdd(x, alphaP);
 
       // Update residual: r = r - alpha*A*p
-      const alpha_Ap = await this.scale(Ap, alpha);
-      r = await this.vecSub(r, alpha_Ap);
+      const alphaAp = await this.scale(Ap, alpha);
+      r = await this.vecSub(r, alphaAp);
 
       // Compute new r·r
-      const rr_new = await this.dotProduct(r, r);
-      const rnorm = Math.sqrt(rr_new);
+      const rrNew = await this.dotProduct(r, r);
+      const rnorm = Math.sqrt(rrNew);
 
-      basicLog(`CG: Iteration ${iter + 1}, residual norm: ${rnorm}`);
+      debugLog(`CG: Iteration ${iter + 1}, residual norm: ${rnorm}`);
 
       // Check convergence
       if (rnorm < tol * rnorm0) {
@@ -872,20 +828,20 @@ export class WebGPUComputeEngine {
       }
 
       // Compute beta = (r_new·r_new) / (r_old·r_old)
-      const beta = rr_new / rr;
+      const beta = rrNew / rr;
 
       // Update search direction: p = r + beta*p (or z + beta*p if preconditioned)
       if (preconditionerType) {
         const z = await this.preconditioner(A, r, preconditionerType);
-        const beta_p = await this.scale(p, beta);
-        p = await this.vecAdd(z, beta_p);
+        const betaP = await this.scale(p, beta);
+        p = await this.vecAdd(z, betaP);
       } else {
-        const beta_p = await this.scale(p, beta);
-        p = await this.vecAdd(r, beta_p);
+        const betaP = await this.scale(p, beta);
+        p = await this.vecAdd(r, betaP);
       }
 
       // Update rr for next iteration
-      rr = rr_new;
+      rr = rrNew;
     }
 
     return x;
@@ -894,7 +850,7 @@ export class WebGPUComputeEngine {
   /**
    * Function to solve a system of linear equations using the Jacobi iterative method (GPU asynchronous version)
    *
-   * @param {array} A - The coefficient matrix (must be square)
+   * @param {array} A - The system matrix
    * @param {array} b - The right-hand side vector
    * @param {array} x0 - Initial guess for solution vector
    * @param {number} [maxIter=1000] - Maximum number of iterations
@@ -903,36 +859,59 @@ export class WebGPUComputeEngine {
    */
   async webgpuJacobiSolver(A, b, x0, maxIter, tol) {
     const n = b.length;
-    let x = await this.copy(x0);
-    let x_new = await this.copy(x0);
+    const flatA = A.flat();
 
-    const diag = await this.diagonal(A);
+    const AField = ti.field(ti.f32, [n * n]);
+    const bField = ti.field(ti.f32, [n]);
+    const xField = ti.field(ti.f32, [n]);
+    const xNewField = ti.field(ti.f32, [n]);
+    const diagField = ti.field(ti.f32, [n]);
+    const maxResidualField = ti.field(ti.f32, [1]);
+
+    AField.fromArray(flatA);
+    bField.fromArray(b);
+    xField.fromArray(x0);
+    xNewField.fromArray(x0);
+
+    ti.addToKernelScope({ AField, bField, xField, xNewField, diagField, maxResidualField });
+
+    ti.kernel((n) => {
+      for (let i of ti.ndrange(n)) {
+        diagField[i] = AField[ti.i32(i) * ti.i32(n) + ti.i32(i)];
+      }
+    })(n);
+
+    const jacobiStep = ti.kernel((n) => {
+      maxResidualField[0] = 0.0;
+      for (let i of ti.ndrange(n)) {
+        let sum = 0.0;
+        for (let j of ti.ndrange(n)) {
+          sum += AField[ti.i32(i) * ti.i32(n) + ti.i32(j)] * xField[j];
+        }
+        const ri = bField[i] - sum;
+        xNewField[i] = xField[i] + ri / diagField[i];
+        ti.atomicMax(maxResidualField[0], ti.abs(ri));
+      }
+    });
+
+    const swapSolution = ti.kernel((n) => {
+      for (let i of ti.ndrange(n)) {
+        xField[i] = xNewField[i];
+      }
+    });
 
     for (let iter = 0; iter < maxIter; iter++) {
-      // Compute residual r = b - A*x
-      const Ax = await this.matVecMul(A, x);
-      const r = await this.vecSub(b, Ax);
-
-      // Check convergence
-      const rnorm = await this.norm(r);
-      basicLog(`Jacobi: Iteration ${iter + 1}, residual norm: ${rnorm}`);
-
+      jacobiStep(n);
+      const rnorm = (await maxResidualField.toArray())[0];
+      debugLog(`Jacobi: Iteration ${iter + 1}, residual norm: ${rnorm}`);
       if (rnorm < tol) {
-        basicLog(`Jacobi: Converged in ${iter + 1} iterations`);
-        return { solutionVector: x, iterations: iter + 1, converged: true };
+        return { solutionVector: await xNewField.toArray(), iterations: iter + 1, converged: true };
       }
-
-      // Jacobi update: x_new[i] = x[i] + r[i] / A[i][i]
-      for (let i = 0; i < n; i++) {
-        x_new[i] = x[i] + r[i] / diag[i];
-      }
-
-      // Swap references
-      [x, x_new] = [x_new, x];
+      swapSolution(n);
     }
 
     errorLog(`Jacobi: Did not converge in ${maxIter} iterations`);
-    return { solutionVector: x, iterations: maxIter, converged: false };
+    return { solutionVector: await xField.toArray(), iterations: maxIter, converged: false };
   }
 
   /**
@@ -941,7 +920,7 @@ export class WebGPUComputeEngine {
   async destroy() {
     if (this.initialized) {
       // Clean up Taichi.js resources and WebGPU context
-      if (typeof ti.destroy === 'function') {
+      if (typeof ti.destroy === "function") {
         await ti.destroy();
       }
       this.initialized = false;
