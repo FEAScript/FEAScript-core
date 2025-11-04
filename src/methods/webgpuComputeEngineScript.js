@@ -167,47 +167,6 @@ export class WebGPUComputeEngine {
   }
 
   /**
-   * Function to perform a Jacobi update step: x_new = D^(-1) * (b - R * x_old)
-   * @param {array} A - The system matrix
-   * @param {array} b - The right-hand side vector
-   * @param {array} x - The current solution vector
-   * @param {number} [omega=1.0] - The relaxation factor
-   * @param {object} [resultBuffer=null] - Optional buffer to store the result
-   * @returns {array} The updated solution vector
-   */
-  async jacobiUpdate(A, b, x, omega = 1.0, resultBuffer = null) {
-    const n = x.length;
-    const AField = ti.field(ti.f32, [n * n]);
-    const bField = ti.field(ti.f32, [n]);
-    const xField = ti.field(ti.f32, [n]);
-    const resultField = ti.field(ti.f32, [n]);
-
-    const flatA = A.flat();
-    AField.fromArray(flatA);
-    bField.fromArray(b);
-    xField.fromArray(x);
-
-    ti.addToKernelScope({ AField, bField, xField, resultField });
-
-    ti.kernel((n, omega) => {
-      for (let i = 0; i < n; i++) {
-        let sum = 0.0;
-        for (let j = 0; j < n; j++) {
-          if (i !== j) {
-            sum += AField[ti.i32(i) * ti.i32(n) + ti.i32(j)] * xField[j];
-          }
-        }
-        resultField[i] =
-          (omega * (bField[i] - sum)) / AField[ti.i32(i) * ti.i32(n) + ti.i32(i)] +
-          (1 - omega) * xField[i];
-      }
-    })(n, omega);
-
-    const result = await resultField.toArray();
-    return result;
-  }
-
-  /**
    * Function to perform an element-wise operation on a vector: result[i] = op(a[i])
    * @param {array} a - The input vector
    * @param {string} op - The operation to perform ('abs', 'sqrt', 'exp', 'log', 'sin', 'cos', 'tan')
