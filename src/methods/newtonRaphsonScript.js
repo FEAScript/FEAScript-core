@@ -1,12 +1,10 @@
-//   ______ ______           _____           _       _     //
-//  |  ____|  ____|   /\    / ____|         (_)     | |    //
-//  | |__  | |__     /  \  | (___   ___ ____ _ ____ | |_   //
-//  |  __| |  __|   / /\ \  \___ \ / __|  __| |  _ \| __|  //
-//  | |    | |____ / ____ \ ____) | (__| |  | | |_) | |    //
-//  |_|    |______/_/    \_\_____/ \___|_|  |_|  __/| |    //
-//                                            | |   | |    //
-//                                            |_|   | |_   //
-//       Website: https://feascript.com/             \__|  //
+/**
+ * ════════════════════════════════════════════════════════════
+ *  FEAScript Library
+ *  Lightweight Finite Element Simulation in JavaScript
+ *  Version: 0.1.4 | https://feascript.com
+ * ════════════════════════════════════════════════════════════
+ */
 
 // Internal imports
 import { euclideanNorm } from "../methods/euclideanNormScript.js";
@@ -19,15 +17,13 @@ import { assembleFrontPropagationFront } from "../models/frontPropagationScript.
  * Function to solve a system of non-linear equations using the Newton-Raphson method
  * @param {function} assembleMat - Matrix assembler based on the physical model
  * @param {object} context - Context object containing simulation data and options
- * @param {number} [maxIterations=100] - Maximum number of iterations
- * @param {number} [tolerance=1e-4] - Convergence tolerance
  * @returns {object} An object containing:
  *  - solutionVector: The solution vector
  *  - iterations: The number of iterations performed
  *  - converged: Boolean indicating whether the method converged
  */
 
-export function newtonRaphson(assembleMat, context, maxIterations = 100, tolerance = 1e-4) {
+export function newtonRaphson(assembleMat, context = {}) {
   let errorNorm = 0;
   let converged = false;
   let iterations = 0;
@@ -35,6 +31,9 @@ export function newtonRaphson(assembleMat, context, maxIterations = 100, toleran
   let solutionVector = [];
   let jacobianMatrix = [];
   let residualVector = [];
+
+  // Extract context
+  const { maxIterations = 100, tolerance = 1e-4 } = context;
 
   // Calculate system size
   let totalNodes = context.meshData.nodesXCoordinates.length;

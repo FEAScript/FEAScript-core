@@ -32,7 +32,7 @@ Thank you for your interest in contributing! FEAScript is in early development, 
 
 All files in the FEAScript-core codebase should follow this structure:
 
-1.  Banner: All files start with the FEAScript ASCII art banner
+1.  Banner: All files start with the FEAScript banner
 2.  Imports:
     - External imports first, alphabetically ordered
     - Internal imports next, grouped by module/folder
@@ -41,15 +41,13 @@ All files in the FEAScript-core codebase should follow this structure:
 Example:
 
 ```javascript
-//   ______ ______           _____           _       _     //
-//  |  ____|  ____|   /\    / ____|         (_)     | |    //
-//  | |__  | |__     /  \  | (___   ___ ____ _ ____ | |_   //
-//  |  __| |  __|   / /\ \  \___ \ / __|  __| |  _ \| __|  //
-//  | |    | |____ / ____ \ ____) | (__| |  | | |_) | |    //
-//  |_|    |______/_/    \_\_____/ \___|_|  |_|  __/| |    //
-//                                            | |   | |    //
-//                                            |_|   | |_   //
-//       Website: https://feascript.com/             \__|  //
+/**
+ * ════════════════════════════════════════════════════════════
+ *  FEAScript Library
+ *  Lightweight Finite Element Simulation in JavaScript
+ *  Version: {VERSION} | https://feascript.com
+ * ════════════════════════════════════════════════════════════
+ */
 
 // External imports
 import { mathLibrary } from "math-package";
