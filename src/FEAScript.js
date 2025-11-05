@@ -46,9 +46,16 @@ export class FEAScriptModel {
     this.solverConfig = solverConfig;
 
     // Store coefficient functions if provided
-    if (options && options.coefficientFunctions) {
+    if (options?.coefficientFunctions) {
       this.coefficientFunctions = options.coefficientFunctions;
       debugLog("Coefficient functions set");
+    }
+    // Only update if a value is provided, otherwise keep the default
+    if (options?.maxIterations !== undefined) {
+      this.maxIterations = options.maxIterations;
+    }
+    if (options?.tolerance !== undefined) {
+      this.tolerance = options.tolerance;
     }
 
     debugLog(`Solver config set to: ${solverConfig}`);
@@ -69,67 +76,15 @@ export class FEAScriptModel {
     debugLog(`Solver method set to: ${solverMethod}`);
   }
 
-  async solveWithWebgpu(computeEngine) {
+  /**
+   * Function to solve the finite element problem synchronously
+   * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
+   * @returns {object} An object containing the solution vector and the coordinates of the mesh nodes
+   */
+  solve(options = {}) {
     if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
       errorLog("Solver config, mesh config, and boundary conditions must be set before solving.");
     }
-
-    let jacobianMatrix = [];
-    let residualVector = [];
-    let solutionVector = [];
-    let nodesCoordinates = {};
-
-    // Prepare the mesh
-    basicLog("Preparing mesh...");
-    const meshData = prepareMesh(this.meshConfig);
-    basicLog("Mesh preparation completed");
-
-    // Extract node coordinates from meshData
-    nodesCoordinates = {
-      nodesXCoordinates: meshData.nodesXCoordinates,
-      nodesYCoordinates: meshData.nodesYCoordinates,
-    };
-
-    // Assembly matrices
-    basicLog("Beginning matrix assembly...");
-    console.time("assemblyMatrices");
-    basicLog(`Using solver: ${this.solverConfig}`);
-    if (this.solverConfig === "solidHeatTransferScript") {
-      ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(
-        meshData,
-        this.boundaryConditions
-      ));
-    }
-    console.timeEnd("assemblyMatrices");
-    basicLog("Matrix assembly completed");
-
-    // System solving with WebGPU Jacobi
-    basicLog("Solving system using WebGPU Jacobi...");
-    console.time("systemSolving");
-
-    // Convert matrices to arrays for WebGPU
-    const A = Array.isArray(jacobianMatrix) ? jacobianMatrix : jacobianMatrix.toArray();
-    const b = Array.isArray(residualVector) ? residualVector : residualVector.toArray();
-
-    // For heat conduction FEM, the matrix might be negative definite
-    console.log("Matrix diagonal sample:", A.slice(0, 5).map((row, i) => row[i]));
-    console.log("RHS sample:", b.slice(0, 5));
-
-    // Use WebGPU Jacobi method
-    const initialGuess = new Array(b.length).fill(0);
-    solutionVector = await computeEngine.webgpuJacobiSolver(A, b, initialGuess, 10000, 1e-3);
-
-    console.timeEnd("systemSolving");
-    basicLog("System solved successfully with WebGPU Jacobi");
-
-    return { solutionVector, nodesCoordinates };
-  }
-
-  solve() {
-    if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
-      errorLog("Solver config, mesh config, and boundary conditions must be set before solving.");
-    }
-
     /**
      * For consistency across both linear and nonlinear formulations,
      * this project always refers to the assembled right-hand side vector
@@ -172,7 +127,10 @@ export class FEAScriptModel {
       } else {
         // Use regular linear solver methods
         ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(meshData, this.boundaryConditions));
-        const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
+        const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector, {
+          maxIterations: options.maxIterations ?? this.maxIterations,
+          tolerance: options.tolerance ?? this.tolerance,
+        });
         solutionVector = linearSystemResult.solutionVector;
       }
     } else if (this.solverConfig === "frontPropagationScript") {
@@ -187,6 +145,9 @@ export class FEAScriptModel {
         eikonalActivationFlag: eikonalActivationFlag,
         solverMethod: this.solverMethod,
         initialSolution,
+        // TODO: Consider using different maxIterations/tolerance for Newton-Raphson and linear solver
+        maxIterations: options.maxIterations ?? this.maxIterations,
+        tolerance: options.tolerance ?? this.tolerance,
       };
 
       while (eikonalActivationFlag <= 1) {
@@ -199,7 +160,7 @@ export class FEAScriptModel {
         }
 
         // Solve the assembled non-linear system
-        const newtonRaphsonResult = newtonRaphson(assembleFrontPropagationMat, context, 100, 1e-4);
+        const newtonRaphsonResult = newtonRaphson(assembleFrontPropagationMat, context);
 
         // Extract results
         jacobianMatrix = newtonRaphsonResult.jacobianMatrix;
@@ -223,7 +184,10 @@ export class FEAScriptModel {
           this.coefficientFunctions
         ));
 
-        const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
+        const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector, {
+          maxIterations: options.maxIterations ?? this.maxIterations,
+          tolerance: options.tolerance ?? this.tolerance,
+        });
         solutionVector = linearSystemResult.solutionVector;
       }
     }
@@ -233,6 +197,12 @@ export class FEAScriptModel {
     return { solutionVector, nodesCoordinates };
   }
 
+  /**
+   * Function to solve the finite element problem asynchronously
+   * @param {object} computeEngine - The compute engine to use for the asynchronous solver (e.g., a worker or a WebGPU context)
+   * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
+   * @returns {Promise<object>} A promise that resolves to an object containing the solution vector and the coordinates of the mesh nodes
+   */
   async solveAsync(computeEngine, options = {}) {
     if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
       errorLog("Solver config, mesh config, and boundary conditions must be set before solving.");
@@ -260,13 +230,12 @@ export class FEAScriptModel {
       if (this.solverMethod === "jacobi-gpu") {
         const { solutionVector: x } = await solveLinearSystemAsync("jacobi-gpu", jacobianMatrix, residualVector, {
           computeEngine,
-          maxIterations: options.maxIterations,
-          tolerance: options.tolerance,
+          maxIterations: options.maxIterations ?? this.maxIterations,
+          tolerance: options.tolerance ?? this.tolerance,
         });
         solutionVector = x;
       } else {
-        const { solutionVector: x } = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector);
-        solutionVector = x;
+        // Other async solver
       }
     }
     console.timeEnd("totalSolvingTime");
@@ -274,4 +243,5 @@ export class FEAScriptModel {
 
     return { solutionVector, nodesCoordinates };
   }
+
 }

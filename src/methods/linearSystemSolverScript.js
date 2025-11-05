@@ -16,16 +16,16 @@ import * as Comlink from "../vendor/comlink.mjs";
  * @param {string} solverMethod - The solver method to use ("lusolve" or "jacobi")
  * @param {Array} jacobianMatrix - The coefficient matrix
  * @param {Array} residualVector - The right-hand side vector
- * @param {object} [options] - Additional options for the solver
- * @param {number} [options.maxIterations=10000] - Maximum iterations for iterative methods
- * @param {number} [options.tolerance=1e-3] - Convergence tolerance for iterative methods
+ * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance`
  * @returns {object} An object containing:
  *  - solutionVector: The solution vector
  *  - converged: Boolean indicating whether the method converged (for iterative methods)
  *  - iterations: Number of iterations performed (for iterative methods)
  */
 export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, options = {}) {
-  const { maxIterations = 10000, tolerance = 1e-3 } = options;
+
+  // Extract options
+  const { maxIterations = 10000, tolerance = 1e-4 } = options;
 
   let solutionVector = [];
   let converged = true;
@@ -85,16 +85,16 @@ async function createDefaultComputeEngine() {
  * @param {string} solverMethod - The solver method to use (e.g., "jacobi-gpu")
  * @param {array} jacobianMatrix - The coefficient matrix
  * @param {array} residualVector - The right-hand side vector
- * @param {object} [options] - Additional options for the solver
- * @param {number} [options.maxIterations=10000] - Maximum iterations for iterative methods
- * @param {number} [options.tolerance=1e-3] - Convergence tolerance for iterative methods
+ * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance`
  * @returns {Promise<object>} A promise that resolves to an object containing:
  *  - solutionVector: The solution vector
  *  - converged: Boolean indicating whether the method converged (for iterative methods)
  *  - iterations: Number of iterations performed (for iterative methods)
  */
 export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, residualVector, options = {}) {
-  const { maxIterations = 10000, tolerance = 1e-3 } = options;
+  
+  // Extract options
+  const { maxIterations = 10000, tolerance = 1e-4 } = options;
 
   basicLog(`Solving system using ${solverMethod}...`);
   console.time("systemSolving");
@@ -137,7 +137,7 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
   basicLog(`System solved successfully (${solverMethod})`);
 
   if (created) {
-    await computeEngine?.destroy?.().catch(() => {});
+    await computeEngine?.destroy?.().catch(() => { });
     created.worker.terminate();
   }
 

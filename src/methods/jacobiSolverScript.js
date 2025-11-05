@@ -11,16 +11,16 @@
  * @param {array} A - The system matrix
  * @param {array} b - The right-hand side vector
  * @param {array} x0 - Initial guess for solution vector
- * @param {object} [options] - Additional options for the solver
- * @param {number} [options.maxIterations=1000] - Maximum number of iterations
- * @param {number} [options.tolerance=1e-6] - Convergence tolerance
+ * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance`
  * @returns {object} An object containing:
  *  - solutionVector: The solution vector
  *  - iterations: The number of iterations performed
  *  - converged: Boolean indicating whether the method converged
  */
 export function jacobiSolver(A, b, x0, options = {}) {
-  const { maxIterations = 1000, tolerance = 1e-6 } = options;
+  // Extract options
+  const { maxIterations, tolerance } = options;
+
   const n = A.length;
   let x = [...x0];
   let xNew = new Array(n);

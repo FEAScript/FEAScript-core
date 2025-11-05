@@ -49,9 +49,7 @@ class webgpuFEAScriptWorker {
    * @param {array} A - The system matrix
    * @param {array} b - The right-hand side vector
    * @param {array} x0 - The initial guess
-   * @param {object} [options] - Additional options for the solver
-   * @param {number} [options.maxIterations=1000] - The maximum number of iterations
-   * @param {number} [options.tolerance=1e-6] - The convergence tolerance
+   * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance`
    * @returns {Promise<object>} An object containing the solution vector, iterations, and convergence status
    */
   async webgpuJacobiSolver(A, b, x0, options = {}) {

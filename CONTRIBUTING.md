@@ -32,7 +32,7 @@ Thank you for your interest in contributing! FEAScript is in early development, 
 
 All files in the FEAScript-core codebase should follow this structure:
 
-1.  Banner: All files start with the FEAScript ASCII art banner
+1.  Banner: All files start with the FEAScript banner
 2.  Imports:
     - External imports first, alphabetically ordered
     - Internal imports next, grouped by module/folder
