@@ -109,6 +109,7 @@ export class FEAScriptModel {
     const nodesCoordinates = {
       nodesXCoordinates: meshData.nodesXCoordinates,
       nodesYCoordinates: meshData.nodesYCoordinates,
+      nop: meshData.nop,
     };
 
     // Select and execute the appropriate solver based on solverConfig
@@ -218,6 +219,7 @@ export class FEAScriptModel {
     const nodesCoordinates = {
       nodesXCoordinates: meshData.nodesXCoordinates,
       nodesYCoordinates: meshData.nodesYCoordinates,
+      nop: meshData.nop,
     };
 
     basicLog("Beginning solving process...");
