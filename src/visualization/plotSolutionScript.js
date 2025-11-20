@@ -9,7 +9,7 @@
 /**
  * Function to create plots of the solution vector
  * @param {*} solutionVector - The computed solution vector
- * @param {*} nodesCoordinates - Object containing x and y coordinates for the nodes
+ * @param {*} nodesCoordinates - Object containing x and y coordinates for the nodes and the nodal numbering (NOP) array
  * @param {string} solverConfig - Parameter specifying the type of solver
  * @param {string} meshDimension - The dimension of the solution
  * @param {string} plotType - The type of plot
@@ -28,6 +28,24 @@ export function plotSolution(
   const { nodesXCoordinates, nodesYCoordinates } = nodesCoordinates;
   const nop = nodesCoordinates.nop;
   const totalElements = nop.length;
+  const estimateTickLabelLength = (minVal, maxVal) => {
+    const extremes = [minVal, maxVal].filter((val) => Number.isFinite(val));
+    if (!extremes.length) {
+      return 3;
+    }
+    return Math.max(
+      ...extremes.map((val) => {
+        const absVal = Math.abs(val);
+        if (absVal === 0) {
+          return 3;
+        }
+        if (absVal >= 1e4 || absVal < 1e-2) {
+          return 9; // Allow room for scientific notation
+        }
+        return Math.max(4, absVal.toFixed(2).length + (val < 0 ? 1 : 0));
+      })
+    );
+  };
 
   if (meshDimension === "1D" && plotType === "line") {
     // Check if solutionVector is a nested array
@@ -37,9 +55,9 @@ export function plotSolution(
     } else {
       yData = solutionVector;
     }
-    let xData = Array.from(nodesXCoordinates);
+    const xData = Array.from(nodesXCoordinates);
 
-    let lineData = {
+    const lineData = {
       x: xData,
       y: yData,
       mode: "lines",
@@ -48,19 +66,60 @@ export function plotSolution(
       name: "Solution",
     };
 
-    let maxWindowWidth = Math.min(window.innerWidth, 700);
-    let maxPlotWidth = Math.max(...xData);
-    let zoomFactor = maxWindowWidth / maxPlotWidth;
-    let plotWidth = Math.max(zoomFactor * maxPlotWidth, 400);
-    let plotHeight = 350;
+    const hasDOM = typeof window !== "undefined";
+    const screenWidth = hasDOM ? window.innerWidth : 1024;
+    const screenHeight = hasDOM ? window.innerHeight : 768;
+    const plotContainer = hasDOM && typeof document !== "undefined" ? document.getElementById(plotDivId) : null;
+    const containerWidth = plotContainer?.clientWidth;
 
-    let layout = {
-      title: `line plot - ${solverConfig}`,
-      width: plotWidth,
+    // Derive responsive width/height so the 1D plot scales cleanly on small screens
+    const availableWidth = Math.max(140, Math.min(1200, containerWidth || screenWidth || 700));
+    const widthPadding = Math.min(48, availableWidth * 0.08);
+    const widthCandidate = Math.max(availableWidth - widthPadding, 140);
+    let plotWidth = Math.min(700, widthCandidate);
+    if (containerWidth) {
+      const containerLimit = Math.max(100, containerWidth - 8);
+      plotWidth = Math.min(plotWidth, containerLimit, containerWidth);
+    }
+
+    const isMobileViewport = availableWidth <= 768;
+    const defaultAspectRatio = 0.65;
+    const naturalHeight = plotWidth * defaultAspectRatio;
+    const minHeight = isMobileViewport ? Math.max(200, plotWidth * 0.55) : 300;
+    const maxHeight = isMobileViewport ? Math.min(screenHeight * 0.65, 500) : 600;
+    const plotHeight = Math.round(
+      Math.max(minHeight, Math.min(maxHeight, naturalHeight))
+    );
+
+    const layout = {
+      title: {
+        text: `line plot - ${solverConfig}`,
+        y: 0.9,
+        x: 0.5,
+        xanchor: "center",
+        yanchor: "top",
+        font: { size: 16 }
+      },
+      width: Math.round(plotWidth),
       height: plotHeight,
-      xaxis: { title: "x" },
-      yaxis: { title: "Solution" },
-      margin: { l: 70, r: 40, t: 50, b: 50 },
+      xaxis: {
+        title: "x",
+        ticks: "outside",
+        ticklen: 6,
+        showline: true,
+        linecolor: "#444",
+        automargin: true
+      },
+      yaxis: {
+        title: "Solution",
+        ticks: "outside",
+        ticklen: 6,
+        showline: true,
+        linecolor: "#444",
+        automargin: true
+      },
+      margin: { l: 60, r: 40, t: 60, b: 50 },
+      hovermode: "closest",
     };
 
     Plotly.newPlot(plotDivId, [lineData], layout, { responsive: true });
@@ -74,7 +133,6 @@ export function plotSolution(
     }
 
     // Common sizing parameters
-    let maxWindowWidth = Math.min(window.innerWidth, 700);
     const minX = Math.min(...nodesXCoordinates);
     const maxX = Math.max(...nodesXCoordinates);
     const minY = Math.min(...nodesYCoordinates);
@@ -85,14 +143,44 @@ export function plotSolution(
     const padY = Math.max(spanY * 0.03, 1e-3);
     const paddedXRange = [minX - padX, maxX + padX];
     const paddedYRange = [minY - padY, maxY + padY];
-    let aspectRatio = maxY / maxX;
-    let plotWidth = Math.min(maxWindowWidth, 600);
-    let plotHeight = plotWidth * aspectRatio * 0.8; // Slightly reduce height for better appearance
+    const hasDOM = typeof window !== "undefined";
+    const screenWidth = hasDOM ? window.innerWidth : 1024;
+    const screenHeight = hasDOM ? window.innerHeight : 768;
+    const plotContainer = hasDOM && typeof document !== "undefined" ? document.getElementById(plotDivId) : null;
+    const containerWidth = plotContainer?.clientWidth;
+    // Derive responsive width/height so the 2D plot scales cleanly on small screens
+    const availableWidth = Math.max(140, Math.min(1200, containerWidth || screenWidth || 700));
+    const widthPadding = Math.min(48, availableWidth * 0.08);
+    const widthCandidate = Math.max(availableWidth - widthPadding, 140);
+    let plotWidth = Math.min(700, widthCandidate);
+    if (containerWidth) {
+      const containerLimit = Math.max(100, containerWidth - 8);
+      plotWidth = Math.min(plotWidth, containerLimit, containerWidth);
+    }
+    const spanAspectRatio = spanY / spanX || 1;
+    const isMobileViewport = availableWidth <= 768;
+    const naturalHeight = plotWidth * spanAspectRatio;
+    const minHeight = isMobileViewport ? Math.max(200, plotWidth * 0.55) : 360;
+    const maxHeight = isMobileViewport ? Math.min(screenHeight * 0.65, 680) : 900;
+    const plotHeight = Math.round(
+      Math.max(minHeight, Math.min(maxHeight, naturalHeight))
+    );
+    const sceneDomainX = plotWidth >= 520 ? [0.04, 0.9] : [0.02, 0.86];
+    // Position colorbar just outside the scene so it never overlaps the mesh even on narrow screens
+    const colorbarXPosition = Math.min(0.98, sceneDomainX[1] + 0.06);
 
     // Layout properties
-    let layout = {
-      title: `${plotType} plot - ${solverConfig}`,
-      width: plotWidth,
+    const layout = {
+
+      title: {
+        text: `${plotType} plot - ${solverConfig}`,
+        y: 0.8,
+        x: 0.5,
+        xanchor: "center",
+        yanchor: "top",
+        font: { size: 16 }
+      },
+      width: Math.round(plotWidth),
       height: plotHeight,
       xaxis: {
         title: "x",
@@ -112,14 +200,14 @@ export function plotSolution(
         linecolor: "#444",
         automargin: true
       },
-      margin: { l: 50, r: 50, t: 50, b: 50 },
+      margin: { l: 50, r: 50, t: 20, b: 50, },
       hovermode: "closest",
     };
 
-    let contourDataUnstructured = [];
+    const contourDataUnstructured = [];
 
     // Convert all elements to triangles for visualization
-    let triangles = [];
+    const triangles = [];
 
     for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {
       const elementNodes = nop[elementIndex];
@@ -165,8 +253,10 @@ export function plotSolution(
       ],
       colorbar: {
         title: "Solution",
-        x: 1.0,
-        y: 0.5
+        x: colorbarXPosition,
+        y: 0.5,
+        thickness: 14,
+        len: 0.4
       },
       flatshading: false, // Enable smooth shading for interpolation
       lighting: {
@@ -178,7 +268,7 @@ export function plotSolution(
       },
       lightposition: { x: 0, y: 0, z: 1 },
       showscale: true,
-      hovertemplate: 'x: %{x:.3f}<br>y: %{y:.3f}<br>Solution: %{intensity:.3f}<extra></extra>',
+      hovertemplate: 'x: %{x:.2f}<br>y: %{y:.2f}<br>Solution: %{intensity:.2f}<extra></extra>',
       showlegend: false
     });
 
@@ -233,6 +323,7 @@ export function plotSolution(
 
     // Force a top-down orthographic camera so 2D meshes render without perspective
     layout.scene = {
+      domain: { x: sceneDomainX, y: [0, 1] },
       xaxis: {
         title: "x",
         range: paddedXRange,
@@ -243,7 +334,8 @@ export function plotSolution(
         ticks: "outside",
         ticklen: 6,
         tickcolor: "#444",
-        automargin: true
+        automargin: true,
+        tickfont: { size: 12 }
       },
       yaxis: {
         title: "y",
@@ -255,14 +347,15 @@ export function plotSolution(
         ticks: "outside",
         ticklen: 6,
         tickcolor: "#444",
-        automargin: true
+        automargin: true,
+        tickfont: { size: 12 }
       },
       zaxis: {
         visible: false,
         showgrid: false,
         zeroline: false
       },
-      aspectmode: "manual",
+      aspectmode: "data",
       aspectratio: {
         x: spanX,
         y: spanY,
@@ -270,7 +363,7 @@ export function plotSolution(
       },
       dragmode: "pan",
       uirevision: "topView",
-      camera: createCameraDefaults()
+      camera: createCameraDefaults(),
     };
 
     const meshPlotConfig = {
