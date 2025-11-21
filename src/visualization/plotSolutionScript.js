@@ -14,7 +14,6 @@
  * @param {string} meshDimension - The dimension of the solution
  * @param {string} plotType - The type of plot
  * @param {string} plotDivId - The id of the div where the plot will be rendered
- * @param {string} [meshType="structured"] - Type of mesh: "structured" or "unstructured"
  */
 export function plotSolution(
   solutionVector,
@@ -22,8 +21,7 @@ export function plotSolution(
   solverConfig,
   meshDimension,
   plotType,
-  plotDivId,
-  meshType = "structured"
+  plotDivId
 ) {
   const { nodesXCoordinates, nodesYCoordinates } = nodesCoordinates;
 
@@ -38,7 +36,7 @@ export function plotSolution(
     let xData = Array.from(nodesXCoordinates);
 
     let lineData = {
-      x: xData,
+      x: nodesXCoordinates,
       y: yData,
       mode: "lines",
       type: "scatter",
@@ -47,9 +45,7 @@ export function plotSolution(
     };
 
     let maxWindowWidth = Math.min(window.innerWidth, 700);
-    let maxPlotWidth = Math.max(...xData);
-    let zoomFactor = maxWindowWidth / maxPlotWidth;
-    let plotWidth = Math.max(zoomFactor * maxPlotWidth, 400);
+    let plotWidth = Math.min(maxWindowWidth, 600);
     let plotHeight = 350;
 
     let layout = {
@@ -58,35 +54,28 @@ export function plotSolution(
       height: plotHeight,
       xaxis: { title: "x" },
       yaxis: { title: "Solution" },
-      margin: { l: 70, r: 40, t: 50, b: 50 },
+      margin: { l: 50, r: 50, t: 50, b: 50 },
     };
 
     Plotly.newPlot(plotDivId, [lineData], layout, { responsive: true });
   } else if (meshDimension === "2D" && plotType === "contour") {
-    // Use the user-provided mesh type
-    const isStructured = meshType === "structured";
-
-    // For auto-detection (if needed)
-    const uniqueXCoords = new Set(nodesXCoordinates).size;
-    const uniqueYCoords = new Set(nodesYCoordinates).size;
-
-    // Extract scalar values from solution vector
-    let zValues;
+    // Check if solutionVector is a nested array
+    let zData;
     if (Array.isArray(solutionVector[0])) {
-      zValues = solutionVector.map((val) => val[0]);
+      zData = solutionVector.map((val) => val[0]);
     } else {
-      zValues = solutionVector;
+      zData = solutionVector;
     }
 
-    // Common sizing parameters for both plot types
+    // Sizing parameters
     let maxWindowWidth = Math.min(window.innerWidth, 700);
     let maxX = Math.max(...nodesXCoordinates);
     let maxY = Math.max(...nodesYCoordinates);
     let aspectRatio = maxY / maxX;
     let plotWidth = Math.min(maxWindowWidth, 600);
-    let plotHeight = plotWidth * aspectRatio * 0.8; // Slightly reduce height for better appearance
+    let plotHeight = plotWidth * aspectRatio;
 
-    // Common layout properties
+    // Layout properties
     let layout = {
       title: `${plotType} plot - ${solverConfig}`,
       width: plotWidth,
@@ -97,67 +86,26 @@ export function plotSolution(
       hovermode: "closest",
     };
 
-    if (isStructured) {
-      // Calculate the number of nodes along the x-axis and y-axis
-      const numNodesX = uniqueXCoords;
-      const numNodesY = uniqueYCoords;
+    // Create the plot
+    let contourData = {
+      x: nodesXCoordinates,
+      y: nodesYCoordinates,
+      z: zData,
+      type: "contour",
+      line: {
+        smoothing: 0.85,
+      },
+      contours: {
+        coloring: "heatmap",
+        showlabels: false,
+      },
+      //colorscale: 'Viridis',
+      colorbar: {
+        title: "Solution",
+      },
+      name: "Solution Field",
+    };
 
-      // Reshape the nodesXCoordinates and nodesYCoordinates arrays to match the grid dimensions
-      let reshapedXCoordinates = math.reshape(Array.from(nodesXCoordinates), [numNodesX, numNodesY]);
-      let reshapedYCoordinates = math.reshape(Array.from(nodesYCoordinates), [numNodesX, numNodesY]);
-
-      // Reshape the solution array to match the grid dimensions
-      let reshapedSolution = math.reshape(Array.from(solutionVector), [numNodesX, numNodesY]);
-
-      // Transpose the reshapedSolution array to get column-wise data
-      let transposedSolution = math.transpose(reshapedSolution);
-
-      // Create an array for x-coordinates used in the contour plot
-      let reshapedXForPlot = [];
-      for (let i = 0; i < numNodesX * numNodesY; i += numNodesY) {
-        let xValue = nodesXCoordinates[i];
-        reshapedXForPlot.push(xValue);
-      }
-
-      // Create the data structure for the contour plot
-      let contourData = {
-        z: transposedSolution,
-        type: "contour",
-        contours: {
-          coloring: "heatmap",
-          showlabels: false,
-        },
-        //colorscale: 'Viridis',
-        colorbar: {
-          title: "Solution",
-        },
-        x: reshapedXForPlot,
-        y: reshapedYCoordinates[0],
-        name: "Solution Field",
-      };
-
-      // Create the plot using Plotly
-      Plotly.newPlot(plotDivId, [contourData], layout, { responsive: true });
-    } else {
-      // Create an interpolated contour plot for the unstructured mesh
-      let contourData = {
-        x: nodesXCoordinates,
-        y: nodesYCoordinates,
-        z: zValues,
-        type: "contour",
-        contours: {
-          coloring: "heatmap",
-          showlabels: false,
-        },
-        //colorscale: 'Viridis',
-        colorbar: {
-          title: "Solution",
-        },
-        name: "Solution Field",
-      };
-
-      // Create the plot using only the contour fill
-      Plotly.newPlot(plotDivId, [contourData], layout, { responsive: true });
-    }
+    Plotly.newPlot(plotDivId, [contourData], layout, { responsive: true });
   }
 }
