@@ -105,11 +105,12 @@ export class FEAScriptModel {
     const meshData = prepareMesh(this.meshConfig);
     basicLog("Mesh preparation completed");
 
-    // Extract node coordinates from meshData
+    // Extract node coordinates and nodal numbering from meshData
     const nodesCoordinates = {
       nodesXCoordinates: meshData.nodesXCoordinates,
       nodesYCoordinates: meshData.nodesYCoordinates,
     };
+    const nop = meshData.nop;
 
     // Select and execute the appropriate solver based on solverConfig
     basicLog("Beginning solving process...");
@@ -194,7 +195,7 @@ export class FEAScriptModel {
     console.timeEnd("totalSolvingTime");
     basicLog("Solving process completed");
 
-    return { solutionVector, nodesCoordinates };
+    return { solutionVector, nodesCoordinates, nop };
   }
 
   /**
@@ -228,11 +229,16 @@ export class FEAScriptModel {
       ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(meshData, this.boundaryConditions));
 
       if (this.solverMethod === "jacobi-gpu") {
-        const { solutionVector: x } = await solveLinearSystemAsync("jacobi-gpu", jacobianMatrix, residualVector, {
-          computeEngine,
-          maxIterations: options.maxIterations ?? this.maxIterations,
-          tolerance: options.tolerance ?? this.tolerance,
-        });
+        const { solutionVector: x } = await solveLinearSystemAsync(
+          "jacobi-gpu",
+          jacobianMatrix,
+          residualVector,
+          {
+            computeEngine,
+            maxIterations: options.maxIterations ?? this.maxIterations,
+            tolerance: options.tolerance ?? this.tolerance,
+          }
+        );
         solutionVector = x;
       } else {
         // Other async solver
@@ -241,7 +247,6 @@ export class FEAScriptModel {
     console.timeEnd("totalSolvingTime");
     basicLog("Solving process completed");
 
-    return { solutionVector, nodesCoordinates };
+    return { solutionVector, nodesCoordinates, nop };
   }
-
 }
