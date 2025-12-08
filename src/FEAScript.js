@@ -22,7 +22,7 @@ import { basicLog, debugLog, warnLog, errorLog } from "./utilities/loggingScript
  * @param {string} solverConfig - Parameter specifying the type of solver
  * @param {object} meshConfig - Object containing computational mesh details
  * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
- * @returns {object} An object containifng the solution vector and additional mesh information
+ * @returns {object} An object containifng the solution vector and mesh information
  */
 export class FEAScriptModel {
   constructor() {
@@ -79,7 +79,7 @@ export class FEAScriptModel {
   /**
    * Function to solve the finite element problem synchronously
    * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
-   * @returns {object} An object containing the solution vector and the coordinates of the mesh nodes
+   * @returns {object} An object containifng the solution vector and mesh information
    */
   solve(options = {}) {
     if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
@@ -110,7 +110,6 @@ export class FEAScriptModel {
       nodesXCoordinates: meshData.nodesXCoordinates,
       nodesYCoordinates: meshData.nodesYCoordinates,
     };
-    const nop = meshData.nop;
 
     // Select and execute the appropriate solver based on solverConfig
     basicLog("Beginning solving process...");
@@ -195,7 +194,7 @@ export class FEAScriptModel {
     console.timeEnd("totalSolvingTime");
     basicLog("Solving process completed");
 
-    return { solutionVector, nodesCoordinates, nop };
+    return { solutionVector, nodesCoordinates};
   }
 
   /**
@@ -247,6 +246,6 @@ export class FEAScriptModel {
     console.timeEnd("totalSolvingTime");
     basicLog("Solving process completed");
 
-    return { solutionVector, nodesCoordinates, nop };
+    return { solutionVector, nodesCoordinates};
   }
 }
