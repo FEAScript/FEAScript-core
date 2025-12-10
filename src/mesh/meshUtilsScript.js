@@ -6,6 +6,7 @@
  * ════════════════════════════════════════════════════════════
  */
 
+// Internal imports
 import { BasisFunctions } from "./basisFunctionsScript.js";
 import { Mesh1D, Mesh2D } from "./meshGenerationScript.js";
 import { NumericalIntegration } from "../methods/numericalIntegrationScript.js";
@@ -220,21 +221,20 @@ export function performIsoparametricMapping2D(params) {
  * @param {number} elementIndex - Index of the element to process
  * @returns {array} Array of element connectivity for the two triangles
  */
-export function splitQuadrilateral(meshData) {
-  const elementConnectivity = meshData.nop[elementIndex];
+export function splitQuadrilateral(meshData, elementIndex) {
+  const { nop } = meshData;
+  const nodesPerElement = nop[0].length;
   // Check if the element is linear quadrilateral
-  if (elementConnectivity.length === 4) {
-    const splitElementConnectivity = elementConnectivity;
+  if (nodesPerElement === 4) {
     return [
-      [splitElementConnectivity[0], splitElementConnectivity[1], splitElementConnectivity[3]],
-      [splitElementConnectivity[0], splitElementConnectivity[2], splitElementConnectivity[3]],
+      [nop[elementIndex][0], nop[elementIndex][1], nop[elementIndex][3]],
+      [nop[elementIndex][0], nop[elementIndex][2], nop[elementIndex][3]],
     ];
     // Check if the element is quadratic quadrilateral
-  } else if (elementConnectivity.length === 9) {
-    const splitElementConnectivity = elementConnectivity;
+  } else if (nodesPerElement === 9) {
     return [
-      [splitElementConnectivity[0], splitElementConnectivity[2], splitElementConnectivity[8]],
-      [splitElementConnectivity[0], splitElementConnectivity[6], splitElementConnectivity[8]],
+      [nop[elementIndex][0], nop[elementIndex][2], nop[elementIndex][8]],
+      [nop[elementIndex][0], nop[elementIndex][6], nop[elementIndex][8]],
     ];
   }
 }
@@ -259,22 +259,33 @@ export function pointInsideTriangle(x, y, vertices) {
 }
 
 /**
- * Function to assemble the list of elements that touch each global node
- * @param {object} meshData - Object containing mesh connectivity (nop)
- * @returns {object} Indices of neighboring elements per node
+ * Function that finds the list of adjacent elements for each node in the mesh
+ * @param {object} meshData - Object containing nodal numbering (NOP)
+ * @returns {object} Object containing:
+ *  - nodeNeighbors: Indices of neighboring elements per node
+ *  - neighborCount: Total number of neighboring elements per node
  */
 export function computeNodeNeighbors(meshData) {
   const { nop, nodesXCoordinates } = meshData;
   const totalNodes = nodesXCoordinates.length;
   const nodesPerElement = nop[0].length;
-  const nodeNeighbors = Array.from({ length: totalNodes }, () => []);
 
+  // Initialize arrays
+  const nodeNeighbors = Array.from({ length: totalNodes }, () => []);
+  const neighborCount = Array(totalNodes).fill(0);
+
+  // Loop through all elements
   for (let elemIndex = 0; elemIndex < nop.length; elemIndex++) {
     for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
-      const nodeId = nop[elemIndex][localNodeIndex] - 1;
-      nodeNeighbors[nodeId].push(elemIndex);
+      const nodeIndex = nop[elemIndex][localNodeIndex] - 1;
+
+      // Increment the total number of neighboring elements for this node
+      neighborCount[nodeIndex] = neighborCount[nodeIndex] + 1;
+
+      // Store the element index as a neighbor of this node
+      nodeNeighbors[nodeIndex].push(elemIndex);
     }
   }
 
-  return { nodeNeighbors };
+  return { nodeNeighbors, neighborCount };
 }

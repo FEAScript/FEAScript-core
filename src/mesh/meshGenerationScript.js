@@ -75,8 +75,8 @@ export class Mesh {
         // Map nodal numbering from GMSH format to FEAScript format for quad elements
         const mappedNodalNumbering = [];
 
-        for (let elemIdx = 0; elemIdx < quadElements.length; elemIdx++) {
-          const gmshNodes = quadElements[elemIdx];
+        for (let elementIndex = 0; elementIndex < quadElements.length; elementIndex++) {
+          const gmshNodes = quadElements[elementIndex];
           const feaScriptNodes = new Array(gmshNodes.length);
 
           // Check for element type based on number of nodes
@@ -175,21 +175,25 @@ export class Mesh {
                   let foundElement = false;
 
                   // Loop through all elements in the mesh
-                  for (let elemIdx = 0; elemIdx < this.parsedMesh.nodalNumbering.length; elemIdx++) {
-                    const elemNodes = this.parsedMesh.nodalNumbering[elemIdx];
+                  for (
+                    let elementIndex = 0;
+                    elementIndex < this.parsedMesh.nodalNumbering.length;
+                    elementIndex++
+                  ) {
+                    const elementConnectivity = this.parsedMesh.nodalNumbering[elementIndex];
 
                     // For linear quadrilateral linear elements (4 nodes)
-                    if (elemNodes.length === 4) {
+                    if (elementConnectivity.length === 4) {
                       // Check if both boundary nodes are in this element
-                      if (elemNodes.includes(node1) && elemNodes.includes(node2)) {
+                      if (elementConnectivity.includes(node1) && elementConnectivity.includes(node2)) {
                         // Find which side of the element these nodes form
                         let side;
 
-                        const node1Index = elemNodes.indexOf(node1);
-                        const node2Index = elemNodes.indexOf(node2);
+                        const node1Index = elementConnectivity.indexOf(node1);
+                        const node2Index = elementConnectivity.indexOf(node2);
 
                         debugLog(
-                          `  Found element ${elemIdx} containing boundary nodes. Element nodes: [${elemNodes.join(
+                          `  Found element ${elementIndex} containing boundary nodes. Element nodes: [${elementConnectivity.join(
                             ", "
                           )}]`
                         );
@@ -207,47 +211,47 @@ export class Mesh {
                           (node1Index === 2 && node2Index === 0)
                         ) {
                           side = 0; // Bottom side
-                          debugLog(`  These nodes form the BOTTOM side (${side}) of element ${elemIdx}`);
+                          debugLog(`  These nodes form the BOTTOM side (${side}) of element ${elementIndex}`);
                         } else if (
                           (node1Index === 0 && node2Index === 1) ||
                           (node1Index === 1 && node2Index === 0)
                         ) {
                           side = 1; // Left side
-                          debugLog(`  These nodes form the LEFT side (${side}) of element ${elemIdx}`);
+                          debugLog(`  These nodes form the LEFT side (${side}) of element ${elementIndex}`);
                         } else if (
                           (node1Index === 1 && node2Index === 3) ||
                           (node1Index === 3 && node2Index === 1)
                         ) {
                           side = 2; // Top side
-                          debugLog(`  These nodes form the TOP side (${side}) of element ${elemIdx}`);
+                          debugLog(`  These nodes form the TOP side (${side}) of element ${elementIndex}`);
                         } else if (
                           (node1Index === 2 && node2Index === 3) ||
                           (node1Index === 3 && node2Index === 2)
                         ) {
                           side = 3; // Right side
-                          debugLog(`  These nodes form the RIGHT side (${side}) of element ${elemIdx}`);
+                          debugLog(`  These nodes form the RIGHT side (${side}) of element ${elementIndex}`);
                         }
 
                         // Add the element and side to the boundary elements array
-                        this.parsedMesh.boundaryElements[prop.tag].push([elemIdx, side]);
+                        this.parsedMesh.boundaryElements[prop.tag].push([elementIndex, side]);
                         debugLog(
-                          `  Added element-side pair [${elemIdx}, ${side}] to boundary tag ${prop.tag}`
+                          `  Added element-side pair [${elementIndex}, ${side}] to boundary tag ${prop.tag}`
                         );
                         foundElement = true;
                         break;
                       }
-                    } else if (elemNodes.length === 9) {
+                    } else if (elementConnectivity.length === 9) {
                       // For quadratic quadrilateral elements (9 nodes)
                       // Check if both boundary nodes are in this element
-                      if (elemNodes.includes(node1) && elemNodes.includes(node2)) {
+                      if (elementConnectivity.includes(node1) && elementConnectivity.includes(node2)) {
                         // Find which side of the element these nodes form
                         let side;
 
-                        const node1Index = elemNodes.indexOf(node1);
-                        const node2Index = elemNodes.indexOf(node2);
+                        const node1Index = elementConnectivity.indexOf(node1);
+                        const node2Index = elementConnectivity.indexOf(node2);
 
                         debugLog(
-                          `  Found element ${elemIdx} containing boundary nodes. Element nodes: [${elemNodes.join(
+                          `  Found element ${elementIndex} containing boundary nodes. Element nodes: [${elementConnectivity.join(
                             ", "
                           )}]`
                         );
@@ -272,7 +276,7 @@ export class Mesh {
                           (node1Index === 6 && node2Index === 3)
                         ) {
                           side = 0; // Bottom side (nodes 0, 3, 6)
-                          debugLog(`  These nodes form the BOTTOM side (${side}) of element ${elemIdx}`);
+                          debugLog(`  These nodes form the BOTTOM side (${side}) of element ${elementIndex}`);
                         } else if (
                           (node1Index === 0 && node2Index === 2) ||
                           (node1Index === 2 && node2Index === 0) ||
@@ -282,7 +286,7 @@ export class Mesh {
                           (node1Index === 2 && node2Index === 1)
                         ) {
                           side = 1; // Left side (nodes 0, 1, 2)
-                          debugLog(`  These nodes form the LEFT side (${side}) of element ${elemIdx}`);
+                          debugLog(`  These nodes form the LEFT side (${side}) of element ${elementIndex}`);
                         } else if (
                           (node1Index === 2 && node2Index === 8) ||
                           (node1Index === 8 && node2Index === 2) ||
@@ -292,7 +296,7 @@ export class Mesh {
                           (node1Index === 8 && node2Index === 5)
                         ) {
                           side = 2; // Top side (nodes 2, 5, 8)
-                          debugLog(`  These nodes form the TOP side (${side}) of element ${elemIdx}`);
+                          debugLog(`  These nodes form the TOP side (${side}) of element ${elementIndex}`);
                         } else if (
                           (node1Index === 6 && node2Index === 8) ||
                           (node1Index === 8 && node2Index === 6) ||
@@ -302,13 +306,13 @@ export class Mesh {
                           (node1Index === 8 && node2Index === 7)
                         ) {
                           side = 3; // Right side (nodes 6, 7, 8)
-                          debugLog(`  These nodes form the RIGHT side (${side}) of element ${elemIdx}`);
+                          debugLog(`  These nodes form the RIGHT side (${side}) of element ${elementIndex}`);
                         }
 
                         // Add the element and side to the boundary elements array
-                        this.parsedMesh.boundaryElements[prop.tag].push([elemIdx, side]);
+                        this.parsedMesh.boundaryElements[prop.tag].push([elementIndex, side]);
                         debugLog(
-                          `  Added element-side pair [${elemIdx}, ${side}] to boundary tag ${prop.tag}`
+                          `  Added element-side pair [${elementIndex}, ${side}] to boundary tag ${prop.tag}`
                         );
                         foundElement = true;
                         break;
@@ -398,7 +402,7 @@ export class Mesh1D extends Mesh {
       }
     }
     // Generate nodal numbering (NOP) array
-    const nodalNumbering = this.generate1DNodalNumbering(this.numElementsX, totalNodesX, this.elementOrder);
+    const nodalNumbering = this.generateNodalNumbering1D(this.numElementsX, totalNodesX, this.elementOrder);
     // Find boundary elements
     const boundaryElements = this.findBoundaryElements();
 
@@ -421,7 +425,7 @@ export class Mesh1D extends Mesh {
    * @param {string} elementOrder - The order of elements, either 'linear' or 'quadratic'
    * @returns {array} NOP - A two-dimensional array which represents the element-to-node connectivity for the entire mesh
    */
-  generate1DNodalNumbering(numElementsX, totalNodesX, elementOrder) {
+  generateNodalNumbering1D(numElementsX, totalNodesX, elementOrder) {
     // TODO: The totalNodesX is not used in the original function. Verify if
     // there is a multiple calculation on the totalNodes.
 
@@ -582,7 +586,7 @@ export class Mesh2D extends Mesh {
     }
 
     // Generate nodal numbering (NOP) array
-    const nodalNumbering = this.generate2DNodalNumbering(
+    const nodalNumbering = this.generateNodalNumbering2D(
       this.numElementsX,
       this.numElementsY,
       totalNodesY,
@@ -616,7 +620,7 @@ export class Mesh2D extends Mesh {
    * @param {string} elementOrder - The order of elements, either 'linear' or 'quadratic'
    * @returns {array} NOP - A two-dimensional array which represents the element-to-node connectivity for the entire mesh
    */
-  generate2DNodalNumbering(numElementsX, numElementsY, totalNodesY, elementOrder) {
+  generateNodalNumbering2D(numElementsX, numElementsY, totalNodesY, elementOrder) {
     let elementIndex = 0;
     let nop = [];
 

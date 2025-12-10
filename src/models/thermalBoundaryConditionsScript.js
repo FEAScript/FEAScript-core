@@ -602,7 +602,7 @@ export class ThermalBoundaryConditions {
 
         // Find if this element is on this boundary and which side
         const boundaryElement = this.boundaryElements[boundaryKey].find(
-          ([elemIdx, _]) => elemIdx === elementIndex
+          ([boundaryElementIndex, _]) => boundaryElementIndex === elementIndex
         );
 
         if (boundaryElement) {

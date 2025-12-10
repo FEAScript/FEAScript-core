@@ -255,7 +255,7 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
     for (const boundaryKey in meshData.boundaryElements) {
       if (
         thermalBoundaryConditions.boundaryConditions[boundaryKey]?.[0] === "convection" &&
-        meshData.boundaryElements[boundaryKey].some(([elemIdx, _]) => elemIdx === elementIndex)
+        meshData.boundaryElements[boundaryKey].some(([boundaryElementIndex, _]) => boundaryElementIndex === elementIndex)
       ) {
         isOnRobinTypeBoundary = true;
         break;

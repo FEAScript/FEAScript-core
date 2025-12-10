@@ -12,6 +12,7 @@ import {
   splitQuadrilateral,
   pointInsideTriangle,
   computeNodeNeighbors,
+  adjacencySearch,
 } from "../mesh/meshUtilsScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
@@ -121,7 +122,7 @@ export function plotSolution(result, model, plotType, plotDivId) {
  * @param {string} plotType - The type of plot
  * @param {string} plotDivId - The id of the div where the plot will be rendered
  */
-export function plotInterpolatedSolution(result, model, plotType, plotDivId)  {
+export function plotInterpolatedSolution(result, model, plotType, plotDivId) {
   if (meshDimension === "1D" && plotType === "line") {
     // 1D plot region
   } else if (meshDimension === "2D" && plotType === "contour") {
@@ -138,19 +139,19 @@ export function plotInterpolatedSolution(result, model, plotType, plotDivId)  {
     visNodeXCoordinates[0] = minX;
     visNodeYCoordinates[0] = minY;
 
-    for (let nodeIndexY = 1; nodeIndexY < visNodesY; nodeIndexY++) {
-      visNodeXCoordinates[nodeIndexY] = visNodeXCoordinates[0];
-      visNodeYCoordinates[nodeIndexY] = visNodeYCoordinates[0] + nodeIndexY * deltavisY;
+    for (let visNodeIndexY = 1; visNodeIndexY < visNodesY; visNodeIndexY++) {
+      visNodeXCoordinates[visNodeIndexY] = visNodeXCoordinates[0];
+      visNodeYCoordinates[visNodeIndexY] = visNodeYCoordinates[0] + visNodeIndexY * deltavisY;
     }
 
-    for (let nodeIndexX = 1; nodeIndexX < visNodesX; nodeIndexX++) {
-      const nnode = nodeIndexX * visNodesY;
-      visNodeXCoordinates[nnode] = visNodeXCoordinates[0] + nodeIndexX * deltavisX;
+    for (let visNodeIndexX = 1; visNodeIndexX < visNodesX; visNodeIndexX++) {
+      const nnode = visNodeIndexX * visNodesY;
+      visNodeXCoordinates[nnode] = visNodeXCoordinates[0] + visNodeIndexX * deltavisX;
       visNodeYCoordinates[nnode] = visNodeYCoordinates[0];
 
-      for (let nodeIndexY = 1; nodeIndexY < visNodesY; nodeIndexY++) {
-        visNodeXCoordinates[nnode + nodeIndexY] = visNodeXCoordinates[nnode];
-        visNodeYCoordinates[nnode + nodeIndexY] = visNodeYCoordinates[nnode] + nodeIndexY * deltavisY;
+      for (let visNodeIndexY = 1; visNodeIndexY < visNodesY; visNodeIndexY++) {
+        visNodeXCoordinates[nnode + visNodeIndexY] = visNodeXCoordinates[nnode];
+        visNodeYCoordinates[nnode + visNodeIndexY] = visNodeYCoordinates[nnode] + visNodeIndexY * deltavisY;
       }
     }
 
@@ -159,5 +160,13 @@ export function plotInterpolatedSolution(result, model, plotType, plotDivId)  {
     // Initialize visSolution with null for all visualization nodes
     visSolution = new Array(visNodesX * visNodesY).fill(null);
 
+    // Perform adjacency-based search to find which element (triangular) contains a given point
+    const elementConnectivity = meshData.nop[elementIndex];
+    lastParentElement = 0;
+    for (let visNodeIndex = 0; visNodeIndex < visNodesX * visNodesY; visNodeIndex++) {
+      for (let localNodeIndex = 0; localNodeIndex < elementConnectivity.length; localNodeIndex++) {
+        // Under development
+      }
+    }
   }
 }
