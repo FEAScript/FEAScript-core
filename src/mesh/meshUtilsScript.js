@@ -223,7 +223,7 @@ export function performIsoparametricMapping2D(params) {
  */
 export function splitQuadrilateral(meshData, elementIndex) {
   const { nop } = meshData;
-  const nodesPerElement = nop[0].length;
+  const nodesPerElement = nop[elementIndex].length;
   // Check if the element is linear quadrilateral
   if (nodesPerElement === 4) {
     return [
