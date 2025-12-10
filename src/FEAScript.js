@@ -79,7 +79,7 @@ export class FEAScriptModel {
   /**
    * Function to solve the finite element problem synchronously
    * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
-   * @returns {object} An object containifng the solution vector and mesh information
+   * @returns {object} An object containing the solution vector and mesh information
    */
   solve(options = {}) {
     if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
@@ -194,7 +194,7 @@ export class FEAScriptModel {
     console.timeEnd("totalSolvingTime");
     basicLog("Solving process completed");
 
-    return { solutionVector, nodesCoordinates};
+    return { solutionVector, nodesCoordinates };
   }
 
   /**
@@ -246,6 +246,6 @@ export class FEAScriptModel {
     console.timeEnd("totalSolvingTime");
     basicLog("Solving process completed");
 
-    return { solutionVector, nodesCoordinates};
+    return { solutionVector, nodesCoordinates };
   }
 }
