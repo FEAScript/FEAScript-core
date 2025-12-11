@@ -161,11 +161,22 @@ export function plotInterpolatedSolution(result, model, plotType, plotDivId) {
     visSolution = new Array(visNodesX * visNodesY).fill(null);
 
     // Perform adjacency-based search to find which element (triangular) contains a given point
-    const elementConnectivity = meshData.nop[elementIndex];
+    const { nodeNeighbors, neighborCount } = computeNodeNeighbors(meshData);
     lastParentElement = 0;
     for (let visNodeIndex = 0; visNodeIndex < visNodesX * visNodesY; visNodeIndex++) {
-      for (let localNodeIndex = 0; localNodeIndex < elementConnectivity.length; localNodeIndex++) {
-        // Under development
+      for (
+        let localNodeIndex = 0;
+        localNodeIndex < meshData.nop[lastParentElement].length;
+        localNodeIndex++
+      ) {
+        let globalNodeIndex = meshData.nop[lastParentElement][localNodeIndex] - 1;
+        for (
+          let neighborElementsIndex = 0;
+          neighborElementsIndex < neighborCount[globalNodeIndex];
+          neighborElementsIndex++
+        ) {
+          currentElement = nodeNeighbors[globalNodeIndex][neighborElementsIndex];
+        }
       }
     }
   }
