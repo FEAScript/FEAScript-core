@@ -12,7 +12,6 @@ import {
   splitQuadrilateral,
   pointInsideTriangle,
   computeNodeNeighbors,
-  adjacencySearch,
 } from "../mesh/meshUtilsScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
