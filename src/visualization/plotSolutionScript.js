@@ -10,10 +10,11 @@
 // Internal imports
 import {
   prepareMesh,
-  splitQuadrilateral,
   pointInsideTriangle,
+  pointInsideQuadrilateral,
   computeNodeNeighbors,
 } from "../mesh/meshUtilsScript.js";
+import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**
@@ -23,7 +24,7 @@ import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
  * @param {string} plotType - The type of plot
  * @param {string} plotDivId - The id of the div where the plot will be rendered
  */
-export function plotSolution(result, model, plotType, plotDivId) {
+export function plotSolution(model, result, plotType, plotDivId) {
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const solutionVector = result.solutionVector;
   const solverConfig = model.solverConfig;
@@ -122,22 +123,24 @@ export function plotSolution(result, model, plotType, plotDivId) {
  * @param {string} plotType - The type of plot
  * @param {string} plotDivId - The id of the div where the plot will be rendered
  */
-export function plotInterpolatedSolution(result, model, plotType, plotDivId) {
+export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
+  const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates; // Check if we should place it inside 2D block
+  const meshDimension = model.meshConfig.meshDimension;
   if (meshDimension === "1D" && plotType === "line") {
     // 1D plot region
   } else if (meshDimension === "2D" && plotType === "contour") {
     const visNodeXCoordinates = [];
     const visNodeYCoordinates = [];
     let visSolution = [];
-    const visNodesX = 1e3; // number of nodes along the x-axis of the visualization grid
-    const visNodesY = 1e3; // number of nodes along the y-axis of the visualization grid
+    const visNodesX = 1e2; // number of nodes along the x-axis of the visualization grid
+    const visNodesY = 1e2; // number of nodes along the y-axis of the visualization grid
 
     const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
     const deltavisX = (Math.max(...nodesXCoordinates) - Math.min(...nodesXCoordinates)) / visNodesX;
     const deltavisY = (Math.max(...nodesYCoordinates) - Math.min(...nodesYCoordinates)) / visNodesY;
 
-    visNodeXCoordinates[0] = minX;
-    visNodeYCoordinates[0] = minY;
+    visNodeXCoordinates[0] = Math.min(...nodesXCoordinates);
+    visNodeYCoordinates[0] = Math.min(...nodesYCoordinates);
 
     for (let visNodeIndexY = 1; visNodeIndexY < visNodesY; visNodeIndexY++) {
       visNodeXCoordinates[visNodeIndexY] = visNodeXCoordinates[0];
@@ -175,9 +178,98 @@ export function plotInterpolatedSolution(result, model, plotType, plotDivId) {
           neighborElementsIndex < neighborCount[globalNodeIndex];
           neighborElementsIndex++
         ) {
-          currentElement = nodeNeighbors[globalNodeIndex][neighborElementsIndex];
+          let currentElement = nodeNeighbors[globalNodeIndex][neighborElementsIndex];
+          const nodesPerElement = meshData.nop[currentElement].length;
+          if (nodesPerElement === 4) {
+            let vertices = [
+              [
+                nodesXCoordinates[meshData.nop[currentElement][0] - 1],
+                nodesYCoordinates[meshData.nop[currentElement][0] - 1],
+              ],
+              [
+                nodesXCoordinates[meshData.nop[currentElement][1] - 1],
+                nodesYCoordinates[meshData.nop[currentElement][1] - 1],
+              ],
+              [
+                nodesXCoordinates[meshData.nop[currentElement][2] - 1],
+                nodesYCoordinates[meshData.nop[currentElement][2] - 1],
+              ],
+              [
+                nodesXCoordinates[meshData.nop[currentElement][3] - 1],
+                nodesYCoordinates[meshData.nop[currentElement][3] - 1],
+              ],
+            ];
+            if (
+              pointInsideQuadrilateral(
+                visNodeXCoordinates[visNodeIndex],
+                visNodeYCoordinates[visNodeIndex],
+                vertices
+              )
+            ) {
+              lastParentElement = currentElement;
+              visSolution = solutionInterpolation(
+                model,
+                meshData,
+                result,
+                currentElement,
+                visNodeXCoordinates[visNodeIndex],
+                visNodeYCoordinates[visNodeIndex]
+              );
+              break;
+            }
+          } else if (nodesPerElement === 9) {
+            let vertices = [
+              [
+                nodesXCoordinates[meshData.nop[currentElement][0] - 1],
+                nodesYCoordinates[meshData.nop[currentElement][0] - 1],
+              ],
+              [
+                nodesXCoordinates[meshData.nop[currentElement][2] - 1],
+                nodesYCoordinates[meshData.nop[currentElement][2] - 1],
+              ],
+              [
+                nodesXCoordinates[meshData.nop[currentElement][6] - 1],
+                nodesYCoordinates[meshData.nop[currentElement][6] - 1],
+              ],
+              [
+                nodesXCoordinates[meshData.nop[currentElement][8] - 1],
+                nodesYCoordinates[meshData.nop[currentElement][8] - 1],
+              ],
+            ];
+            if (
+              pointInsideQuadrilateral(
+                visNodeXCoordinates[visNodeIndex],
+                visNodeYCoordinates[visNodeIndex],
+                vertices
+              )
+            ) {
+              lastParentElement = currentElement;
+              visSolution = solutionInterpolation(
+                model,
+                meshData,
+                result,
+                currentElement,
+                visNodeXCoordinates[visNodeIndex],
+                visNodeYCoordinates[visNodeIndex]
+              );
+              break;
+            }
+          } // TODO: Add also triangular element cases
         }
       }
     }
+    // TODO: build Plotly contour from visNodeXCoordinates/visNodeYCoordinates/visSolution
   }
 }
+
+/**
+ * Function to interpolate the solution at a specific point (x, y) within an element
+ * @param {object} model - Object containing model properties
+ * @param {object} meshData - Object containing mesh data
+ * @param {object} result - Object containing solution vector and mesh information
+ * @param {number} elementIndex - Index of the element containing the point
+ * @param {number} x - X-coordinate of the point
+ * @param {number} y - Y-coordinate of the point
+ * @returns {number} Interpolated solution value
+ */
+function solutionInterpolation(model, meshData, result, elementIndex, x, y) {}

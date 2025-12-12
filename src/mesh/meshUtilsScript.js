@@ -217,30 +217,6 @@ export function performIsoparametricMapping2D(params) {
 }
 
 /**
- * Function to split the quadrilateral elements into two triangles
- * @param {object} meshData - Object containing mesh connectivity (nop)
- * @param {number} elementIndex - Index of the element to process
- * @returns {array} Array of element connectivity for the two triangles
- */
-export function splitQuadrilateral(meshData, elementIndex) {
-  const { nop } = meshData;
-  const nodesPerElement = nop[elementIndex].length;
-  // Check if the element is linear quadrilateral
-  if (nodesPerElement === 4) {
-    return [
-      [nop[elementIndex][0], nop[elementIndex][1], nop[elementIndex][3]],
-      [nop[elementIndex][0], nop[elementIndex][2], nop[elementIndex][3]],
-    ];
-    // Check if the element is quadratic quadrilateral
-  } else if (nodesPerElement === 9) {
-    return [
-      [nop[elementIndex][0], nop[elementIndex][2], nop[elementIndex][8]],
-      [nop[elementIndex][0], nop[elementIndex][6], nop[elementIndex][8]],
-    ];
-  }
-}
-
-/**
  * Function to test if a point is inside a triangle using barycentric coordinates
  * @param {number} x - X-coordinate of the point
  * @param {number} y - Y-coordinate of the point
@@ -257,6 +233,40 @@ export function pointInsideTriangle(x, y, vertices) {
   if (a >= -tolerance && b >= -tolerance && c >= -tolerance) {
     return true;
   }
+}
+
+/**
+ * Function to test if a point is inside a quadrilateral by spliting it into triangles and using barycentric coordinates
+ * @param {number} x - X-coordinate of the point
+ * @param {number} y - Y-coordinate of the point
+ * @param {array} vertices - Quadrilateral vertices [[x0,y0],[x1,y1],[x2,y2],[x3,y3]]
+ * @returns {boolean} True if the point is inside (or on the edge of) the quadrilateral
+ */
+export function pointInsideQuadrilateral(x, y, vertices) {
+  const [firstTriangleVertices, secondTriangleVertices] = splitQuadrilateral(vertices);
+  const pointInsideFirstTriangle = pointInsideTriangle(x, y, firstTriangleVertices);
+  const pointInsideSecondTriangle = pointInsideTriangle(x, y, secondTriangleVertices);
+
+  if (pointInsideFirstTriangle || pointInsideSecondTriangle) {
+    return true;
+  }
+}
+
+/**
+ * Function to split the quadrilateral elements into two triangles
+ * @param {array} vertices - Quadrilateral vertices [[x0,y0],[x1,y1],[x2,y2],[x3,y3]]
+ * @returns {array} Array of triangle vertices: [[v0,v1,v3], [v0,v2,v3]]
+ */
+export function splitQuadrilateral(vertices) {
+  const [v0, v1, v2, v3] = vertices;
+  // Vertices order:
+  //   1 --- 3
+  //   |     |
+  //   0 --- 2
+  return [
+    [v0, v1, v3],
+    [v0, v2, v3],
+  ];
 }
 
 /**
