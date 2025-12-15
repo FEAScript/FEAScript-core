@@ -164,10 +164,11 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
     // Initialize visSolution with null for all visualization nodes
     visSolution = new Array(visNodesX * visNodesY).fill(null);
 
-    // Perform adjacency-based search to find which element (triangular) contains a given point
+    // Perform adjacency-based search to find which element contains a given point (quick search)
     const { nodeNeighbors, neighborCount } = computeNodeNeighbors(meshData);
     lastParentElement = 0;
     for (let visNodeIndex = 0; visNodeIndex < visNodesX * visNodesY; visNodeIndex++) {
+      let found = false;
       for (
         let localNodeIndex = 0;
         localNodeIndex < meshData.nop[lastParentElement].length;
@@ -180,85 +181,118 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
           neighborElementsIndex++
         ) {
           let currentElement = nodeNeighbors[globalNodeIndex][neighborElementsIndex];
-          const nodesPerElement = meshData.nop[currentElement].length;
-          if (nodesPerElement === 4) {
-            let vertices = [
-              [
-                nodesXCoordinates[meshData.nop[currentElement][0] - 1],
-                nodesYCoordinates[meshData.nop[currentElement][0] - 1],
-              ],
-              [
-                nodesXCoordinates[meshData.nop[currentElement][1] - 1],
-                nodesYCoordinates[meshData.nop[currentElement][1] - 1],
-              ],
-              [
-                nodesXCoordinates[meshData.nop[currentElement][2] - 1],
-                nodesYCoordinates[meshData.nop[currentElement][2] - 1],
-              ],
-              [
-                nodesXCoordinates[meshData.nop[currentElement][3] - 1],
-                nodesYCoordinates[meshData.nop[currentElement][3] - 1],
-              ],
-            ];
-            const pointCheck = pointInsideQuadrilateral(
-              visNodeXCoordinates[visNodeIndex],
-              visNodeYCoordinates[visNodeIndex],
-              vertices
-            );
-            if (pointCheck.inside) {
-              lastParentElement = currentElement;
-              visSolution[visNodeIndex] = solutionInterpolation(
-                model,
-                meshData,
-                result,
-                currentElement,
-                pointCheck.ksi,
-                pointCheck.eta
-              );
-              break;
-            }
-          } else if (nodesPerElement === 9) {
-            let vertices = [
-              [
-                nodesXCoordinates[meshData.nop[currentElement][0] - 1],
-                nodesYCoordinates[meshData.nop[currentElement][0] - 1],
-              ],
-              [
-                nodesXCoordinates[meshData.nop[currentElement][2] - 1],
-                nodesYCoordinates[meshData.nop[currentElement][2] - 1],
-              ],
-              [
-                nodesXCoordinates[meshData.nop[currentElement][6] - 1],
-                nodesYCoordinates[meshData.nop[currentElement][6] - 1],
-              ],
-              [
-                nodesXCoordinates[meshData.nop[currentElement][8] - 1],
-                nodesYCoordinates[meshData.nop[currentElement][8] - 1],
-              ],
-            ];
-            const pointCheck = pointInsideQuadrilateral(
-              visNodeXCoordinates[visNodeIndex],
-              visNodeYCoordinates[visNodeIndex],
-              vertices
-            );
-            if (pointCheck.inside) {
-              lastParentElement = currentElement;
-              visSolution[visNodeIndex] = solutionInterpolation(
-                model,
-                meshData,
-                result,
-                currentElement,
-                pointCheck.ksi,
-                pointCheck.eta
-              );
-              break;
-            }
+          const searchResult = pointSearch(
+            model,
+            meshData,
+            result,
+            currentElement,
+            visNodeXCoordinates[visNodeIndex],
+            visNodeYCoordinates[visNodeIndex]
+          );
+
+          if (searchResult.inside) {
+            lastParentElement = currentElement;
+            visSolution[visNodeIndex] = searchResult.value;
+            found = true;
+            break;
           } // TODO: Add also triangular element cases
+        }
+        if (found) break;
+      }
+
+      // Scan all elements to find which element contains a given point (slow search)
+      if (!found) {
+        for (let currentElement = 0; currentElement < meshData.nop.length; currentElement++) {
+          const searchResult = pointSearch(
+            model,
+            meshData,
+            result,
+            currentElement,
+            visNodeXCoordinates[visNodeIndex],
+            visNodeYCoordinates[visNodeIndex]
+          );
+
+          if (searchResult.inside) {
+            lastParentElement = currentElement;
+            visSolution[visNodeIndex] = searchResult.value;
+            found = true;
+            break;
+          }
         }
       }
     }
     // TODO: build Plotly contour from visNodeXCoordinates/visNodeYCoordinates/visSolution
   }
+}
+
+/**
+ * Function to search if a point is inside an element and interpolate the solution
+ * @param {object} model - Object containing model properties
+ * @param {object} meshData - Object containing mesh data
+ * @param {object} result - Object containing solution vector and mesh information
+ * @param {number} currentElement - Index of the element to check
+ * @param {number} visNodeX - X coordinate of the point
+ * @param {number} visNodeY - Y coordinate of the point
+ * @returns {object} Object containing inside boolean and interpolated value
+ */
+function pointSearch(model, meshData, result, currentElement, visNodeX, visNodeY) {
+  const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
+  const nodesPerElement = meshData.nop[currentElement].length;
+
+  if (nodesPerElement === 4) {
+    let vertices = [
+      [
+        nodesXCoordinates[meshData.nop[currentElement][0] - 1],
+        nodesYCoordinates[meshData.nop[currentElement][0] - 1],
+      ],
+      [
+        nodesXCoordinates[meshData.nop[currentElement][1] - 1],
+        nodesYCoordinates[meshData.nop[currentElement][1] - 1],
+      ],
+      [
+        nodesXCoordinates[meshData.nop[currentElement][2] - 1],
+        nodesYCoordinates[meshData.nop[currentElement][2] - 1],
+      ],
+      [
+        nodesXCoordinates[meshData.nop[currentElement][3] - 1],
+        nodesYCoordinates[meshData.nop[currentElement][3] - 1],
+      ],
+    ];
+    const pointCheck = pointInsideQuadrilateral(visNodeX, visNodeY, vertices);
+    if (pointCheck.inside) {
+      return {
+        inside: true,
+        value: solutionInterpolation(model, meshData, result, currentElement, pointCheck.ksi, pointCheck.eta),
+      };
+    }
+  } else if (nodesPerElement === 9) {
+    let vertices = [
+      [
+        nodesXCoordinates[meshData.nop[currentElement][0] - 1],
+        nodesYCoordinates[meshData.nop[currentElement][0] - 1],
+      ],
+      [
+        nodesXCoordinates[meshData.nop[currentElement][2] - 1],
+        nodesYCoordinates[meshData.nop[currentElement][2] - 1],
+      ],
+      [
+        nodesXCoordinates[meshData.nop[currentElement][6] - 1],
+        nodesYCoordinates[meshData.nop[currentElement][6] - 1],
+      ],
+      [
+        nodesXCoordinates[meshData.nop[currentElement][8] - 1],
+        nodesYCoordinates[meshData.nop[currentElement][8] - 1],
+      ],
+    ];
+    const pointCheck = pointInsideQuadrilateral(visNodeX, visNodeY, vertices);
+    if (pointCheck.inside) {
+      return {
+        inside: true,
+        value: solutionInterpolation(model, meshData, result, currentElement, pointCheck.ksi, pointCheck.eta),
+      };
+    }
+  }
+  return { inside: false, value: null };
 }
 
 /**
