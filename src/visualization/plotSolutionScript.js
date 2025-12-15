@@ -74,7 +74,7 @@ export function plotSolution(model, result, plotType, plotDivId) {
       zData = solutionVector;
     }
 
-    // Sizing parameters
+    // Plot sizing parameters
     let maxWindowWidth = Math.min(window.innerWidth, 700);
     let maxX = Math.max(...nodesXCoordinates);
     let maxY = Math.max(...nodesYCoordinates);
@@ -118,14 +118,14 @@ export function plotSolution(model, result, plotType, plotDivId) {
 }
 
 /**
- * Function to create a dense visualization grid
+ * Function to generate a dense visualization grid and interpolate the FEM solution on it
  * @param {object} result - Object containing solution vector and mesh information
  * @param {object} model - Object containing model properties
  * @param {string} plotType - The type of plot
  * @param {string} plotDivId - The id of the div where the plot will be rendered
  */
 export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
-  const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates; // Check if we should place it inside 2D block
+  const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates; // TODO: Check if we should place it inside the 2D block
   const meshDimension = model.meshConfig.meshDimension;
   if (meshDimension === "1D" && plotType === "line") {
     // 1D plot region
@@ -133,12 +133,12 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
     const visNodeXCoordinates = [];
     const visNodeYCoordinates = [];
     let visSolution = [];
-    const visNodesX = 1e2; // number of nodes along the x-axis of the visualization grid
-    const visNodesY = 1e2; // number of nodes along the y-axis of the visualization grid
+    const visNodesX = 1e2; // Number of nodes along the x-axis of the visualization grid
+    const visNodesY = 1e2; // Number of nodes along the y-axis of the visualization grid
 
-    const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
-    const deltavisX = (Math.max(...nodesXCoordinates) - Math.min(...nodesXCoordinates)) / visNodesX;
-    const deltavisY = (Math.max(...nodesYCoordinates) - Math.min(...nodesYCoordinates)) / visNodesY;
+    // const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
+    const deltavisX = (Math.max(...nodesXCoordinates) - Math.min(...nodesXCoordinates)) / (visNodesX - 1);
+    const deltavisY = (Math.max(...nodesYCoordinates) - Math.min(...nodesYCoordinates)) / (visNodesY - 1);
 
     visNodeXCoordinates[0] = Math.min(...nodesXCoordinates);
     visNodeYCoordinates[0] = Math.min(...nodesYCoordinates);
@@ -166,7 +166,7 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
 
     // Perform adjacency-based search to find which element contains a given point (quick search)
     const { nodeNeighbors, neighborCount } = computeNodeNeighbors(meshData);
-    lastParentElement = 0;
+    let lastParentElement = 0;
     for (let visNodeIndex = 0; visNodeIndex < visNodesX * visNodesY; visNodeIndex++) {
       let found = false;
       for (
@@ -195,7 +195,7 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
             visSolution[visNodeIndex] = searchResult.value;
             found = true;
             break;
-          } // TODO: Add also triangular element cases
+          }
         }
         if (found) break;
       }
@@ -221,7 +221,47 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
         }
       }
     }
-    // TODO: build Plotly contour from visNodeXCoordinates/visNodeYCoordinates/visSolution
+
+    // Plot sizing parameters
+    let maxWindowWidth = Math.min(window.innerWidth, 700);
+    let maxX = Math.max(...nodesXCoordinates);
+    let maxY = Math.max(...nodesYCoordinates);
+    let aspectRatio = maxY / maxX;
+    let plotWidth = Math.min(maxWindowWidth, 600);
+    let plotHeight = plotWidth * aspectRatio;
+
+    // Layout properties
+    let layout = {
+      title: `${plotType} plot (interpolated) - ${model.solverConfig}`,
+      width: plotWidth,
+      height: plotHeight,
+      xaxis: { title: "x" },
+      yaxis: { title: "y" },
+      margin: { l: 50, r: 50, t: 50, b: 50 },
+      hovermode: "closest",
+    };
+
+    // Create the plot
+    let contourData = {
+      x: visNodeXCoordinates,
+      y: visNodeYCoordinates,
+      z: visSolution,
+      type: "contour",
+      line: {
+        smoothing: 0.85,
+      },
+      contours: {
+        coloring: "heatmap",
+        showlabels: false,
+      },
+      //colorscale: 'Viridis',
+      colorbar: {
+        title: "Solution",
+      },
+      name: "Interpolated Solution Field",
+    };
+
+    Plotly.newPlot(plotDivId, [contourData], layout, { responsive: true });
   }
 }
 
@@ -231,15 +271,15 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
  * @param {object} meshData - Object containing mesh data
  * @param {object} result - Object containing solution vector and mesh information
  * @param {number} currentElement - Index of the element to check
- * @param {number} visNodeX - X coordinate of the point
- * @param {number} visNodeY - Y coordinate of the point
+ * @param {number} visNodeXCoordinate - X-coordinate of the point
+ * @param {number} visNodeYCoordinate - Y-coordinate of the point
  * @returns {object} Object containing inside boolean and interpolated value
  */
-function pointSearch(model, meshData, result, currentElement, visNodeX, visNodeY) {
+function pointSearch(model, meshData, result, currentElement, visNodeXCoordinate, visNodeYCoordinate) {
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const nodesPerElement = meshData.nop[currentElement].length;
 
-  if (nodesPerElement === 4) {
+  if (nodesPerElement === 4) { // Linear quadrilateral element
     let vertices = [
       [
         nodesXCoordinates[meshData.nop[currentElement][0] - 1],
@@ -258,14 +298,14 @@ function pointSearch(model, meshData, result, currentElement, visNodeX, visNodeY
         nodesYCoordinates[meshData.nop[currentElement][3] - 1],
       ],
     ];
-    const pointCheck = pointInsideQuadrilateral(visNodeX, visNodeY, vertices);
+    const pointCheck = pointInsideQuadrilateral(visNodeXCoordinate, visNodeYCoordinate, vertices);
     if (pointCheck.inside) {
       return {
         inside: true,
         value: solutionInterpolation(model, meshData, result, currentElement, pointCheck.ksi, pointCheck.eta),
       };
     }
-  } else if (nodesPerElement === 9) {
+  } else if (nodesPerElement === 9) { // Quadratic quadrilateral element
     let vertices = [
       [
         nodesXCoordinates[meshData.nop[currentElement][0] - 1],
@@ -284,14 +324,14 @@ function pointSearch(model, meshData, result, currentElement, visNodeX, visNodeY
         nodesYCoordinates[meshData.nop[currentElement][8] - 1],
       ],
     ];
-    const pointCheck = pointInsideQuadrilateral(visNodeX, visNodeY, vertices);
+    const pointCheck = pointInsideQuadrilateral(visNodeXCoordinate, visNodeYCoordinate, vertices);
     if (pointCheck.inside) {
       return {
         inside: true,
         value: solutionInterpolation(model, meshData, result, currentElement, pointCheck.ksi, pointCheck.eta),
       };
     }
-  }
+  }  // TODO: Add also triangular element cases
   return { inside: false, value: null };
 }
 
