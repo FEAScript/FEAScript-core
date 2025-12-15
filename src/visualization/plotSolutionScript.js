@@ -15,6 +15,7 @@ import {
   computeNodeNeighbors,
 } from "../mesh/meshUtilsScript.js";
 import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
+import { initializeFEA } from "../mesh/meshUtilsScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**
@@ -199,21 +200,20 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
                 nodesYCoordinates[meshData.nop[currentElement][3] - 1],
               ],
             ];
-            if (
-              pointInsideQuadrilateral(
-                visNodeXCoordinates[visNodeIndex],
-                visNodeYCoordinates[visNodeIndex],
-                vertices
-              )
-            ) {
+            const pointCheck = pointInsideQuadrilateral(
+              visNodeXCoordinates[visNodeIndex],
+              visNodeYCoordinates[visNodeIndex],
+              vertices
+            );
+            if (pointCheck.inside) {
               lastParentElement = currentElement;
-              visSolution = solutionInterpolation(
+              visSolution[visNodeIndex] = solutionInterpolation(
                 model,
                 meshData,
                 result,
                 currentElement,
-                visNodeXCoordinates[visNodeIndex],
-                visNodeYCoordinates[visNodeIndex]
+                pointCheck.ksi,
+                pointCheck.eta
               );
               break;
             }
@@ -236,21 +236,20 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
                 nodesYCoordinates[meshData.nop[currentElement][8] - 1],
               ],
             ];
-            if (
-              pointInsideQuadrilateral(
-                visNodeXCoordinates[visNodeIndex],
-                visNodeYCoordinates[visNodeIndex],
-                vertices
-              )
-            ) {
+            const pointCheck = pointInsideQuadrilateral(
+              visNodeXCoordinates[visNodeIndex],
+              visNodeYCoordinates[visNodeIndex],
+              vertices
+            );
+            if (pointCheck.inside) {
               lastParentElement = currentElement;
-              visSolution = solutionInterpolation(
+              visSolution[visNodeIndex] = solutionInterpolation(
                 model,
                 meshData,
                 result,
                 currentElement,
-                visNodeXCoordinates[visNodeIndex],
-                visNodeYCoordinates[visNodeIndex]
+                pointCheck.ksi,
+                pointCheck.eta
               );
               break;
             }
@@ -263,13 +262,42 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
 }
 
 /**
- * Function to interpolate the solution at a specific point (x, y) within an element
+ * Function to interpolate the solution at a specific point (ksi, eta) within an element
  * @param {object} model - Object containing model properties
  * @param {object} meshData - Object containing mesh data
  * @param {object} result - Object containing solution vector and mesh information
  * @param {number} elementIndex - Index of the element containing the point
- * @param {number} x - X-coordinate of the point
- * @param {number} y - Y-coordinate of the point
+ * @param {number} ksi - First natural coordinate (ksi)
+ * @param {number} eta - Second natural coordinate (eta)
  * @returns {number} Interpolated solution value
  */
-function solutionInterpolation(model, meshData, result, elementIndex, x, y) {}
+function solutionInterpolation(model, meshData, result, elementIndex, ksi, eta) {
+  // Initialize FEA components
+  const basisFunctions = new BasisFunctions({
+    meshDimension: meshData.meshDimension,
+    elementOrder: meshData.elementOrder,
+  });
+  const solutionVector = result.solutionVector;
+  const nodesPerElement = meshData.nop[elementIndex].length;
+
+  // Get basis functions for the current point
+  const basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(ksi, eta);
+  let basisFunction = basisFunctionsAndDerivatives.basisFunction;
+
+  // Check if solutionVector is a nested array
+  let zData;
+  if (Array.isArray(solutionVector[0])) {
+    zData = solutionVector.map((val) => val[0]);
+  } else {
+    zData = solutionVector;
+  }
+
+  // Interpolate solution
+  let solutionInterpolationValue = 0;
+  for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
+    solutionInterpolationValue +=
+      zData[meshData.nop[elementIndex][localNodeIndex] - 1] * basisFunction[localNodeIndex];
+  }
+
+  return solutionInterpolationValue;
+}

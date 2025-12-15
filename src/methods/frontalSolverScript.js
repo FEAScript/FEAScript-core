@@ -36,10 +36,10 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
   const FEAData = initializeFEA(meshData);
   const totalNodes = meshData.nodesXCoordinates.length;
   const numElements = meshData.totalElements;
-  const numNodes = FEAData.numNodes;
+  const nodesPerElement = FEAData.nodesPerElement;
 
   // Calculate required array sizes
-  initializeFrontalArrays(numNodes, numElements);
+  initializeFrontalArrays(nodesPerElement, numElements);
 
   // Start timing for system solving (frontal algorithm)
   basicLog("Solving system using frontal...");
@@ -53,7 +53,7 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
 
   // Copy node connectivity array into frontalData storage
   for (let elementIndex = 0; elementIndex < meshData.totalElements; elementIndex++) {
-    for (let nodeIndex = 0; nodeIndex < FEAData.numNodes; nodeIndex++) {
+    for (let nodeIndex = 0; nodeIndex < FEAData.nodesPerElement; nodeIndex++) {
       frontalData.nodalNumbering[elementIndex][nodeIndex] = meshData.nop[elementIndex][nodeIndex];
     }
   }
@@ -107,7 +107,7 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
   frontalState.determinant = 1;
 
   for (let elementIndex = 0; elementIndex < meshData.totalElements; elementIndex++) {
-    frontalState.nodesPerElement[elementIndex] = FEAData.numNodes;
+    frontalState.nodesPerElement[elementIndex] = FEAData.nodesPerElement;
   }
 
   // Parameters for non-linear assemblers
@@ -157,41 +157,41 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
 
 /**
  * Function to initialize arrays dynamically based on problem size
- * @param {number} numNodes - Number of nodes per element
+ * @param {number} nodesPerElement - Number of nodes per element
  * @param {number} numElements - Number of elements in the mesh
  */
-function initializeFrontalArrays(numNodes, numElements) {
+function initializeFrontalArrays(nodesPerElement, numElements) {
   // Use the actual number of elements from the mesh
   frontalData.nodalNumbering = Array(numElements)
     .fill()
-    .map(() => Array(numNodes).fill(0));
-  frontalData.nodeConstraintCode = Array(numNodes).fill(0);
-  frontalData.boundaryValues = Array(numNodes).fill(0);
-  frontalData.globalResidualVector = Array(numNodes).fill(0);
-  frontalData.solutionVector = Array(numNodes).fill(0);
+    .map(() => Array(nodesPerElement).fill(0));
+  frontalData.nodeConstraintCode = Array(nodesPerElement).fill(0);
+  frontalData.boundaryValues = Array(nodesPerElement).fill(0);
+  frontalData.globalResidualVector = Array(nodesPerElement).fill(0);
+  frontalData.solutionVector = Array(nodesPerElement).fill(0);
   frontalData.topologyData = Array(numElements).fill(0);
   frontalData.lateralData = Array(numElements).fill(0);
 
   // Initialize frontalState arrays
   frontalState.writeFlag = 0;
-  frontalState.totalNodes = numNodes;
+  frontalState.totalNodes = nodesPerElement;
   frontalState.transformationFlag = 0;
   frontalState.nodesPerElement = Array(numElements).fill(0);
   frontalState.determinant = 1;
 
   // For matrix operations, estimate required size based on problem complexity
-  const systemSize = Math.max(numNodes, 2000);
+  const systemSize = Math.max(nodesPerElement, 2000);
   frontalState.globalSolutionVector = Array(systemSize).fill(0);
   frontalState.frontDataIndex = 0;
 
   // Initialize elementData arrays
-  elementData.localJacobianMatrix = Array(numNodes)
+  elementData.localJacobianMatrix = Array(nodesPerElement)
     .fill()
-    .map(() => Array(numNodes).fill(0));
+    .map(() => Array(nodesPerElement).fill(0));
   elementData.currentElementIndex = 0;
 
   // Initialize frontStorage arrays
-  const frontSize = estimateFrontSize(numNodes, numElements);
+  const frontSize = estimateFrontSize(nodesPerElement, numElements);
   frontStorage.frontValues = Array(frontSize).fill(0);
   frontStorage.columnHeaders = Array(systemSize).fill(0);
   frontStorage.pivotRow = Array(systemSize).fill(0);
@@ -200,18 +200,18 @@ function initializeFrontalArrays(numNodes, numElements) {
 
 /**
  * Function to estimate the required front size
- * @param {number} numNodes - Number of of nodes per element
+ * @param {number} nodesPerElement - Number of of nodes per element
  * @param {number} numElements - Number of elements in the mesh
  * @returns {number} Estimated front size
  */
-function estimateFrontSize(numNodes, numElements) {
-  const frontWidthEstimate = Math.max(Math.ceil(Math.sqrt(numElements)) * numNodes, numNodes * 2);
+function estimateFrontSize(nodesPerElement, numElements) {
+  const frontWidthEstimate = Math.max(Math.ceil(Math.sqrt(numElements)) * nodesPerElement, nodesPerElement * 2);
   return frontWidthEstimate * numElements;
 }
 // Old function to estimate the required front size
-// function estimateFrontSize(numNodes, numElements, numNodes) {
-//   const frontWidthEstimate = Math.ceil(Math.sqrt(numElements) * numNodes * 2);
-//   const frontSize = frontWidthEstimate * numNodes * 4;
+// function estimateFrontSize(nodesPerElement, numElements, nodesPerElement) {
+//   const frontWidthEstimate = Math.ceil(Math.sqrt(numElements) * nodesPerElement * 2);
+//   const frontSize = frontWidthEstimate * nodesPerElement * 4;
 //   return Math.max(frontSize, 10000);
 // }
 
@@ -244,10 +244,10 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
   });
 
   // Handle Robin-type boundary conditions differently based on which solver is being used
-  let boundaryLocalJacobianMatrix = Array(FEAData.numNodes)
+  let boundaryLocalJacobianMatrix = Array(FEAData.nodesPerElement)
     .fill()
-    .map(() => Array(FEAData.numNodes).fill(0));
-  let boundaryResidualVector = Array(FEAData.numNodes).fill(0);
+    .map(() => Array(FEAData.nodesPerElement).fill(0));
+  let boundaryResidualVector = Array(FEAData.nodesPerElement).fill(0);
 
   // heatConductionScript solver
   if (assembleFront === assembleHeatConductionFront) {
@@ -282,15 +282,15 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
   }
 
   // Combine domain and boundary contributions
-  for (let localNodeI = 0; localNodeI < FEAData.numNodes; localNodeI++) {
-    for (let localNodeJ = 0; localNodeJ < FEAData.numNodes; localNodeJ++) {
+  for (let localNodeI = 0; localNodeI < FEAData.nodesPerElement; localNodeI++) {
+    for (let localNodeJ = 0; localNodeJ < FEAData.nodesPerElement; localNodeJ++) {
       elementData.localJacobianMatrix[localNodeI][localNodeJ] =
         localJacobianMatrix[localNodeI][localNodeJ] + boundaryLocalJacobianMatrix[localNodeI][localNodeJ];
     }
   }
 
   // Assemble local element residual
-  for (let localNodeIndex = 0; localNodeIndex < FEAData.numNodes; localNodeIndex++) {
+  for (let localNodeIndex = 0; localNodeIndex < FEAData.nodesPerElement; localNodeIndex++) {
     const globalNodeIndex = ngl[localNodeIndex] - 1;
     frontalData.globalResidualVector[globalNodeIndex] +=
       localResidualVector[localNodeIndex] + boundaryResidualVector[localNodeIndex];
@@ -309,10 +309,10 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
 function runFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions, assembleFront) {
   // Allocate local arrays dynamically
   const totalElements = meshData.totalElements;
-  const numNodes = meshData.nodesXCoordinates.length;
-  const systemSize = Math.max(numNodes, frontalState.globalSolutionVector.length);
-  let localDestination = Array(FEAData.numNodes).fill(0);
-  let rowDestination = Array(FEAData.numNodes).fill(0);
+  const nodesPerElement = meshData.nodesXCoordinates.length;
+  const systemSize = Math.max(nodesPerElement, frontalState.globalSolutionVector.length);
+  let localDestination = Array(FEAData.nodesPerElement).fill(0);
+  let rowDestination = Array(FEAData.nodesPerElement).fill(0);
   let rowHeaders = Array(systemSize).fill(0);
   let pivotRowIndices = Array(systemSize).fill(0);
   let pivotColumnIndices = Array(systemSize).fill(0);
@@ -321,9 +321,9 @@ function runFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions, assem
   let frontMatrix = Array(systemSize)
     .fill()
     .map(() => Array(systemSize).fill(0));
-  let rowSwapCount = Array(numNodes).fill(0);
-  let columnSwapCount = Array(numNodes).fill(0);
-  let lastAppearanceCheck = Array(numNodes).fill(0);
+  let rowSwapCount = Array(nodesPerElement).fill(0);
+  let columnSwapCount = Array(nodesPerElement).fill(0);
+  let lastAppearanceCheck = Array(nodesPerElement).fill(0);
   let pivotColumnGlobalIndex; // Pivot column global index
 
   let frontDataCounter = 1;

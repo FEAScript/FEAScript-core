@@ -55,13 +55,13 @@ export function assembleHeatConductionMat(meshData, boundaryConditions) {
     basisFunctions,
     gaussPoints,
     gaussWeights,
-    numNodes,
+    nodesPerElement,
   } = FEAData;
 
   // Matrix assembly
   for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {
     // Map local element nodes to global mesh nodes
-    for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+    for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
       // Subtract 1 from nop in order to start numbering from 0
       localToGlobalMap[localNodeIndex] = nop[elementIndex][localNodeIndex] - 1;
     }
@@ -79,18 +79,18 @@ export function assembleHeatConductionMat(meshData, boundaryConditions) {
           basisFunctionDerivKsi: basisFunctionsAndDerivatives.basisFunctionDerivKsi,
           nodesXCoordinates,
           localToGlobalMap,
-          numNodes,
+          nodesPerElement,
         });
 
         // Extract mapping results
         const { detJacobian, basisFunctionDerivX } = mappingResult;
 
         // Computation of Galerkin's residuals and Jacobian matrix
-        for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
+        for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
           let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
           // residualVector is zero for this case
 
-          for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
+          for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
             let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
             jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
               -gaussWeights[gaussPointIndex1] *
@@ -116,18 +116,18 @@ export function assembleHeatConductionMat(meshData, boundaryConditions) {
             nodesXCoordinates,
             nodesYCoordinates,
             localToGlobalMap,
-            numNodes,
+            nodesPerElement,
           });
 
           // Extract mapping results
           const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = mappingResult;
 
           // Computation of Galerkin's residuals and Jacobian matrix
-          for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
+          for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
             let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
             // residualVector is zero for this case
 
-            for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
+            for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
               let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
               jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
                 -gaussWeights[gaussPointIndex1] *
@@ -186,19 +186,19 @@ export function assembleHeatConductionMat(meshData, boundaryConditions) {
  */
 export function assembleHeatConductionFront({ elementIndex, nop, meshData, basisFunctions, FEAData }) {
   // Extract numerical integration parameters and mesh coordinates
-  const { gaussPoints, gaussWeights, numNodes } = FEAData;
+  const { gaussPoints, gaussWeights, nodesPerElement } = FEAData;
   const { nodesXCoordinates, nodesYCoordinates, meshDimension } = meshData;
 
   // Initialize local Jacobian matrix and local residual vector
-  const localJacobianMatrix = Array(numNodes)
+  const localJacobianMatrix = Array(nodesPerElement)
     .fill()
-    .map(() => Array(numNodes).fill(0));
-  const localResidualVector = Array(numNodes).fill(0);
+    .map(() => Array(nodesPerElement).fill(0));
+  const localResidualVector = Array(nodesPerElement).fill(0);
 
   // Build the mapping from local node indices to global node indices
-  const ngl = Array(numNodes);
-  const localToGlobalMap = Array(numNodes);
-  for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+  const ngl = Array(nodesPerElement);
+  const localToGlobalMap = Array(nodesPerElement);
+  for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
     ngl[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]);
     localToGlobalMap[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]) - 1;
   }
@@ -218,12 +218,12 @@ export function assembleHeatConductionFront({ elementIndex, nop, meshData, basis
         basisFunctionDerivKsi,
         nodesXCoordinates,
         localToGlobalMap,
-        numNodes,
+        nodesPerElement,
       });
 
       // Computation of Galerkin's residuals and local Jacobian matrix
-      for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
-        for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
+      for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
+        for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
           localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
             gaussWeights[gaussPointIndex1] *
             detJacobian *
@@ -250,12 +250,12 @@ export function assembleHeatConductionFront({ elementIndex, nop, meshData, basis
           nodesXCoordinates,
           nodesYCoordinates,
           localToGlobalMap,
-          numNodes,
+          nodesPerElement,
         });
 
         // Computation of Galerkin's residuals and local Jacobian matrix
-        for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
-          for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
+        for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
+          for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
             localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
               gaussWeights[gaussPointIndex1] *
               gaussWeights[gaussPointIndex2] *

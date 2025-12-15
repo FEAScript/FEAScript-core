@@ -389,8 +389,8 @@ export class ThermalBoundaryConditions {
               let ksiDerivY = 0;
               let etaDerivX = 0;
               let etaDerivY = 0;
-              const numNodes = this.nop[elementIndex].length;
-              for (let nodeIndex = 0; nodeIndex < numNodes; nodeIndex++) {
+              const nodesPerElement = this.nop[elementIndex].length;
+              for (let nodeIndex = 0; nodeIndex < nodesPerElement; nodeIndex++) {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
 
                 // For boundaries along Ksi (horizontal), use Ksi derivatives
@@ -488,8 +488,8 @@ export class ThermalBoundaryConditions {
                 let ksiDerivY = 0;
                 let etaDerivX = 0;
                 let etaDerivY = 0;
-                const numNodes = this.nop[elementIndex].length;
-                for (let nodeIndex = 0; nodeIndex < numNodes; nodeIndex++) {
+                const nodesPerElement = this.nop[elementIndex].length;
+                for (let nodeIndex = 0; nodeIndex < nodesPerElement; nodeIndex++) {
                   const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
 
                   // For boundaries along Ksi (horizontal), use Ksi derivatives
@@ -586,11 +586,11 @@ export class ThermalBoundaryConditions {
     });
 
     // Initialize local Jacobian matrix and local residual vector
-    const numNodes = this.nop[elementIndex].length;
-    const localJacobianMatrix = Array(numNodes)
+    const nodesPerElement = this.nop[elementIndex].length;
+    const localJacobianMatrix = Array(nodesPerElement)
       .fill()
-      .map(() => Array(numNodes).fill(0));
-    const localResidualVector = Array(numNodes).fill(0);
+      .map(() => Array(nodesPerElement).fill(0));
+    const localResidualVector = Array(nodesPerElement).fill(0);
 
     // Check if this element is on a convection boundary
     for (const boundaryKey in this.boundaryElements) {
@@ -672,7 +672,7 @@ export class ThermalBoundaryConditions {
                 ksiDerivY = 0,
                 etaDerivX = 0,
                 etaDerivY = 0;
-              for (let nodeIndex = 0; nodeIndex < numNodes; nodeIndex++) {
+              for (let nodeIndex = 0; nodeIndex < nodesPerElement; nodeIndex++) {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
 
                 if (side === 0 || side === 2) {
@@ -761,8 +761,8 @@ export class ThermalBoundaryConditions {
                 let ksiDerivY = 0;
                 let etaDerivX = 0;
                 let etaDerivY = 0;
-                const numNodes = this.nop[elementIndex].length;
-                for (let nodeIndex = 0; nodeIndex < numNodes; nodeIndex++) {
+                const nodesPerElement = this.nop[elementIndex].length;
+                for (let nodeIndex = 0; nodeIndex < nodesPerElement; nodeIndex++) {
                   const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
 
                   // For boundaries along Ksi (horizontal), use Ksi derivatives

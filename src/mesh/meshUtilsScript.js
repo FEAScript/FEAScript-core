@@ -113,7 +113,7 @@ export function initializeFEA(meshData) {
   let gaussWeights = gaussPointsAndWeights.gaussWeights;
 
   // Determine the number of nodes in the reference element based on the first element in the nop array
-  const numNodes = nop[0].length;
+  const nodesPerElement = nop[0].length;
 
   return {
     residualVector,
@@ -122,7 +122,7 @@ export function initializeFEA(meshData) {
     basisFunctions,
     gaussPoints,
     gaussWeights,
-    numNodes,
+    nodesPerElement,
   };
 }
 
@@ -132,13 +132,13 @@ export function initializeFEA(meshData) {
  * @returns {object} An object containing the mapped data
  */
 export function performIsoparametricMapping1D(params) {
-  const { basisFunction, basisFunctionDerivKsi, nodesXCoordinates, localToGlobalMap, numNodes } = params;
+  const { basisFunction, basisFunctionDerivKsi, nodesXCoordinates, localToGlobalMap, nodesPerElement } = params;
 
   let xCoordinates = 0;
   let ksiDerivX = 0;
 
   // Isoparametric mapping
-  for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+  for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
     xCoordinates += nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunction[localNodeIndex];
     ksiDerivX += nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
   }
@@ -146,7 +146,7 @@ export function performIsoparametricMapping1D(params) {
 
   // Compute x-derivative of basis functions
   let basisFunctionDerivX = [];
-  for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+  for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
     basisFunctionDerivX[localNodeIndex] = basisFunctionDerivKsi[localNodeIndex] / detJacobian;
   }
 
@@ -170,7 +170,7 @@ export function performIsoparametricMapping2D(params) {
     nodesXCoordinates,
     nodesYCoordinates,
     localToGlobalMap,
-    numNodes,
+    nodesPerElement,
   } = params;
 
   let xCoordinates = 0;
@@ -181,7 +181,7 @@ export function performIsoparametricMapping2D(params) {
   let etaDerivY = 0;
 
   // Isoparametric mapping
-  for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+  for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
     xCoordinates += nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunction[localNodeIndex];
     yCoordinates += nodesYCoordinates[localToGlobalMap[localNodeIndex]] * basisFunction[localNodeIndex];
     ksiDerivX += nodesXCoordinates[localToGlobalMap[localNodeIndex]] * basisFunctionDerivKsi[localNodeIndex];
@@ -194,7 +194,7 @@ export function performIsoparametricMapping2D(params) {
   // Compute x-derivative and y-derivative of basis functions
   let basisFunctionDerivX = [];
   let basisFunctionDerivY = [];
-  for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+  for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
     // The x-derivative of the n basis function
     basisFunctionDerivX[localNodeIndex] =
       (etaDerivY * basisFunctionDerivKsi[localNodeIndex] -
@@ -217,22 +217,25 @@ export function performIsoparametricMapping2D(params) {
 }
 
 /**
- * Function to test if a point is inside a triangle using barycentric coordinates
+ * Function to test if a point is inside a triangle using barycentric coordinates,
+ * also returning the natural coordinates (ksi, eta).
  * @param {number} x - X-coordinate of the point
  * @param {number} y - Y-coordinate of the point
  * @param {array} vertices - Triangle vertices [[x0,y0],[x1,y1],[x2,y2]]
- * @returns {boolean} True if the point is inside (or on the edge of) the triangle
+ * @returns {object} Object containing inside boolean and natural coordinates {inside, ksi, eta}
  */
 export function pointInsideTriangle(x, y, vertices) {
   const tolerance = 1e-12;
   const [v0, v1, v2] = vertices;
+
   const denom = (v1[1] - v2[1]) * (v0[0] - v2[0]) + (v2[0] - v1[0]) * (v0[1] - v2[1]);
-  const a = ((v1[1] - v2[1]) * (x - v2[0]) + (v2[0] - v1[0]) * (y - v2[1])) / denom;
-  const b = ((v2[1] - v0[1]) * (x - v2[0]) + (v0[0] - v2[0]) * (y - v2[1])) / denom;
-  const c = 1 - a - b;
-  if (a >= -tolerance && b >= -tolerance && c >= -tolerance) {
-    return true;
-  }
+
+  const ksi = ((v1[1] - v2[1]) * (x - v2[0]) + (v2[0] - v1[0]) * (y - v2[1])) / denom;
+  const eta = ((v2[1] - v0[1]) * (x - v2[0]) + (v0[0] - v2[0]) * (y - v2[1])) / denom;
+  const gamma = 1 - ksi - eta;
+
+  const inside = ksi >= -tolerance && eta >= -tolerance && gamma >= -tolerance;
+  return { inside, ksi, eta };
 }
 
 /**
@@ -240,16 +243,42 @@ export function pointInsideTriangle(x, y, vertices) {
  * @param {number} x - X-coordinate of the point
  * @param {number} y - Y-coordinate of the point
  * @param {array} vertices - Quadrilateral vertices [[x0,y0],[x1,y1],[x2,y2],[x3,y3]]
- * @returns {boolean} True if the point is inside (or on the edge of) the quadrilateral
+ * @returns {object} Object containing inside boolean and natural coordinates {inside, ksi, eta}
  */
 export function pointInsideQuadrilateral(x, y, vertices) {
   const [firstTriangleVertices, secondTriangleVertices] = splitQuadrilateral(vertices);
   const pointInsideFirstTriangle = pointInsideTriangle(x, y, firstTriangleVertices);
   const pointInsideSecondTriangle = pointInsideTriangle(x, y, secondTriangleVertices);
 
-  if (pointInsideFirstTriangle || pointInsideSecondTriangle) {
-    return true;
+  const inside = pointInsideFirstTriangle.inside || pointInsideSecondTriangle.inside;
+  let ksi = 0;
+  let eta = 0;
+
+  if (inside) {
+    const [v0, v1, v2, v3] = vertices;
+
+    // Function to calculate distance from point to line segment
+    const getDistanceFromLine = (p1, p2) => {
+      const num = Math.abs((p2[0] - p1[0]) * (p1[1] - y) - (p1[0] - x) * (p2[1] - p1[1]));
+      const den = Math.sqrt((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2);
+      return num / den;
+    };
+
+    // Calculate distances to edges based on vertex order:
+    //   1 (v1) --- 3 (v3)
+    //   |          |
+    //   0 (v0) --- 2 (v2)
+
+    const distLeft = getDistanceFromLine(v0, v1);
+    const distRight = getDistanceFromLine(v2, v3);
+    const distBottom = getDistanceFromLine(v0, v2);
+    const distTop = getDistanceFromLine(v1, v3);
+
+    ksi = distLeft / (distLeft + distRight);
+    eta = distBottom / (distBottom + distTop);
   }
+
+  return { inside, ksi, eta };
 }
 
 /**

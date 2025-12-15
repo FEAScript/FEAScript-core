@@ -62,13 +62,13 @@ export function assembleFrontPropagationMat(
     basisFunctions,
     gaussPoints,
     gaussWeights,
-    numNodes,
+    nodesPerElement,
   } = FEAData;
 
   // Matrix assembly
   for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {
     // Map local element nodes to global mesh nodes
-    for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+    for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
       // Subtract 1 from nop in order to start numbering from 0
       localToGlobalMap[localNodeIndex] = nop[elementIndex][localNodeIndex] - 1;
     }
@@ -89,7 +89,7 @@ export function assembleFrontPropagationMat(
           basisFunctionDerivKsi: basisFunctionsAndDerivatives.basisFunctionDerivKsi,
           nodesXCoordinates,
           localToGlobalMap,
-          numNodes,
+          nodesPerElement,
         });
 
         // Extract mapping results
@@ -98,18 +98,18 @@ export function assembleFrontPropagationMat(
 
         // Calculate solution derivative
         let solutionDerivX = 0;
-        for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+        for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
           solutionDerivX +=
             solutionVector[localToGlobalMap[localNodeIndex]] * basisFunctionDerivX[localNodeIndex];
         }
 
         // Computation of Galerkin's residuals and Jacobian matrix
-        for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
+        for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
           let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
           // residualVector
           // TODO residualVector calculation here
 
-          for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
+          for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
             let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
             // jacobianMatrix
             // TODO jacobianMatrix calculation here
@@ -133,7 +133,7 @@ export function assembleFrontPropagationMat(
             nodesXCoordinates,
             nodesYCoordinates,
             localToGlobalMap,
-            numNodes,
+            nodesPerElement,
           });
 
           // Extract mapping results
@@ -143,7 +143,7 @@ export function assembleFrontPropagationMat(
           // Calculate solution derivatives
           let solutionDerivX = 0;
           let solutionDerivY = 0;
-          for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+          for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
             solutionDerivX +=
               solutionVector[localToGlobalMap[localNodeIndex]] * basisFunctionDerivX[localNodeIndex];
             solutionDerivY +=
@@ -151,7 +151,7 @@ export function assembleFrontPropagationMat(
           }
 
           // Computation of Galerkin's residuals and Jacobian matrix
-          for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
+          for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
             let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
 
             // residualVector: Viscous term contribution (to stabilize the solution)
@@ -184,7 +184,7 @@ export function assembleFrontPropagationMat(
                     basisFunction[localNodeIndex1]);
             }
 
-            for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
+            for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
               let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
 
               // jacobianMatrix: Viscous term contribution
@@ -268,22 +268,22 @@ export function assembleFrontPropagationFront({
   eikonalActivationFlag,
 }) {
   // Extract numerical integration parameters and mesh coordinates
-  const { gaussPoints, gaussWeights, numNodes } = FEAData;
+  const { gaussPoints, gaussWeights, nodesPerElement } = FEAData;
   const { nodesXCoordinates, nodesYCoordinates, meshDimension } = meshData;
 
   // Calculate eikonal viscous term
   let eikonalViscousTerm = 1 - eikonalActivationFlag + baseEikonalViscousTerm; // Viscous term for the front propagation (eikonal) equation
 
   // Initialize local Jacobian matrix and local residual vector
-  const localJacobianMatrix = Array(numNodes)
+  const localJacobianMatrix = Array(nodesPerElement)
     .fill()
-    .map(() => Array(numNodes).fill(0));
-  const localResidualVector = Array(numNodes).fill(0);
+    .map(() => Array(nodesPerElement).fill(0));
+  const localResidualVector = Array(nodesPerElement).fill(0);
 
   // Build the mapping from local node indices to global node indices
-  const ngl = Array(numNodes);
-  const localToGlobalMap = Array(numNodes);
-  for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+  const ngl = Array(nodesPerElement);
+  const localToGlobalMap = Array(nodesPerElement);
+  for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
     ngl[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]);
     localToGlobalMap[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]) - 1;
   }
@@ -304,7 +304,7 @@ export function assembleFrontPropagationFront({
         basisFunctionDerivKsi: basisFunctionsAndDerivatives.basisFunctionDerivKsi,
         nodesXCoordinates,
         localToGlobalMap,
-        numNodes,
+        nodesPerElement,
       });
 
       // Extract mapping results
@@ -313,18 +313,18 @@ export function assembleFrontPropagationFront({
 
       // Calculate solution derivative
       let solutionDerivX = 0;
-      for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+      for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
         solutionDerivX +=
           solutionVector[localToGlobalMap[localNodeIndex]] * basisFunctionDerivX[localNodeIndex];
       }
 
       // Computation of Galerkin's residuals and Jacobian matrix
-      for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
+      for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
         let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
         // residualVector
         // TODO residualVector calculation here
 
-        for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
+        for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
           let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
           // localJacobianMatrix
           // TODO localJacobianMatrix calculation here
@@ -345,13 +345,13 @@ export function assembleFrontPropagationFront({
           nodesXCoordinates,
           nodesYCoordinates,
           localToGlobalMap,
-          numNodes,
+          nodesPerElement,
         });
 
         // Calculate solution derivatives
         let solutionDerivX = 0;
         let solutionDerivY = 0;
-        for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+        for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
           solutionDerivX +=
             solutionVector[localToGlobalMap[localNodeIndex]] * basisFunctionDerivX[localNodeIndex];
           solutionDerivY +=
@@ -359,7 +359,7 @@ export function assembleFrontPropagationFront({
         }
 
         // Computation of Galerkin's residuals and Jacobian matrix
-        for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
+        for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
           let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
           // Viscous term contribution
           localResidualVector[localNodeIndex1] +=
@@ -391,7 +391,7 @@ export function assembleFrontPropagationFront({
                   basisFunction[localNodeIndex1]);
           }
 
-          for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
+          for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
             // Viscous term contribution
             localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
               eikonalViscousTerm *
