@@ -78,7 +78,7 @@ export class Mesh {
 
         for (let elementIndex = 0; elementIndex < quadElements.length; elementIndex++) {
           const gmshNodes = quadElements[elementIndex];
-          const feaScriptNodes = new Array(gmshNodes.length);
+          const FEAScriptNodes = new Array(gmshNodes.length);
 
           // Check for element type based on number of nodes
           if (gmshNodes.length === 4) {
@@ -88,10 +88,10 @@ export class Mesh {
             // |     |  -->  |     |
             // 0 --- 1       0 --- 2
 
-            feaScriptNodes[0] = gmshNodes[0]; // 0 -> 0
-            feaScriptNodes[1] = gmshNodes[3]; // 3 -> 1
-            feaScriptNodes[2] = gmshNodes[1]; // 1 -> 2
-            feaScriptNodes[3] = gmshNodes[2]; // 2 -> 3
+            FEAScriptNodes[0] = gmshNodes[0]; // 0 -> 0
+            FEAScriptNodes[1] = gmshNodes[3]; // 3 -> 1
+            FEAScriptNodes[2] = gmshNodes[1]; // 1 -> 2
+            FEAScriptNodes[3] = gmshNodes[2]; // 2 -> 3
           } else if (gmshNodes.length === 9) {
             // Mapping for quadratic quad elements (9 nodes)
             // GMSH:         FEAScript:
@@ -101,18 +101,18 @@ export class Mesh {
             // |     |       |     |
             // 0--4--1       0--3--6
 
-            feaScriptNodes[0] = gmshNodes[0]; // 0 -> 0
-            feaScriptNodes[1] = gmshNodes[7]; // 7 -> 1
-            feaScriptNodes[2] = gmshNodes[3]; // 3 -> 2
-            feaScriptNodes[3] = gmshNodes[4]; // 4 -> 3
-            feaScriptNodes[4] = gmshNodes[8]; // 8 -> 4
-            feaScriptNodes[5] = gmshNodes[6]; // 6 -> 5
-            feaScriptNodes[6] = gmshNodes[1]; // 1 -> 6
-            feaScriptNodes[7] = gmshNodes[5]; // 5 -> 7
-            feaScriptNodes[8] = gmshNodes[2]; // 2 -> 8
+            FEAScriptNodes[0] = gmshNodes[0]; // 0 -> 0
+            FEAScriptNodes[1] = gmshNodes[7]; // 7 -> 1
+            FEAScriptNodes[2] = gmshNodes[3]; // 3 -> 2
+            FEAScriptNodes[3] = gmshNodes[4]; // 4 -> 3
+            FEAScriptNodes[4] = gmshNodes[8]; // 8 -> 4
+            FEAScriptNodes[5] = gmshNodes[6]; // 6 -> 5
+            FEAScriptNodes[6] = gmshNodes[1]; // 1 -> 6
+            FEAScriptNodes[7] = gmshNodes[5]; // 5 -> 7
+            FEAScriptNodes[8] = gmshNodes[2]; // 2 -> 8
           }
 
-          mappedNodalNumbering.push(feaScriptNodes);
+          mappedNodalNumbering.push(FEAScriptNodes);
         }
 
         this.parsedMesh.nodalNumbering = mappedNodalNumbering;
@@ -478,7 +478,7 @@ export class Mesh1D extends Mesh {
    */
   findBoundaryElements() {
     const boundaryElements = [];
-    const maxSides = 2; // For 1D, we only have two sides (left and right)
+    const maxSides = 2; // Two sides for 1D case (left and right)
     for (let sideIndex = 0; sideIndex < maxSides; sideIndex++) {
       boundaryElements.push([]);
     }
@@ -691,7 +691,7 @@ export class Mesh2D extends Mesh {
    */
   findBoundaryElements() {
     const boundaryElements = [];
-    const maxSides = 4; // For 2D, we have four sides (left, right, bottom, top)
+    const maxSides = 4; // Four sides for a rectangle 2D case (left, right, bottom, top)
 
     for (let sideIndex = 0; sideIndex < maxSides; sideIndex++) {
       boundaryElements.push([]);
