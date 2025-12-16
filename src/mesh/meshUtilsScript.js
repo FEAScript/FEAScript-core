@@ -329,3 +329,13 @@ export function computeNodeNeighbors(meshData) {
 
   return { nodeNeighbors, neighborCount };
 }
+
+
+/**
+ * Function to extracts boundary line segments for ray casting
+ * @param {object} meshData - Object containing mesh data
+ * @returns {array} Array of segments
+ */
+export function getBoundarySegments(meshData) {
+  // Write the function
+}

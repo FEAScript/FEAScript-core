@@ -8,7 +8,7 @@
  */
 
 export { FEAScriptModel } from "./FEAScript.js";
-export { importGmshQuadTri } from "./readers/gmshReaderScript.js";
+export { importGmshQuadTri } from "./readers/gmshReaderScript.js"; //TODO rename importGmshQuadTri to importGmsh
 export { logSystem } from "./utilities/loggingScript.js";
 export { plotSolution } from "./visualization/plotSolutionScript.js";
 export { FEAScriptWorker } from "./workers/workerScript.js";
