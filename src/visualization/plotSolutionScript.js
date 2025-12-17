@@ -128,6 +128,7 @@ export function plotSolution(model, result, plotType, plotDivId) {
 export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates; // TODO: Check if we should place it inside the 2D block
   const meshDimension = model.meshConfig.meshDimension;
+  const meshData = prepareMesh(model.meshConfig); // Retrieve mesh connectivity details
 
   // Initialize BasisFunctions once here to avoid creating it inside the loop
   const basisFunctions = new BasisFunctions({

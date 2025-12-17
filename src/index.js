@@ -10,6 +10,6 @@
 export { FEAScriptModel } from "./FEAScript.js";
 export { importGmshQuadTri } from "./readers/gmshReaderScript.js"; //TODO rename importGmshQuadTri to importGmsh
 export { logSystem } from "./utilities/loggingScript.js";
-export { plotSolution } from "./visualization/plotSolutionScript.js";
+export { plotSolution, plotInterpolatedSolution } from "./visualization/plotSolutionScript.js";
 export { FEAScriptWorker } from "./workers/workerScript.js";
 export const printVersion = "0.2.0 (RC)";
