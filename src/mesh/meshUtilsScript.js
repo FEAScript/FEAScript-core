@@ -132,7 +132,8 @@ export function initializeFEA(meshData) {
  * @returns {object} An object containing the mapped data
  */
 export function performIsoparametricMapping1D(params) {
-  const { basisFunction, basisFunctionDerivKsi, nodesXCoordinates, localToGlobalMap, nodesPerElement } = params;
+  const { basisFunction, basisFunctionDerivKsi, nodesXCoordinates, localToGlobalMap, nodesPerElement } =
+    params;
 
   let xCoordinates = 0;
   let ksiDerivX = 0;
@@ -330,12 +331,85 @@ export function computeNodeNeighbors(meshData) {
   return { nodeNeighbors, neighborCount };
 }
 
-
 /**
  * Function to extracts boundary line segments for ray casting
  * @param {object} meshData - Object containing mesh data
  * @returns {array} Array of segments
  */
 export function getBoundarySegments(meshData) {
-  // Write the function
+  let boundaryLineElements = [];
+  let boundaryNodesSegments = [];
+  let boundaryGlobalElementIndex = 0;
+  let boundarySides;
+  const { nodesXCoordinates, nodesYCoordinates, nop, boundaryElements, meshDimension, elementOrder } =
+    meshData;
+
+  if (meshDimension === "1D") {
+    if (elementOrder === "linear") {
+      boundarySides = {
+        0: [0], // Node at the left side of the reference element
+        1: [1], // Node at the right side of the reference element
+      };
+    } else if (elementOrder === "quadratic") {
+      boundarySides = {
+        0: [0], // Node at the left side of the reference element
+        1: [1], // Node at the right side of the reference element
+      };
+    }
+  } else if (meshDimension === "2D") {
+    if (elementOrder === "linear") {
+      boundarySides = {
+        0: [0, 2], // Nodes at the bottom side of the reference element
+        1: [0, 1], // Nodes at the left side of the reference element
+        2: [1, 3], // Nodes at the top side of the reference element
+        3: [2, 3], // Nodes at the right side of the reference element
+      };
+    } else if (elementOrder === "quadratic") {
+      boundarySides = {
+        0: [0, 3, 6], // Nodes at the bottom side of the reference element
+        1: [0, 1, 2], // Nodes at the left side of the reference element
+        2: [2, 5, 8], // Nodes at the top side of the reference element
+        3: [6, 7, 8], // Nodes at the right side of the reference element
+      };
+    }
+  }
+
+  // Iterate over all boundaries
+  for (let boundaryIndex = 0; boundaryIndex < boundaryElements.length; boundaryIndex++) {
+    // Iterate over all elements in the current boundary
+    for (
+      let boundaryLocalElementIndex = 0;
+      boundaryLocalElementIndex < boundaryElements[boundaryIndex].length;
+      boundaryLocalElementIndex++
+    ) {
+      boundaryLineElements[boundaryGlobalElementIndex] =
+        boundaryElements[boundaryIndex][boundaryLocalElementIndex];
+      boundaryGlobalElementIndex++;
+      // Retrieve the element index and the side
+      const [elementIndex, side] = boundaryElements[boundaryIndex][boundaryLocalElementIndex];
+      let boundaryLocalNodeIndices = boundarySides[side];
+      let currentElementNodesX = [];
+      let currentElementNodesY = [];
+
+      for (
+        let boundaryLocalNodeIndex = 0;
+        boundaryLocalNodeIndex < boundaryLocalNodeIndices.length;
+        boundaryLocalNodeIndex++
+      ) {
+        const globalNodeIndex = nop[elementIndex][boundaryLocalNodeIndices[boundaryLocalNodeIndex]] - 1;
+
+        currentElementNodesX.push(nodesXCoordinates[globalNodeIndex]);
+        currentElementNodesY.push(nodesYCoordinates[globalNodeIndex]);
+      }
+
+      // Create segments for this element
+      for (let k = 0; k < currentElementNodesX.length - 1; k++) {
+        boundaryNodesSegments.push([
+          [currentElementNodesX[k], currentElementNodesY[k]],
+          [currentElementNodesX[k + 1], currentElementNodesY[k + 1]],
+        ]);
+      }
+    }
+  }
+  return boundaryNodesSegments;
 }

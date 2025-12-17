@@ -467,12 +467,10 @@ export class Mesh1D extends Mesh {
   }
 
   /**
-   * Function to find the elements that belong to each boundary of a domain
+   * Function to find the elements that belong to each boundary of an 1D domain
    * @returns {array} An array containing arrays of elements and their adjacent boundary side for each boundary
    * Each element in the array is of the form [elementIndex, side], where 'side' indicates which side
    * of the reference element is in contact with the physical boundary:
-   *
-   * For 1D domains (line segments):
    * 0 - Left node of reference element (maps to physical left endpoint)
    * 1 - Right node of reference element (maps to physical right endpoint)
    */
@@ -678,16 +676,14 @@ export class Mesh2D extends Mesh {
   }
 
   /**
-   * Function to find the elements that belong to each boundary of a domain
+   * Function to find the elements that belong to each boundary of a 2D domain
    * @returns {array} An array containing arrays of elements and their adjacent boundary side for each boundary
    * Each element in the array is of the form [elementIndex, side], where 'side' indicates which side
    * of the reference element is in contact with the physical boundary:
-   *
-   * For 2D domains (rectangular):
-   * 0 - Bottom side of reference element (maps to physical bottom boundary)
-   * 1 - Left side of reference element (maps to physical left boundary)
-   * 2 - Top side of reference element (maps to physical top boundary)
-   * 3 - Right side of reference element (maps to physical right boundary)
+   * 0 - Bottom side of reference element (maps to physical bottom boundary in the case of a rectangular domain)
+   * 1 - Left side of reference element (maps to physical left boundary in the case of a rectangular domain)
+   * 2 - Top side of reference element (maps to physical top boundary in the case of a rectangular domain)
+   * 3 - Right side of reference element (maps to physical right boundary in the case of a rectangular domain)
    */
   findBoundaryElements() {
     const boundaryElements = [];

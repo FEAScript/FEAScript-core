@@ -76,7 +76,7 @@ export class ThermalBoundaryConditions {
             } else if (this.elementOrder === "quadratic") {
               const boundarySides = {
                 0: [0], // Node at the left side of the reference element
-                2: [2], // Node at the right side of the reference element
+                1: [2], // Node at the right side of the reference element
               };
               boundarySides[side].forEach((nodeIndex) => {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
