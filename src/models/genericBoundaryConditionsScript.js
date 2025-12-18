@@ -1,9 +1,10 @@
 /**
- * ════════════════════════════════════════════════════════════
- *  FEAScript Library
+ * ════════════════════════════════════════════════════════════════
+ *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.1.4 | https://feascript.com
- * ════════════════════════════════════════════════════════════
+ *  Version: 0.2.0 (RC) | https://feascript.com
+ *  MIT License © 2023–2025 FEAScript
+ * ════════════════════════════════════════════════════════════════
  */
 
 // Internal imports
@@ -73,7 +74,7 @@ export class GenericBoundaryConditions {
             } else if (this.elementOrder === "quadratic") {
               const boundarySides = {
                 0: [0], // Node at the left side of the reference element
-                2: [2], // Node at the right side of the reference element
+                1: [2], // Node at the right side of the reference element
               };
               boundarySides[side].forEach((nodeIndex) => {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;

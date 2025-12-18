@@ -1,9 +1,10 @@
 /**
- * ════════════════════════════════════════════════════════════
- *  FEAScript Library
+ * ════════════════════════════════════════════════════════════════
+ *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.1.4 | https://feascript.com
- * ════════════════════════════════════════════════════════════
+ *  Version: 0.2.0 (RC) | https://feascript.com
+ *  MIT License © 2023–2025 FEAScript
+ * ════════════════════════════════════════════════════════════════
  */
 
 // Internal imports
@@ -22,7 +23,7 @@ import { basicLog, debugLog, warnLog, errorLog } from "./utilities/loggingScript
  * @param {string} solverConfig - Parameter specifying the type of solver
  * @param {object} meshConfig - Object containing computational mesh details
  * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
- * @returns {object} An object containifng the solution vector and additional mesh information
+ * @returns {object} An object containifng the solution vector and mesh information
  */
 export class FEAScriptModel {
   constructor() {
@@ -79,7 +80,7 @@ export class FEAScriptModel {
   /**
    * Function to solve the finite element problem synchronously
    * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
-   * @returns {object} An object containing the solution vector and the coordinates of the mesh nodes
+   * @returns {object} An object containing the solution vector and mesh information
    */
   solve(options = {}) {
     if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
@@ -105,7 +106,7 @@ export class FEAScriptModel {
     const meshData = prepareMesh(this.meshConfig);
     basicLog("Mesh preparation completed");
 
-    // Extract node coordinates from meshData
+    // Extract node coordinates and nodal numbering from meshData
     const nodesCoordinates = {
       nodesXCoordinates: meshData.nodesXCoordinates,
       nodesYCoordinates: meshData.nodesYCoordinates,
@@ -228,11 +229,16 @@ export class FEAScriptModel {
       ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(meshData, this.boundaryConditions));
 
       if (this.solverMethod === "jacobi-gpu") {
-        const { solutionVector: x } = await solveLinearSystemAsync("jacobi-gpu", jacobianMatrix, residualVector, {
-          computeEngine,
-          maxIterations: options.maxIterations ?? this.maxIterations,
-          tolerance: options.tolerance ?? this.tolerance,
-        });
+        const { solutionVector: x } = await solveLinearSystemAsync(
+          "jacobi-gpu",
+          jacobianMatrix,
+          residualVector,
+          {
+            computeEngine,
+            maxIterations: options.maxIterations ?? this.maxIterations,
+            tolerance: options.tolerance ?? this.tolerance,
+          }
+        );
         solutionVector = x;
       } else {
         // Other async solver
@@ -243,5 +249,4 @@ export class FEAScriptModel {
 
     return { solutionVector, nodesCoordinates };
   }
-
 }

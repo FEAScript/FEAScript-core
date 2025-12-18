@@ -1,9 +1,10 @@
 /**
- * ════════════════════════════════════════════════════════════
- *  FEAScript Library
+ * ════════════════════════════════════════════════════════════════
+ *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.1.4 | https://feascript.com
- * ════════════════════════════════════════════════════════════
+ *  Version: 0.2.0 (RC) | https://feascript.com
+ *  MIT License © 2023–2025 FEAScript
+ * ════════════════════════════════════════════════════════════════
  */
 
 // Internal imports
@@ -46,7 +47,7 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
     basisFunctions,
     gaussPoints,
     gaussWeights,
-    numNodes,
+    nodesPerElement,
   } = FEAData;
 
   if (meshDimension === "1D") {
@@ -55,7 +56,7 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
     // Matrix assembly
     for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {
       // Map local element nodes to global mesh nodes
-      for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+      for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
         // Convert to 0-based indexing
         localToGlobalMap[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]) - 1;
       }
@@ -73,12 +74,12 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
           basisFunctionDerivKsi,
           nodesXCoordinates,
           localToGlobalMap,
-          numNodes,
+          nodesPerElement,
         });
 
         // Calculate the physical coordinate for this Gauss point
         let xCoord = 0;
-        for (let i = 0; i < numNodes; i++) {
+        for (let i = 0; i < nodesPerElement; i++) {
           xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunction[i];
         }
 
@@ -89,14 +90,14 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
         const d = D(xCoord);
 
         // Computation of Galerkin's residuals and local Jacobian matrix
-        for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
+        for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
           const globalNodeIndex1 = localToGlobalMap[localNodeIndex1];
 
           // Source term contribution to residual vector
           residualVector[globalNodeIndex1] -=
             gaussWeights[gaussPointIndex] * detJacobian * d * basisFunction[localNodeIndex1];
 
-          for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
+          for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
             const globalNodeIndex2 = localToGlobalMap[localNodeIndex2];
 
             // Diffusion term
@@ -165,20 +166,20 @@ export function assembleGeneralFormPDEFront({
   coefficientFunctions,
 }) {
   // Extract numerical integration parameters and mesh coordinates
-  const { gaussPoints, gaussWeights, numNodes } = FEAData;
+  const { gaussPoints, gaussWeights, nodesPerElement } = FEAData;
   const { nodesXCoordinates, nodesYCoordinates, meshDimension } = meshData;
   const { A, B, C, D } = coefficientFunctions;
 
   // Initialize local Jacobian matrix and local residual vector
-  const localJacobianMatrix = Array(numNodes)
+  const localJacobianMatrix = Array(nodesPerElement)
     .fill()
-    .map(() => Array(numNodes).fill(0));
-  const localResidualVector = Array(numNodes).fill(0);
+    .map(() => Array(nodesPerElement).fill(0));
+  const localResidualVector = Array(nodesPerElement).fill(0);
 
   // Build the mapping from local node indices to global node indices
-  const ngl = Array(numNodes);
-  const localToGlobalMap = Array(numNodes);
-  for (let localNodeIndex = 0; localNodeIndex < numNodes; localNodeIndex++) {
+  const ngl = Array(nodesPerElement);
+  const localToGlobalMap = Array(nodesPerElement);
+  for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
     ngl[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]);
     localToGlobalMap[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]) - 1;
   }
@@ -199,12 +200,12 @@ export function assembleGeneralFormPDEFront({
         basisFunctionDerivKsi,
         nodesXCoordinates,
         localToGlobalMap,
-        numNodes,
+        nodesPerElement,
       });
 
       // Calculate the physical coordinate for this Gauss point
       let xCoord = 0;
-      for (let i = 0; i < numNodes; i++) {
+      for (let i = 0; i < nodesPerElement; i++) {
         xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunction[i];
       }
 
@@ -215,12 +216,12 @@ export function assembleGeneralFormPDEFront({
       const d = D(xCoord);
 
       // Computation of local Jacobian matrix and residual vector
-      for (let localNodeIndex1 = 0; localNodeIndex1 < numNodes; localNodeIndex1++) {
+      for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
         // Source term contribution to local residual vector
         localResidualVector[localNodeIndex1] -=
           gaussWeights[gaussPointIndex] * detJacobian * d * basisFunction[localNodeIndex1];
 
-        for (let localNodeIndex2 = 0; localNodeIndex2 < numNodes; localNodeIndex2++) {
+        for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
           // Diffusion term
           localJacobianMatrix[localNodeIndex1][localNodeIndex2] +=
             gaussWeights[gaussPointIndex] *
