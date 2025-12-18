@@ -51,11 +51,19 @@ export class Mesh {
   }
 
   /**
-   * Method to parse the mesh from the GMSH format to the FEAScript format
+   * Method to parse the mesh from the Gmsh format to the FEAScript format
    */
   parseMeshFromGmsh() {
     if (!this.parsedMesh.nodalNumbering) {
       errorLog("No valid nodal numbering found in the parsed mesh.");
+    }
+
+    // If this parsed mesh was already converted in a previous run, don't re-process it.
+    // Just mark this Mesh instance as ready so prepareMesh() doesn't fall back to generateMesh().
+    if (Array.isArray(this.parsedMesh.nodalNumbering)) {
+      this.boundaryElementsProcessed = true;
+      this.parsedMesh.boundaryElementsProcessed = true;
+      return this.parsedMesh;
     }
 
     if (
@@ -67,13 +75,13 @@ export class Mesh {
       const triangleElements = this.parsedMesh.nodalNumbering.triangleElements || [];
 
       debugLog(
-        "Initial parsed mesh nodal numbering from GMSH format: " +
+        "Initial parsed mesh nodal numbering from Gmsh format: " +
           JSON.stringify(this.parsedMesh.nodalNumbering)
       );
 
       // Check if it has quadElements or triangleElements structure from gmshReader
       if (this.parsedMesh.elementTypes[3] || this.parsedMesh.elementTypes[10]) {
-        // Map nodal numbering from GMSH format to FEAScript format for quad elements
+        // Map nodal numbering from Gmsh format to FEAScript format for quad elements
         const mappedNodalNumbering = [];
 
         for (let elementIndex = 0; elementIndex < quadElements.length; elementIndex++) {
@@ -83,7 +91,7 @@ export class Mesh {
           // Check for element type based on number of nodes
           if (gmshNodes.length === 4) {
             // Simple mapping for linear quad elements (4 nodes)
-            // GMSH:         FEAScript:
+            // Gmsh:         FEAScript:
             // 3 --- 2       1 --- 3
             // |     |  -->  |     |
             // 0 --- 1       0 --- 2
@@ -94,7 +102,7 @@ export class Mesh {
             FEAScriptNodes[3] = gmshNodes[2]; // 2 -> 3
           } else if (gmshNodes.length === 9) {
             // Mapping for quadratic quad elements (9 nodes)
-            // GMSH:         FEAScript:
+            // Gmsh:         FEAScript:
             // 3--6--2       2--5--8
             // |     |       |     |
             // 7  8  5  -->  1  4  7
@@ -121,7 +129,7 @@ export class Mesh {
       }
 
       debugLog(
-        "Nodal numbering after mapping from GMSH to FEAScript format: " +
+        "Nodal numbering after mapping from Gmsh to FEAScript format: " +
           JSON.stringify(this.parsedMesh.nodalNumbering)
       );
 

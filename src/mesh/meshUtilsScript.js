@@ -31,7 +31,7 @@ export function prepareMesh(meshConfig) {
     errorLog("Mesh dimension must be either '1D' or '2D'.");
   }
 
-  // Use the parsed mesh in case it was already passed with Gmsh format
+  // Use the parsed mesh (e.g., from a Gmsh .msh import) if provided. Otherwise, generate a structured mesh
   const nodesCoordinatesAndNumbering = mesh.boundaryElementsProcessed ? mesh.parsedMesh : mesh.generateMesh();
 
   // Extract nodes coordinates and nodal numbering (NOP) from the mesh data
