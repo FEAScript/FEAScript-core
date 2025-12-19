@@ -27,6 +27,7 @@ import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
  * @param {string} plotDivId - The id of the div where the plot will be rendered
  */
 export function plotSolution(model, result, plotType, plotDivId) {
+  console.time("plottingTime");
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const solutionVector = result.solutionVector;
   const solverConfig = model.solverConfig;
@@ -66,6 +67,7 @@ export function plotSolution(model, result, plotType, plotDivId) {
     };
 
     Plotly.newPlot(plotDivId, [lineData], layout, { responsive: true });
+    console.timeEnd("plottingTime");
   } else if (meshDimension === "2D" && plotType === "contour") {
     // Check if solutionVector is a nested array
     let zData;
@@ -115,6 +117,7 @@ export function plotSolution(model, result, plotType, plotDivId) {
     };
 
     Plotly.newPlot(plotDivId, [contourData], layout, { responsive: true });
+    console.timeEnd("plottingTime");
   }
 }
 
@@ -126,6 +129,7 @@ export function plotSolution(model, result, plotType, plotDivId) {
  * @param {string} plotDivId - The id of the div where the plot will be rendered
  */
 export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
+  console.time("plottingTime");
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates; // TODO: Check if we should place it inside the 2D block
   const meshDimension = model.meshConfig.meshDimension;
   const meshData = prepareMesh(model.meshConfig); // Retrieve mesh connectivity details
@@ -141,13 +145,14 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
   } else if (meshDimension === "2D" && plotType === "contour") {
     const visNodeXCoordinates = [];
     const visNodeYCoordinates = [];
+    const lengthX = Math.max(...nodesXCoordinates) - Math.min(...nodesXCoordinates);
+    const lengthY = Math.max(...nodesYCoordinates) - Math.min(...nodesYCoordinates);
+    const visPoinsPerUnit = 50; // Number of nodes per one length unit of the visualization grid
+    const visNodesX = Math.round(lengthX * visPoinsPerUnit); // Number of nodes along the x-axis of the visualization grid
+    const visNodesY = Math.round(lengthY * visPoinsPerUnit); // Number of nodes along the y-axis of the visualization grid
+    const deltavisX = lengthX / (visNodesX - 1);
+    const deltavisY = lengthY / (visNodesY - 1);
     let visSolution = [];
-    const visNodesX = 1e2; // Number of nodes along the x-axis of the visualization grid
-    const visNodesY = 1e2; // Number of nodes along the y-axis of the visualization grid
-
-    // const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
-    const deltavisX = (Math.max(...nodesXCoordinates) - Math.min(...nodesXCoordinates)) / (visNodesX - 1);
-    const deltavisY = (Math.max(...nodesYCoordinates) - Math.min(...nodesYCoordinates)) / (visNodesY - 1);
 
     visNodeXCoordinates[0] = Math.min(...nodesXCoordinates);
     visNodeYCoordinates[0] = Math.min(...nodesYCoordinates);
@@ -271,6 +276,8 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
       y: visNodeYCoordinates,
       z: visSolution,
       type: "contour",
+      connectgaps: false,
+      hoverongaps: false,
       line: {
         smoothing: 0.85,
       },
@@ -286,6 +293,7 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
     };
 
     Plotly.newPlot(plotDivId, [contourData], layout, { responsive: true });
+    console.timeEnd("plottingTime");
   }
 }
 
@@ -300,7 +308,15 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
  * @param {object} basisFunctions - Instance of BasisFunctions class
  * @returns {object} Object containing inside boolean and interpolated value
  */
-function pointSearch(model, meshData, result, currentElement, visNodeXCoordinate, visNodeYCoordinate, basisFunctions) {
+function pointSearch(
+  model,
+  meshData,
+  result,
+  currentElement,
+  visNodeXCoordinate,
+  visNodeYCoordinate,
+  basisFunctions
+) {
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const nodesPerElement = meshData.nop[currentElement].length;
 
@@ -328,7 +344,15 @@ function pointSearch(model, meshData, result, currentElement, visNodeXCoordinate
     if (pointCheck.inside) {
       return {
         inside: true,
-        value: solutionInterpolation(model, meshData, result, currentElement, pointCheck.ksi, pointCheck.eta, basisFunctions),
+        value: solutionInterpolation(
+          model,
+          meshData,
+          result,
+          currentElement,
+          pointCheck.ksi,
+          pointCheck.eta,
+          basisFunctions
+        ),
       };
     }
   } else if (nodesPerElement === 9) {
@@ -355,7 +379,15 @@ function pointSearch(model, meshData, result, currentElement, visNodeXCoordinate
     if (pointCheck.inside) {
       return {
         inside: true,
-        value: solutionInterpolation(model, meshData, result, currentElement, pointCheck.ksi, pointCheck.eta, basisFunctions),
+        value: solutionInterpolation(
+          model,
+          meshData,
+          result,
+          currentElement,
+          pointCheck.ksi,
+          pointCheck.eta,
+          basisFunctions
+        ),
       };
     }
   } // TODO: Add also triangular element cases
