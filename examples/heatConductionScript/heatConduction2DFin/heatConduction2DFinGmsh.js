@@ -25,7 +25,7 @@ console.log("FEAScript Version:", printVersion);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Read the mesh file
-const meshFilePath = path.join(__dirname, "rect_quad_unstruct.msh");
+const meshFilePath = path.join(__dirname, "rect_quad.msh");
 const meshContent = fs.readFileSync(meshFilePath, "utf8");
 
 async function main() {
@@ -38,7 +38,7 @@ async function main() {
   // Create a mock File object for Node.js environment
   const mockFile = {
     text: async () => meshContent,
-    name: "rect_quad_unstruct.msh",
+    name: "rect_quad.msh",
   };
 
   // Parse the mesh data
