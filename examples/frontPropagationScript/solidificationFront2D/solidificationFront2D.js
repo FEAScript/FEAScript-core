@@ -19,8 +19,8 @@ console.log("FEAScript Version:", printVersion);
 // Create a new FEAScript model
 const model = new FEAScriptModel();
 
-// Set solver configuration for front propagation
-model.setSolverConfig("frontPropagationScript");
+// Select physics/PDE
+model.setModelConfig("frontPropagationScript");
 
 // Define mesh configuration
 model.setMeshConfig({

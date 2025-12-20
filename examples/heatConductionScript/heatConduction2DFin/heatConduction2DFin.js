@@ -19,8 +19,8 @@ console.log("FEAScript Version:", printVersion);
 // Create a new FEAScript model
 const model = new FEAScriptModel();
 
-// Set solver configuration
-model.setSolverConfig("heatConductionScript");
+// Select physics/PDE
+model.setModelConfig("heatConductionScript");
 
 // Define mesh configuration
 model.setMeshConfig({

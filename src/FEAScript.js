@@ -45,6 +45,7 @@ export class FEAScriptModel {
    */
   setSolverConfig(solverConfig, options = {}) {
     this.solverConfig = solverConfig;
+    warnLog("setSolverConfig() is deprecated. Use setModelConfig() instead");
 
     // Store coefficient functions if provided
     if (options?.coefficientFunctions) {
@@ -60,6 +61,11 @@ export class FEAScriptModel {
     }
 
     debugLog(`Solver config set to: ${solverConfig}`);
+  }
+
+  // Alias modelConfig to solverConfig (solverConfig is deprecated)
+  setModelConfig(modelConfig, options = {}) {
+    this.setSolverConfig(modelConfig, options);
   }
 
   setMeshConfig(meshConfig) {

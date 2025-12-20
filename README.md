@@ -117,7 +117,7 @@ While FEAScript API offers full programmatic control for advanced customization,
 
 ## Quick Example
 
-Here is a minimal browser-based example using the FEAScript API. Adapt paths, solver types, and boundary conditions as needed for your specific problem:
+Here is a minimal browser-based example using the FEAScript API. Adapt paths, physics model, and boundary conditions as needed for your specific problem:
 
 ```html
 <body>
@@ -130,8 +130,8 @@ Here is a minimal browser-based example using the FEAScript API. Adapt paths, so
       // Create a new FEAScript model
       const model = new FEAScriptModel();
 
-      // Set the solver type for your problem
-      model.setSolverConfig("solverType"); // Example: "heatConductionScript"
+      // Select physics/PDE
+      model.setModelConfig("physicsModel"); // Example: "heatConductionScript"
 
       // Configure the mesh
       model.setMeshConfig({
