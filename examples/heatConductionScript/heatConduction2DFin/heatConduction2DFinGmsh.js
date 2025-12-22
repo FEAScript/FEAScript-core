@@ -32,8 +32,8 @@ async function main() {
   // Create a new FEAScript model
   const model = new FEAScriptModel();
 
-  // Set solver configuration
-  model.setSolverConfig("heatConductionScript");
+  // Select physics/PDE
+  model.setModelConfig("heatConductionScript");
 
   // Create a mock File object for Node.js environment
   const mockFile = {

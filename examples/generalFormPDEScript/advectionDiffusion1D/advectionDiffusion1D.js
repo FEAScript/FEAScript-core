@@ -19,8 +19,8 @@ console.log("FEAScript Version:", printVersion);
 // Create a new FEAScript model
 const model = new FEAScriptModel();
 
-// Set solver configuration with coefficient functions
-model.setSolverConfig("generalFormPDEScript", {
+// Select physics/PDE
+model.setModelConfig("generalFormPDEScript", {
   coefficientFunctions: {
     // Equation d²u/dx² - 10 du/dx = 10 * exp(-200 * (x - 0.5)²)
     A: (x) => 1, // Diffusion coefficient
