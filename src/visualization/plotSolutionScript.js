@@ -79,9 +79,13 @@ export function plotSolution(model, result, plotType, plotDivId) {
 
     // Plot sizing parameters
     let maxWindowWidth = Math.min(window.innerWidth, 700);
+    let minX = Math.min(...nodesXCoordinates);
     let maxX = Math.max(...nodesXCoordinates);
+    let minY = Math.min(...nodesYCoordinates);
     let maxY = Math.max(...nodesYCoordinates);
-    let aspectRatio = maxY / maxX;
+    let lengthX = maxX - minX;
+    let lengthY = maxY - minY;
+    let aspectRatio = lengthY / lengthX;
     let plotWidth = Math.min(maxWindowWidth, 600);
     let plotHeight = plotWidth * aspectRatio;
 
@@ -91,7 +95,11 @@ export function plotSolution(model, result, plotType, plotDivId) {
       width: plotWidth,
       height: plotHeight,
       xaxis: { title: "x" },
-      yaxis: { title: "y" },
+      yaxis: {
+        title: "y",
+        scaleanchor: "x",
+        scaleratio: 1,
+      },
       margin: { l: 50, r: 50, t: 50, b: 50 },
       hovermode: "closest",
     };
@@ -253,9 +261,7 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
 
     // Plot sizing parameters
     let maxWindowWidth = Math.min(window.innerWidth, 700);
-    let maxX = Math.max(...nodesXCoordinates);
-    let maxY = Math.max(...nodesYCoordinates);
-    let aspectRatio = maxY / maxX;
+    let aspectRatio = lengthY / lengthX;
     let plotWidth = Math.min(maxWindowWidth, 600);
     let plotHeight = plotWidth * aspectRatio;
 
@@ -265,7 +271,11 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
       width: plotWidth,
       height: plotHeight,
       xaxis: { title: "x" },
-      yaxis: { title: "y" },
+      yaxis: {
+        title: "y",
+        scaleanchor: "x",
+        scaleratio: 1,
+      },
       margin: { l: 50, r: 50, t: 50, b: 50 },
       hovermode: "closest",
     };
