@@ -113,7 +113,7 @@ For users who prefer a visual approach to creating simulations, we offer the [FE
 
 While FEAScript API offers full programmatic control for advanced customization, the FEAScript Platform provides an accessible entry point for users without coding experience.
 
-<!-- > Note: The FEAScript Platform is not yet available -->
+<!-- Note: The FEAScript Platform is not yet available -->
 
 ## Quick Example
 
