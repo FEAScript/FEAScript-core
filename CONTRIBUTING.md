@@ -46,6 +46,7 @@ Example:
  *  FEAScript Library
  *  Lightweight Finite Element Simulation in JavaScript
  *  Version: {VERSION} | https://feascript.com
+ *  MIT License © 2023–20xx FEAScript
  * ════════════════════════════════════════════════════════════
  */
 
