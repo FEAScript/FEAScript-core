@@ -15,7 +15,7 @@
     - [Use FEAScript in the Browser](#use-feascript-in-the-browser)
     - [Use FEAScript with Node.js](#use-feascript-with-nodejs)
     - [Use FEAScript in JavaScript Playgrounds](#use-feascript-in-javascript-playgrounds)
-  - [FEAScript Platform](#feascript-platform)
+  - [FEAScript Studio](#feascript-studio)
 - [Quick Example](#quick-example)
 - [Support FEAScript](#support-feascript)
 - [Contributing](#contributing)
@@ -26,7 +26,7 @@
 FEAScript offers two main approaches to creating simulations:
 
 1. **[FEAScript API](#feascript-api)** – For developers comfortable with coding, providing full programmatic control in browsers, Node.js, or interactive notebooks.
-2. **[FEAScript Platform](#feascript-platform)** – For users who prefer a no-code approach, offering a block-based visual interface built with [Blockly](https://blockly.com/).
+2. **[FEAScript Studio](#feascript-studio)** – A visual and code-based environment (based on [Blockly](https://blockly.com/)) for building simulations in the browser.
 
 Each approach is explained in detail below.
 
@@ -99,21 +99,20 @@ When running examples from within this repository, this step isn’t needed as t
 
 FEAScript works well in interactive JavaScript playgrounds where you can write code, visualize results inline, and share your work.
 
-👉 Explore the following examples: 
+👉 Explore the following examples:
+
 - [CodePen (interactive pens)](https://codepen.io/FEAScript)
 - [Scribbler (notebooks)](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples)
 
-### FEAScript Platform
+### FEAScript Studio
 
-For users who prefer a visual approach to creating simulations, we offer the [FEAScript Platform](https://feascript.com/feascript-platform.html) - a browser-based visual editor built on the [Blockly](https://blockly.com/) library. This no-code interface allows you to:
+For users who prefer a visual approach to creating simulations, [FEAScript Studio](https://feascript.com/feascript-studio.html) offers a browser-based visual editor that allows you to:
 
-- Build and run finite element simulations directly in your browser by connecting visual blocks together.
-- Create complex simulations without writing any JavaScript code.
-- Save and load projects in XML format for easy sharing and reuse.
+- Build and run finite element simulations directly in your browser by connecting visual blocks together (based on the [Blockly](https://blockly.com/) library).
+- Combine a no-code workflow with an integrated code editor when you need more control.
+- Save and share projects.
 
-While FEAScript API offers full programmatic control for advanced customization, the FEAScript Platform provides an accessible entry point for users without coding experience.
-
-<!-- Note: The FEAScript Platform is not yet available -->
+While the FEAScript API provides full programmatic control for advanced customization, FEAScript Studio offers a visual interface for creating and editing simulations.
 
 ## Quick Example
 
