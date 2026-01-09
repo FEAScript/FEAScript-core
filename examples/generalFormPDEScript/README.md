@@ -6,9 +6,9 @@ This directory contains Node.js examples demonstrating how to use the FEAScript 
 
 ## Examples
 
-#### 1. Advection-Diffusion with Gaussian Source (advectionDiffusion1D)
+#### 1. Advection-Diffusion with Gaussian Source (`advectionDiffusion1D.js`)
 
-This example demonstrates solving a one-dimensional advection-diffusion problem with a Gaussian source term. The problem models the transport of a substance under the effects of both diffusion and advection. For detailed information on the model setup refer to the corresponding [tutorial](https://feascript.com/tutorials/advection-diffusion-1d.html) in the FEAScript website.
+This example demonstrates solving a one-dimensional advection-diffusion problem with a Gaussian source term. The problem models the transport of a substance under the effects of both diffusion and advection. For detailed information on the model setup, refer to the corresponding [tutorial](https://feascript.com/tutorials/advection-diffusion-1d.html) in the FEAScript website.
 
 ## Running the Examples
 
