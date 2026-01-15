@@ -26,7 +26,7 @@
 FEAScript offers two main approaches to creating simulations:
 
 1. **[FEAScript API](#feascript-api)** – For developers comfortable with coding, providing full programmatic control in browsers, Node.js, or interactive notebooks.
-2. **[FEAScript Studio](#feascript-studio)** – A visual and code-based environment (based on [Blockly](https://blockly.com/)) for building simulations in the browser.
+2. **[FEAScript Studio](#feascript-studio)** – A visual (based on [Blockly](https://blockly.com/)) and code-based environment for building simulations in the browser.
 
 Each approach is explained in detail below.
 
@@ -34,9 +34,9 @@ Each approach is explained in detail below.
 
 The FEAScript API is the core programmatic interface for FEAScript. Written entirely in pure JavaScript, it runs in three environments:
 
-1. **[In the browser](#use-feascript-in-the-browser)** – Use FEAScript in a simple HTML page, running simulations locally without additional installations or cloud services.
-2. **[With Node.js](#use-feascript-with-nodejs)** – Use FEAScript in server-side JavaScript applications or CLI tools.
-3. **[In JavaScript playgrounds](#use-feascript-in-javascript-playgrounds)** – Use FEAScript in the [Scribbler](https://scribbler.live/) interactive JavaScript notebook environment.
+1. **[In the browser](#use-feascript-in-the-browser)** – Run FEAScript directly in a simple HTML page to perform simulations locally with no additional installations or cloud services required.
+2. **[With Node.js](#use-feascript-with-nodejs)** – Use FEAScript in server-side JavaScript applications.
+3. **[In JavaScript playgrounds](#use-feascript-in-javascript-playgrounds)** – Try FEAScript in interactive JavaScript playgrounds such as [CopePen](https://codepen.io/FEAScript) or [Scribbler](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples).
 
 #### Use FEAScript in the Browser
 
@@ -113,6 +113,8 @@ For users who prefer a visual approach to creating simulations, [FEAScript Studi
 - Save and share projects.
 
 While the FEAScript API provides full programmatic control for advanced customization, FEAScript Studio offers a visual interface for creating and editing simulations.
+
+Join the [waitlist](https://feascript.com/feascript-studio.html#waitlist) to get updates about FEAScript Studio and be among the first to try it when it’s released.
 
 ## Quick Example
 
