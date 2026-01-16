@@ -19,16 +19,35 @@ import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
  * @returns {object} An object containing all mesh-related data
  */
 export function prepareMesh(meshConfig) {
-  const { meshDimension, numElementsX, numElementsY, maxX, maxY, elementOrder, parsedMesh } = meshConfig;
+  const {
+    meshDimension,
+    numElementsX,
+    numElementsY,
+    maxX,
+    maxY,
+    elementOrder,
+    parsedMesh,
+    angleLeft,
+    angleRight,
+  } = meshConfig;
 
   // Create a new instance of the Mesh class
   let mesh;
   if (meshDimension === "1D") {
     mesh = new Mesh1D({ numElementsX, maxX, elementOrder, parsedMesh });
   } else if (meshDimension === "2D") {
-    mesh = new Mesh2D({ numElementsX, maxX, numElementsY, maxY, elementOrder, parsedMesh });
+    mesh = new Mesh2D({
+      numElementsX,
+      maxX,
+      numElementsY,
+      maxY,
+      elementOrder,
+      parsedMesh,
+      angleLeft,
+      angleRight,
+    });
   } else {
-    errorLog("Mesh dimension must be either '1D' or '2D'.");
+    errorLog("Mesh dimension must be either '1D' or '2D'");
   }
 
   // Use the parsed mesh (e.g., from a Gmsh .msh import) if provided. Otherwise, generate a structured mesh

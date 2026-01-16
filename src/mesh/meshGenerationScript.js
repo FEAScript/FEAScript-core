@@ -511,6 +511,8 @@ export class Mesh2D extends Mesh {
    * @param {number} [config.maxY] - Maximum y-coordinate of the mesh (required for geometry-based mesh)
    * @param {string} [config.elementOrder='linear'] - The order of elements, either 'linear' or 'quadratic'
    * @param {object} [config.parsedMesh=null] - Optional pre-parsed mesh data
+   * @param {number} [config.angleLeft=90] - Left side skew angle in degrees (90 = vertical)
+   * @param {number} [config.angleRight=90] - Right side skew angle in degrees (90 = vertical)
    */
   constructor({
     numElementsX = null,
@@ -519,6 +521,8 @@ export class Mesh2D extends Mesh {
     maxY = null,
     elementOrder = "linear",
     parsedMesh = null,
+    angleLeft = 90,
+    angleRight = 90,
   }) {
     super({
       numElementsX,
@@ -529,6 +533,9 @@ export class Mesh2D extends Mesh {
       elementOrder,
       parsedMesh,
     });
+
+    this.angleLeft = angleLeft;
+    this.angleRight = angleRight;
 
     // Validate geometry parameters (when not using a parsed mesh)
     if (
@@ -588,6 +595,32 @@ export class Mesh2D extends Mesh {
         for (let nodeIndexY = 1; nodeIndexY < totalNodesY; nodeIndexY++) {
           nodesXCoordinates[nnode + nodeIndexY] = nodesXCoordinates[nnode];
           nodesYCoordinates[nnode + nodeIndexY] = nodesYCoordinates[nnode] + (nodeIndexY * deltaY) / 2;
+        }
+      }
+    }
+
+    // Angles are measured from the positive X-axis:
+    // 90° = vertical sides (rectangle)
+    // angleLeft < 90°  => left side leans right as y increases
+    // angleLeft > 90°  => left side leans left
+    // angleRight < 90° => right side leans left
+    // angleRight > 90° => right side leans right
+    if (this.angleLeft !== 90 || this.angleRight !== 90) {
+      const degToRad = Math.PI / 180;
+      const tanLeft = Math.tan(this.angleLeft * degToRad);
+      const tanRight = Math.tan(this.angleRight * degToRad);
+      const epsilon = 1e-12;
+
+      for (let nodeIndexY = 0; nodeIndexY < totalNodesY; nodeIndexY++) {
+        const rowBaseIndex = nodeIndexY;
+        const y = nodesYCoordinates[rowBaseIndex];
+        const xLeft = Math.abs(tanLeft) < epsilon ? 0 : y / tanLeft;
+        const xRight = Math.abs(tanRight) < epsilon ? this.maxX : this.maxX - y / tanRight;
+
+        for (let nodeIndexX = 0; nodeIndexX < totalNodesX; nodeIndexX++) {
+          const nnode = nodeIndexX * totalNodesY + nodeIndexY;
+          const t = totalNodesX === 1 ? 0 : nodeIndexX / (totalNodesX - 1);
+          nodesXCoordinates[nnode] = xLeft + (xRight - xLeft) * t;
         }
       }
     }
