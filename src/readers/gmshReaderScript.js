@@ -242,14 +242,20 @@ const importGmshQuadTri = async (file) => {
         }
 
         if (currentElementBlock.elementType === 1 || currentElementBlock.elementType === 8) {
+          // 1: 2-node line.
+          // 8: 3-node second order line (2 nodes associated with the vertices and 1 with the edge).
           if (!boundaryElementsByTag[physicalTag]) boundaryElementsByTag[physicalTag] = [];
           boundaryElementsByTag[physicalTag].push(nodeIndices);
 
           if (!result.boundaryNodePairs[physicalTag]) result.boundaryNodePairs[physicalTag] = [];
           result.boundaryNodePairs[physicalTag].push(nodeIndices);
-        } else if (currentElementBlock.elementType === 2) {
+        } else if (currentElementBlock.elementType === 2 || currentElementBlock.elementType === 9) {
+          // 2: 3-node triangle.
+          // 9: 6-node second order triangle (3 nodes associated with the vertices and 3 with the edges).
           result.nodalNumbering.triangleElements.push(nodeIndices);
         } else if (currentElementBlock.elementType === 3 || currentElementBlock.elementType === 10) {
+          // 3: 4-node quadrangle.
+          // 10: 9-node second order quadrangle (4 nodes associated with the vertices, 4 with the edges and 1 with the face).
           result.nodalNumbering.quadElements.push(nodeIndices);
         }
 

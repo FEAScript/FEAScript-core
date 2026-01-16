@@ -124,8 +124,47 @@ export class Mesh {
         }
 
         this.parsedMesh.nodalNumbering = mappedNodalNumbering;
-      } else if (this.parsedMesh.elementTypes[2]) {
-        errorLog("Element type is neither triangle nor quad; mapping for this type is not implemented yet.");
+      } else if (this.parsedMesh.elementTypes[2] || this.parsedMesh.elementTypes[9]) {
+        // Map nodal numbering from Gmsh format to FEAScript format for triangle elements
+        const mappedNodalNumbering = [];
+
+        for (let elementIndex = 0; elementIndex < triangleElements.length; elementIndex++) {
+          const gmshNodes = triangleElements[elementIndex];
+          const FEAScriptNodes = new Array(gmshNodes.length);
+
+          if (gmshNodes.length === 3) {
+            // Mapping for linear triangle elements (3 nodes)
+            // Gmsh:         FEAScript:
+            // 2             1
+            // | \     -->   | \
+            // 0---1         0---2
+
+            FEAScriptNodes[0] = gmshNodes[0]; // 0 -> 0
+            FEAScriptNodes[1] = gmshNodes[2]; // 2 -> 1
+            FEAScriptNodes[2] = gmshNodes[1]; // 1 -> 2
+          } else if (gmshNodes.length === 6) {
+            // Mapping for quadratic triangle elements (6 nodes)
+            // Gmsh:            FEAScript:
+            //     2                2
+            //    / \              / \
+            //   5   4     -->    1   4
+            //  /     \          /     \
+            // 0---3---1        0---3---5
+
+            FEAScriptNodes[0] = gmshNodes[0]; // 0 -> 0
+            FEAScriptNodes[1] = gmshNodes[5]; // 5 -> 1
+            FEAScriptNodes[2] = gmshNodes[2]; // 2 -> 2
+            FEAScriptNodes[3] = gmshNodes[3]; // 3 -> 3
+            FEAScriptNodes[4] = gmshNodes[4]; // 4 -> 4
+            FEAScriptNodes[5] = gmshNodes[1]; // 1 -> 5
+          }
+
+          mappedNodalNumbering.push(FEAScriptNodes);
+        }
+
+        this.parsedMesh.nodalNumbering = mappedNodalNumbering;
+      } else {
+        errorLog("Element type is neither triangle nor quad; mapping for this type is not implemented yet");
       }
 
       debugLog(
