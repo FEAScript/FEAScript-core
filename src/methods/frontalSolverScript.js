@@ -8,7 +8,6 @@
  */
 
 // Internal imports
-import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
 import { initializeFEA } from "../mesh/meshUtilsScript.js";
 import { assembleHeatConductionFront } from "../models/heatConductionScript.js";
 import { ThermalBoundaryConditions } from "../models/thermalBoundaryConditionsScript.js";
@@ -21,7 +20,6 @@ const frontalData = {};
 const frontalState = {};
 const elementData = { currentElementIndex: 0 };
 const frontStorage = {};
-let basisFunctions;
 
 /**
  * Function to run the frontal solver and obtain results for plotting
@@ -44,12 +42,6 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
   // Start timing for system solving (frontal algorithm)
   basicLog("Solving system using frontal...");
   console.time("systemSolving");
-
-  // Initialize basis functions
-  basisFunctions = new BasisFunctions({
-    meshDimension: meshData.meshDimension,
-    elementOrder: meshData.elementOrder,
-  });
 
   // Copy node connectivity array into frontalData storage
   for (let elementIndex = 0; elementIndex < meshData.totalElements; elementIndex++) {
@@ -74,12 +66,12 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
       meshData.boundaryElements,
       meshData.nop,
       meshData.meshDimension,
-      meshData.elementOrder
+      meshData.elementOrder,
     );
 
     dirichletBoundaryConditionsHandler.imposeConstantTempBoundaryConditionsFront(
       frontalData.nodeConstraintCode,
-      frontalData.boundaryValues
+      frontalData.boundaryValues,
     );
     // Front propagation model (frontPropagationScript solver)
   } else if (assembleFront === assembleFrontPropagationFront) {
@@ -88,12 +80,12 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
       meshData.boundaryElements,
       meshData.nop,
       meshData.meshDimension,
-      meshData.elementOrder
+      meshData.elementOrder,
     );
 
     dirichletBoundaryConditionsHandler.imposeConstantValueBoundaryConditionsFront(
       frontalData.nodeConstraintCode,
-      frontalData.boundaryValues
+      frontalData.boundaryValues,
     );
   }
   // Initialize global residual vector
@@ -130,14 +122,14 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
       debugLog(
         `${nodesXCoordinates[nodeIndex].toExponential(5)}  ${frontalData.solutionVector[
           nodeIndex
-        ].toExponential(5)}`
+        ].toExponential(5)}`,
       );
     } else {
       // 2D case - output X, Y coordinates and temperature
       debugLog(
         `${nodesXCoordinates[nodeIndex].toExponential(5)}  ${nodesYCoordinates[nodeIndex].toExponential(
-          5
-        )}  ${frontalData.solutionVector[nodeIndex].toExponential(5)}`
+          5,
+        )}  ${frontalData.solutionVector[nodeIndex].toExponential(5)}`,
       );
     }
   }
@@ -205,7 +197,10 @@ function initializeFrontalArrays(nodesPerElement, numElements) {
  * @returns {number} Estimated front size
  */
 function estimateFrontSize(nodesPerElement, numElements) {
-  const frontWidthEstimate = Math.max(Math.ceil(Math.sqrt(numElements)) * nodesPerElement, nodesPerElement * 2);
+  const frontWidthEstimate = Math.max(
+    Math.ceil(Math.sqrt(numElements)) * nodesPerElement,
+    nodesPerElement * 2,
+  );
   return frontWidthEstimate * numElements;
 }
 // Old function to estimate the required front size
@@ -236,7 +231,6 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
     elementIndex,
     nop: frontalData.nodalNumbering,
     meshData,
-    basisFunctions: basisFunctions,
     FEAData,
     // These are ignored by linear assemblers
     solutionVector: frontalState.currentSolutionVector,
@@ -256,7 +250,9 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
     for (const boundaryKey in meshData.boundaryElements) {
       if (
         thermalBoundaryConditions.boundaryConditions[boundaryKey]?.[0] === "convection" &&
-        meshData.boundaryElements[boundaryKey].some(([boundaryElementIndex, _]) => boundaryElementIndex === elementIndex)
+        meshData.boundaryElements[boundaryKey].some(
+          ([boundaryElementIndex, _]) => boundaryElementIndex === elementIndex,
+        )
       ) {
         isOnRobinTypeBoundary = true;
         break;
@@ -272,7 +268,7 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
         meshData.nodesYCoordinates,
         gaussPoints,
         gaussWeights,
-        basisFunctions
+        FEAData.basisFunctions,
       );
       boundaryLocalJacobianMatrix = result.localJacobianMatrix;
       boundaryResidualVector = result.localResidualVector;
@@ -527,7 +523,7 @@ function runFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions, assem
 
       if (Math.abs(pivotValue) < 1e-10) {
         errorLog(
-          `Matrix singular or ill-conditioned, currentElementIndex=${elementData.currentElementIndex}, pivotGlobalRowIndex=${pivotGlobalRowIndex}, pivotColumnGlobalIndex=${pivotColumnGlobalIndex}, pivotValue=${pivotValue}`
+          `Matrix singular or ill-conditioned, currentElementIndex=${elementData.currentElementIndex}, pivotGlobalRowIndex=${pivotGlobalRowIndex}, pivotColumnGlobalIndex=${pivotColumnGlobalIndex}, pivotValue=${pivotValue}`,
         );
       }
 
@@ -651,7 +647,7 @@ function runFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions, assem
       frontStorage.pivotRow[0] = 1;
       if (Math.abs(pivotValue) < 1e-10) {
         errorLog(
-          `Matrix singular or ill-conditioned, currentElementIndex=${elementData.currentElementIndex}, pivotGlobalRowIndex=${pivotGlobalRowIndex}, pivotColumnGlobalIndex=${pivotColumnGlobalIndex}, pivotValue=${pivotValue}`
+          `Matrix singular or ill-conditioned, currentElementIndex=${elementData.currentElementIndex}, pivotGlobalRowIndex=${pivotGlobalRowIndex}, pivotColumnGlobalIndex=${pivotColumnGlobalIndex}, pivotValue=${pivotValue}`,
         );
       }
 

@@ -33,7 +33,7 @@ export function assembleFrontPropagationMat(
   meshData,
   boundaryConditions,
   solutionVector,
-  eikonalActivationFlag
+  eikonalActivationFlag,
 ) {
   basicLog("Starting front propagation matrix assembly...");
 
@@ -122,7 +122,7 @@ export function assembleFrontPropagationMat(
           // Get basis functions for the current Gauss point
           let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
             gaussPoints[gaussPointIndex1],
-            gaussPoints[gaussPointIndex2]
+            gaussPoints[gaussPointIndex2],
           );
 
           // Perform isoparametric mapping
@@ -231,7 +231,7 @@ export function assembleFrontPropagationMat(
     boundaryElements,
     nop,
     meshDimension,
-    elementOrder
+    elementOrder,
   );
 
   // Impose Dirichlet boundary conditions
@@ -249,7 +249,6 @@ export function assembleFrontPropagationMat(
  * @param {number} elementIndex - Index of the element being processed
  * @param {array} nop - Nodal connectivity array (element-to-node mapping)
  * @param {object} meshData - Object containing prepared mesh data
- * @param {object} basisFunctions - Object containing basis functions and their derivatives
  * @param {object} FEAData - Object containing FEA-related data
  * @param {array} solutionVector - The solution vector for non-linear equations
  * @param {number} eikonalActivationFlag - Activation parameter for the eikonal equation
@@ -262,13 +261,13 @@ export function assembleFrontPropagationFront({
   elementIndex,
   nop,
   meshData,
-  basisFunctions,
   FEAData,
   solutionVector,
   eikonalActivationFlag,
 }) {
+  // nop is passed explicitly because the frontal solver tags last appearances with sign flips
   // Extract numerical integration parameters and mesh coordinates
-  const { gaussPoints, gaussWeights, nodesPerElement } = FEAData;
+  const { gaussPoints, gaussWeights, nodesPerElement, basisFunctions } = FEAData;
   const { nodesXCoordinates, nodesYCoordinates, meshDimension } = meshData;
 
   // Calculate eikonal viscous term

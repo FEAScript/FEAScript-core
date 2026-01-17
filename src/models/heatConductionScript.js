@@ -105,7 +105,7 @@ export function assembleHeatConductionMat(meshData, boundaryConditions) {
           // Get basis functions for the current Gauss point
           const basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
             gaussPoints[gaussPointIndex1],
-            gaussPoints[gaussPointIndex2]
+            gaussPoints[gaussPointIndex2],
           );
 
           // Perform isoparametric mapping
@@ -148,7 +148,7 @@ export function assembleHeatConductionMat(meshData, boundaryConditions) {
     boundaryElements,
     nop,
     meshDimension,
-    elementOrder
+    elementOrder,
   );
 
   // Impose Convection boundary conditions
@@ -159,7 +159,7 @@ export function assembleHeatConductionMat(meshData, boundaryConditions) {
     gaussWeights,
     nodesXCoordinates,
     nodesYCoordinates,
-    basisFunctions
+    basisFunctions,
   );
 
   // Impose ConstantTemp boundary conditions
@@ -177,16 +177,16 @@ export function assembleHeatConductionMat(meshData, boundaryConditions) {
  * @param {number} elementIndex - Index of the element being processed
  * @param {array} nop - Nodal connectivity array (element-to-node mapping)
  * @param {object} meshData - Object containing prepared mesh data
- * @param {object} basisFunctions - Object containing basis functions and their derivatives
  * @param {object} FEAData - Object containing FEA-related data
  * @returns {object} An object containing:
  *  - localJacobianMatrix: Local Jacobian matrix
  *  - localResidualVector: Residual vector contributions
  *  - ngl: Array mapping local node indices to global node indices
  */
-export function assembleHeatConductionFront({ elementIndex, nop, meshData, basisFunctions, FEAData }) {
+export function assembleHeatConductionFront({ elementIndex, nop, meshData, FEAData }) {
+  // nop is passed explicitly because the frontal solver tags last appearances with sign flips
   // Extract numerical integration parameters and mesh coordinates
-  const { gaussPoints, gaussWeights, nodesPerElement } = FEAData;
+  const { gaussPoints, gaussWeights, nodesPerElement, basisFunctions } = FEAData;
   const { nodesXCoordinates, nodesYCoordinates, meshDimension } = meshData;
 
   // Initialize local Jacobian matrix and local residual vector
@@ -209,7 +209,7 @@ export function assembleHeatConductionFront({ elementIndex, nop, meshData, basis
     for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
       // Get basis functions for the current Gauss point
       const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(
-        gaussPoints[gaussPointIndex1]
+        gaussPoints[gaussPointIndex1],
       );
 
       // Perform isoparametric mapping
