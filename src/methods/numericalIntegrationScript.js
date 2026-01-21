@@ -40,6 +40,9 @@ export class NumericalIntegration {
       gaussWeights[0] = 1;
     } else if (this.elementOrder === "linear" && this.nodesPerElement == 3) {
       // Linear triangular elements
+      // Triangular Gauss quadrature is NOT fully implemented yet
+      // TODO: Refactor triangle integration separately from quadrilateral elements
+      // TODO: Triangles require paired (ksi, eta) Gauss points
       gaussPoints[0] = 1 / 3;
       gaussWeights[0] = 1;
     } else if (this.elementOrder === "quadratic" && this.nodesPerElement == 9) {
@@ -53,6 +56,9 @@ export class NumericalIntegration {
       gaussWeights[2] = 5 / 18;
     } else if (this.elementOrder === "quadratic" && this.nodesPerElement == 6) {
       // Quadratic triangular elements
+      // Triangular Gauss quadrature is NOT fully implemented yet
+      // TODO: Refactor triangle integration separately from quadrilateral elements
+      // TODO: Triangles require paired (ksi, eta) Gauss points
       gaussPoints[0] = 2 / 3;
       gaussPoints[1] = 1 / 6;
       gaussPoints[2] = 1 / 6;

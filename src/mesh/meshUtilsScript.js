@@ -114,14 +114,15 @@ export function initializeFEA(meshData) {
     }
   }
 
+  // Determine the number of nodes in the reference element based on the first element in the nop array
+  const nodesPerElement = nop[0].length;
+
   // Initialize the BasisFunctions class
   const basisFunctions = new BasisFunctions({
     meshDimension,
     elementOrder,
+    nodesPerElement,
   });
-
-  // Determine the number of nodes in the reference element based on the first element in the nop array
-  const nodesPerElement = nop[0].length;
 
   // Initialize the NumericalIntegration class
   const numericalIntegration = new NumericalIntegration({

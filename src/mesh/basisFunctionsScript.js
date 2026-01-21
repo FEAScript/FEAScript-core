@@ -18,10 +18,12 @@ export class BasisFunctions {
    * Constructor to initialize the BasisFunctions class
    * @param {string} meshDimension - The dimension of the mesh
    * @param {string} elementOrder - The order of elements
+   * @param {number} nodesPerElement - Νodes in the reference element based on the first element in the nop array
    */
-  constructor({ meshDimension, elementOrder }) {
+  constructor({ meshDimension, elementOrder, nodesPerElement }) {
     this.meshDimension = meshDimension;
     this.elementOrder = elementOrder;
+    this.nodesPerElement = nodesPerElement;
   }
 
   /**
