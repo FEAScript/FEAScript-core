@@ -120,19 +120,20 @@ export function initializeFEA(meshData) {
     elementOrder,
   });
 
+  // Determine the number of nodes in the reference element based on the first element in the nop array
+  const nodesPerElement = nop[0].length;
+
   // Initialize the NumericalIntegration class
   const numericalIntegration = new NumericalIntegration({
     meshDimension,
     elementOrder,
+    nodesPerElement,
   });
 
   // Calculate Gauss points and weights
   let gaussPointsAndWeights = numericalIntegration.getGaussPointsAndWeights();
   let gaussPoints = gaussPointsAndWeights.gaussPoints;
   let gaussWeights = gaussPointsAndWeights.gaussWeights;
-
-  // Determine the number of nodes in the reference element based on the first element in the nop array
-  const nodesPerElement = nop[0].length;
 
   return {
     residualVector,
@@ -147,12 +148,12 @@ export function initializeFEA(meshData) {
 
 /**
  * Function to perform isoparametric mapping for 1D elements
- * @param {object} params - Parameters for the mapping
+ * @param {object} mappingParams - Parameters for the mapping
  * @returns {object} An object containing the mapped data
  */
-export function performIsoparametricMapping1D(params) {
+export function performIsoparametricMapping1D(mappingParams) {
   const { basisFunction, basisFunctionDerivKsi, nodesXCoordinates, localToGlobalMap, nodesPerElement } =
-    params;
+    mappingParams;
 
   let xCoordinates = 0;
   let ksiDerivX = 0;
@@ -179,10 +180,10 @@ export function performIsoparametricMapping1D(params) {
 
 /**
  * Function to perform isoparametric mapping for 2D elements
- * @param {object} params - Parameters for the mapping
+ * @param {object} mappingParams - Parameters for the mapping
  * @returns {object} An object containing the mapped data
  */
-export function performIsoparametricMapping2D(params) {
+export function performIsoparametricMapping2D(mappingParams) {
   const {
     basisFunction,
     basisFunctionDerivKsi,
@@ -191,7 +192,7 @@ export function performIsoparametricMapping2D(params) {
     nodesYCoordinates,
     localToGlobalMap,
     nodesPerElement,
-  } = params;
+  } = mappingParams;
 
   let xCoordinates = 0;
   let yCoordinates = 0;

@@ -90,7 +90,7 @@ export class Mesh {
 
           // Check for element type based on number of nodes
           if (gmshNodes.length === 4) {
-            // Simple mapping for linear quad elements (4 nodes)
+            // Simple mapping for linear quadrilateral elements (4 nodes)
             // Gmsh:         FEAScript:
             // 3 --- 2       1 --- 3
             // |     |  -->  |     |
@@ -101,7 +101,7 @@ export class Mesh {
             FEAScriptNodes[2] = gmshNodes[1]; // 1 -> 2
             FEAScriptNodes[3] = gmshNodes[2]; // 2 -> 3
           } else if (gmshNodes.length === 9) {
-            // Mapping for quadratic quad elements (9 nodes)
+            // Mapping for quadratic quadrilateral elements (9 nodes)
             // Gmsh:         FEAScript:
             // 3--6--2       2--5--8
             // |     |       |     |
@@ -164,7 +164,9 @@ export class Mesh {
 
         this.parsedMesh.nodalNumbering = mappedNodalNumbering;
       } else {
-        errorLog("Element type is neither triangle nor quad; mapping for this type is not implemented yet");
+        errorLog(
+          "Element type is neither triangle nor quadrilateral; mapping for this type is not implemented yet"
+        );
       }
 
       debugLog(
