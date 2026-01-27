@@ -10,40 +10,28 @@
 
 ## Contents
 
-- [Ways to Use FEAScript](#ways-to-use-feascript)
-  - [FEAScript API](#feascript-api)
-    - [Use FEAScript in the Browser](#use-feascript-in-the-browser)
-    - [Use FEAScript with Node.js](#use-feascript-with-nodejs)
-    - [Use FEAScript in JavaScript Playgrounds](#use-feascript-in-javascript-playgrounds)
-  - [FEAScript Studio](#feascript-studio)
+- [How to Use FEAScript](#ways-to-use-feascript)
+  - [Use FEAScript in the Browser](#use-feascript-in-the-browser)
+  - [Use FEAScript with Node.js](#use-feascript-with-nodejs)
+  - [Use FEAScript in JavaScript Playgrounds](#use-feascript-in-javascript-playgrounds)
 - [Quick Example](#quick-example)
 - [Support FEAScript](#support-feascript)
 - [Contributing](#contributing)
 - [License](#license)
 
-## Ways to Use FEAScript
+## How to Use FEAScript
 
-FEAScript offers two main approaches to creating simulations:
-
-1. **[FEAScript API](#feascript-api)** – For developers comfortable with coding, providing full programmatic control in browsers, Node.js, or interactive notebooks.
-2. **[FEAScript Studio](#feascript-studio)** – A visual (based on [Blockly](https://blockly.com/)) and code-based environment for building simulations in the browser.
-
-Each approach is explained in detail below.
-
-### FEAScript API
-
-The FEAScript API is the core programmatic interface for FEAScript. Written entirely in pure JavaScript, it runs in three environments:
+You can run simulations with FEAScript by calling its functions from JavaScript (the FEAScript API). The API is the core programmatic interface for FEAScript and works across multiple environments, including the browser (simple HTML pages and online JavaScript playgrounds, e.g. [CodePen](https://codepen.io/) and [Scribbler](https://scribbler.live/)) and server-side runtimes such as Node.js. The most common ways to use FEAScript are outlined below:
 
 1. **[In the browser](#use-feascript-in-the-browser)** – Run FEAScript directly in a simple HTML page to perform simulations locally with no additional installations or cloud services required.
-2. **[With Node.js](#use-feascript-with-nodejs)** – Use FEAScript in server-side JavaScript applications.
-3. **[In JavaScript playgrounds](#use-feascript-in-javascript-playgrounds)** – Try FEAScript in interactive JavaScript playgrounds such as [CopePen](https://codepen.io/FEAScript) or [Scribbler](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples).
+2. **[In JavaScript playgrounds](#use-feascript-in-javascript-playgrounds)** – Try FEAScript in interactive JavaScript playgrounds such as [CodePen](https://codepen.io/FEAScript) or [Scribbler](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples).
+3. **[With Node.js](#use-feascript-with-nodejs)** – Use FEAScript in server-side JavaScript applications.
 
 #### Use FEAScript in the Browser
 
 You can use FEAScript in browser environments in three ways:
 
 - **Import from Hosted ESM Build:**
-
   ```html
   <script type="module">
     import { FEAScriptModel } from "https://core.feascript.com/dist/feascript.esm.js";
@@ -70,6 +58,15 @@ You can use FEAScript in browser environments in three ways:
 
 👉 Explore browser-based tutorials on our [website](https://feascript.com/#tutorials).
 
+#### Use FEAScript in JavaScript Playgrounds
+
+FEAScript works well in interactive JavaScript playgrounds where you can write code, visualize results inline, and share your work.
+
+👉 Explore the following examples:
+
+- [CodePen (interactive pens)](https://codepen.io/FEAScript)
+- [Scribbler (notebooks)](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples)
+
 #### Use FEAScript with Node.js
 
 Install FEAScript and its peer dependencies from npm as follows:
@@ -94,27 +91,6 @@ echo '{"type":"module"}' > package.json
 When running examples from within this repository, this step isn’t needed as the root package.json already has the proper configuration.
 
 👉 Explore Node.js use cases on the [examples directory](https://github.com/FEAScript/FEAScript-core/tree/main/examples).
-
-#### Use FEAScript in JavaScript Playgrounds
-
-FEAScript works well in interactive JavaScript playgrounds where you can write code, visualize results inline, and share your work.
-
-👉 Explore the following examples:
-
-- [CodePen (interactive pens)](https://codepen.io/FEAScript)
-- [Scribbler (notebooks)](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples)
-
-### FEAScript Studio
-
-For users who prefer a visual approach to creating simulations, [FEAScript Studio](https://feascript.com/feascript-studio.html) offers a browser-based visual editor that allows you to:
-
-- Build and run finite element simulations directly in your browser by connecting visual blocks together (based on the [Blockly](https://blockly.com/) library).
-- Combine a no-code workflow with an integrated code editor when you need more control.
-- Save and share projects.
-
-While the FEAScript API provides full programmatic control for advanced customization, FEAScript Studio offers a visual interface for creating and editing simulations.
-
-Join the [waitlist](https://feascript.com/feascript-studio.html#waitlist) to get updates about FEAScript Studio and be among the first to try it when it’s released.
 
 ## Quick Example
 
@@ -157,7 +133,7 @@ Here is a minimal browser-based example using the FEAScript API. Adapt paths, ph
 
 **Note:** The code above uses placeholder values that you should replace with appropriate options, e.g.:
 
-- "solverType" should be replaced with an actual solver type such as "heatConductionScript" for heat conduction problems
+- "physicsModel" should be replaced with an actual solver type such as "heatConductionScript" for heat conduction problems
 - "conditionType" should be replaced with an actual boundary condition type such as "constantTemp"
 - "boundaryIndex" should be replaced with a string identifying the boundary
 
@@ -166,10 +142,10 @@ Here is a minimal browser-based example using the FEAScript API. Adapt paths, ph
 > 💖 **If you find FEAScript useful, please consider supporting its development through a donation:**
 
 <a href="https://github.com/sponsors/FEAScript">
-  <img alt="GitHub Sponsors" src="https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/feascript">
+  <img alt="GitHub Sponsors" src="https://feascript.github.io/FEAScript-website/assets/Sponsor_GitHub.svg">
 </a>
 <a href="https://liberapay.com/FEAScript/donate">
-  <img alt="Donate using Liberapay" src="https://img.shields.io/badge/Liberapay-F6C915?logo=liberapay&logoColor=black">
+  <img alt="Donate using Liberapay" src="https://feascript.github.io/FEAScript-website/assets/Sponsor_Liberapay.svg">
 </a>
 
 Your support helps ensure the continued development and maintenance of this project.
