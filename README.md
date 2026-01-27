@@ -32,6 +32,7 @@ You can run simulations with FEAScript by calling its functions from JavaScript 
 You can use FEAScript in browser environments in three ways:
 
 - **Import from Hosted ESM Build:**
+
   ```html
   <script type="module">
     import { FEAScriptModel } from "https://core.feascript.com/dist/feascript.esm.js";
