@@ -39,7 +39,7 @@ export class FEAScriptModel {
   }
 
   /**
-   * Sets the solver configuration
+   * Method to set the solver configuration
    * @param {string} solverConfig - Parameter specifying the type of solver
    * @param {object} [options] - Optional additional configuration
    */
@@ -48,54 +48,56 @@ export class FEAScriptModel {
     warnLog("setSolverConfig() is deprecated. Use setModelConfig() instead");
 
     // Store coefficient functions if provided
-    if (options?.coefficientFunctions) {
+    if (options?.coefficientFunctions !== undefined) {
       this.coefficientFunctions = options.coefficientFunctions;
-      debugLog("Coefficient functions set");
+      debugLog("coefficientFunctions set");
     }
-    // Only update if a value is provided, otherwise keep the default
+    // Only update if a value is provided
     if (options?.maxIterations !== undefined) {
       this.maxIterations = options.maxIterations;
+      debugLog(`maxIterations set to ${this.maxIterations}`);
     }
     if (options?.tolerance !== undefined) {
       this.tolerance = options.tolerance;
+      debugLog(`tolerance set to ${this.tolerance}`);
     }
 
-    debugLog(`Solver config set to: ${solverConfig}`);
+    debugLog(`solverConfig set to ${solverConfig}`);
   }
 
-  // Alias modelConfig to solverConfig (solverConfig is deprecated)
+  // Alias modelConfig to solverConfig (solverConfig is deprecated, use setModelConfig instead)
   setModelConfig(modelConfig, options = {}) {
     this.setSolverConfig(modelConfig, options);
   }
 
   setMeshConfig(meshConfig) {
     this.meshConfig = meshConfig;
-    debugLog(`Mesh config set with dimensions: ${meshConfig.meshDimension}`);
+    debugLog(`meshConfig set with dimensions: ${meshConfig.meshDimension}`);
   }
 
   addBoundaryCondition(boundaryKey, condition) {
     this.boundaryConditions[boundaryKey] = condition;
-    debugLog(`Boundary condition added for boundary: ${boundaryKey}, type: ${condition[0]}`);
+    debugLog(`boundaryConditions added for boundary: ${boundaryKey}, type: ${condition[0]}`);
   }
 
   setSolverMethod(solverMethod) {
     this.solverMethod = solverMethod;
-    debugLog(`Solver method set to: ${solverMethod}`);
+    debugLog(`solverMethod set to: ${solverMethod}`);
   }
 
   /**
-   * Function to solve the finite element problem synchronously
+   * Method to solve the finite element problem synchronously
    * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
    * @returns {object} An object containing the solution vector and mesh information
    */
   solve(options = {}) {
     if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
-      errorLog("Solver config, mesh config, and boundary conditions must be set before solving.");
+      errorLog("solverConfig, meshConfig and boundaryConditions must be set before solving");
     }
     /**
      * For consistency across both linear and nonlinear formulations,
-     * this project always refers to the assembled right-hand side vector
-     * as `residualVector` and the assembled system matrix as `jacobianMatrix`.
+     * we always refer to the assembled right-hand side vector as 
+     * `residualVector` and the assembled system matrix as `jacobianMatrix`.
      *
      * In linear problems `jacobianMatrix` is equivalent to the
      * classic stiffness/conductivity matrix and `residualVector`
@@ -121,7 +123,7 @@ export class FEAScriptModel {
     // Select and execute the appropriate solver based on solverConfig
     basicLog("Beginning solving process...");
     console.time("totalSolvingTime");
-    basicLog(`Using solver: ${this.solverConfig}`);
+    basicLog(`Using solver ${this.solverConfig}`);
     if (this.solverConfig === "heatConductionScript") {
       // Check if using frontal solver
       if (this.solverMethod === "frontal") {
@@ -174,7 +176,7 @@ export class FEAScriptModel {
         residualVector = newtonRaphsonResult.residualVector;
         solutionVector = newtonRaphsonResult.solutionVector;
 
-        // Increment for next iteration
+        // Increment eikonalActivationFlag for next iteration
         eikonalActivationFlag += 1 / eikonalExteralIterations;
       }
     } else if (this.solverConfig === "generalFormPDEScript") {
@@ -205,7 +207,7 @@ export class FEAScriptModel {
   }
 
   /**
-   * Function to solve the finite element problem asynchronously
+   * Method to solve the finite element problem asynchronously
    * @param {object} computeEngine - The compute engine to use for the asynchronous solver (e.g., a worker or a WebGPU context)
    * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
    * @returns {Promise<object>} A promise that resolves to an object containing the solution vector and the coordinates of the mesh nodes
