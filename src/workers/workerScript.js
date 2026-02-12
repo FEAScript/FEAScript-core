@@ -30,9 +30,9 @@ export class FEAScriptWorker {
   }
 
   /**
-   * Function to initialize the web worker and wrap it using Comlink.
+   * Function to initialize the web worker and wrap it using Comlink
    * @private
-   * @throws Will throw an error if the worker fails to initialize.
+   * @throws Will throw an error if the worker fails to initialize
    */
   async _initWorker() {
     try {
@@ -55,10 +55,10 @@ export class FEAScriptWorker {
   }
 
   /**
-   * Function to ensure that the worker is ready before performing any operations.
+   * Function to ensure that the worker is ready before performing any operations
    * @private
-   * @returns {Promise<void>} Resolves when the worker is ready.
-   * @throws Will throw an error if the worker is not ready within the timeout period.
+   * @returns {Promise<void>} Resolves when the worker is ready
+   * @throws Will throw an error if the worker is not ready within the timeout period
    */
   async _ensureReady() {
     if (this.isReady) return Promise.resolve();
@@ -82,20 +82,20 @@ export class FEAScriptWorker {
   }
 
   /**
-   * Function to set the solver configuration in the worker.
-   * @param {string} solverConfig - The solver configuration to set.
-   * @returns {Promise<boolean>} Resolves when the configuration is set.
+   * Function to set the model configuration in the worker
+   * @param {string} modelConfig - The model configuration to set
+   * @returns {Promise<boolean>} Resolves when the configuration is set
    */
-  async setSolverConfig(solverConfig) {
+  async setModelConfig(modelConfig) {
     await this._ensureReady();
-    basicLog(`FEAScriptWorker: Setting solver config to: ${solverConfig}`);
-    return this.feaWorker.setSolverConfig(solverConfig);
+    basicLog(`FEAScriptWorker: Setting model config to: ${modelConfig}`);
+    return this.feaWorker.setModelConfig(modelConfig);
   }
 
   /**
-   * Sets the mesh configuration in the worker.
-   * @param {object} meshConfig - The mesh configuration to set.
-   * @returns {Promise<boolean>} Resolves when the configuration is set.
+   * Function to set the mesh configuration in the worker
+   * @param {object} meshConfig - The mesh configuration to set
+   * @returns {Promise<boolean>} Resolves when the configuration is set
    */
   async setMeshConfig(meshConfig) {
     await this._ensureReady();
@@ -104,10 +104,10 @@ export class FEAScriptWorker {
   }
 
   /**
-   * Adds a boundary condition to the worker.
-   * @param {string} boundaryKey - The key identifying the boundary.
-   * @param {array} condition - The boundary condition to add.
-   * @returns {Promise<boolean>} Resolves when the boundary condition is added.
+   * Function to add a boundary condition to the worker
+   * @param {string} boundaryKey - The key identifying the boundary
+   * @param {array} condition - The boundary condition to add
+   * @returns {Promise<boolean>} Resolves when the boundary condition is added
    */
   async addBoundaryCondition(boundaryKey, condition) {
     await this._ensureReady();
@@ -116,9 +116,9 @@ export class FEAScriptWorker {
   }
 
   /**
-   * Sets the solver method in the worker.
-   * @param {string} solverMethod - The solver method to set.
-   * @returns {Promise<boolean>} Resolves when the solver method is set.
+   * Function to set the solver method in the worker
+   * @param {string} solverMethod - The solver method to set
+   * @returns {Promise<boolean>} Resolves when the solver method is set
    */
   async setSolverMethod(solverMethod) {
     await this._ensureReady();
@@ -127,8 +127,8 @@ export class FEAScriptWorker {
   }
 
   /**
-   * Requests the worker to solve the problem.
-   * @returns {Promise<object>} Resolves with the solution result.
+   * Function to request the worker to solve the problem
+   * @returns {Promise<object>} Resolves with the solution result
    */
   async solve() {
     await this._ensureReady();
@@ -143,8 +143,8 @@ export class FEAScriptWorker {
   }
 
   /**
-   * Retrieves model information from the worker.
-   * @returns {Promise<object>} Resolves with the model information.
+   * Function to retrieve model information from the worker
+   * @returns {Promise<object>} Resolves with the model information
    */
   async getModelInfo() {
     await this._ensureReady();
@@ -152,8 +152,8 @@ export class FEAScriptWorker {
   }
 
   /**
-   * Sends a ping request to the worker to check its availability.
-   * @returns {Promise<boolean>} Resolves if the worker responds.
+   * Function to send a ping request to the worker to check its availability
+   * @returns {Promise<boolean>} Resolves if the worker responds
    */
   async ping() {
     await this._ensureReady();
@@ -161,7 +161,7 @@ export class FEAScriptWorker {
   }
 
   /**
-   * Terminates the worker and cleans up resources.
+   * Function to terminate the worker and clean up resources
    */
   terminate() {
     if (this.worker) {
