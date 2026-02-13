@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 (RC) | https://feascript.com
+ *  Version: 0.2.0 | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -15,6 +15,7 @@ import { prepareMesh } from "./mesh/meshUtilsScript.js";
 import { assembleFrontPropagationMat } from "./models/frontPropagationScript.js";
 import { assembleGeneralFormPDEMat, assembleGeneralFormPDEFront } from "./models/generalFormPDEScript.js";
 import { assembleHeatConductionMat, assembleHeatConductionFront } from "./models/heatConductionScript.js";
+import { assembleStokesMatrix } from "./models/stokesScript.js";
 import { runFrontalSolver } from "./methods/frontalSolverScript.js";
 import { basicLog, debugLog, warnLog, errorLog } from "./utilities/loggingScript.js";
 
@@ -144,7 +145,7 @@ export class FEAScriptModel {
       }
     } else if (this.solverConfig === "frontPropagationScript") {
       // Initialize eikonalActivationFlag
-      let eikonalActivationFlag = 0;
+      let eikonalActivationFlag = 0; // TODO: make activationFlag a generic variable (not only for eikonal)
       const eikonalExteralIterations = 5; // Number of incremental steps for the eikonal equation
 
       // Create context object with all necessary properties
@@ -199,6 +200,24 @@ export class FEAScriptModel {
         });
         solutionVector = linearSystemResult.solutionVector;
       }
+    } else if (this.solverConfig === "stokesScript") {
+      // Use regular linear solver methods for steady Stokes flow
+      const stokesResult = assembleStokesMatrix(meshData, this.boundaryConditions);
+      jacobianMatrix = stokesResult.jacobianMatrix;
+      residualVector = stokesResult.residualVector;
+
+      const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector, {
+        maxIterations: options.maxIterations ?? this.maxIterations,
+        tolerance: options.tolerance ?? this.tolerance,
+      });
+      solutionVector = linearSystemResult.solutionVector;
+
+      // Store Stokes-specific metadata for solution extraction
+      this._stokesMetadata = {
+        totalNodesVelocity: stokesResult.totalNodesVelocity,
+        totalNodesPressure: stokesResult.totalNodesPressure,
+        pressureNodeIndices: stokesResult.pressureNodeIndices,
+      };
     }
     console.timeEnd("totalSolvingTime");
     basicLog("Solving process completed");
@@ -249,7 +268,7 @@ export class FEAScriptModel {
         );
         solutionVector = x;
       } else {
-        // Other async solver
+        // Any other async solver
       }
     }
     console.timeEnd("totalSolvingTime");

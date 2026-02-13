@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 (RC) | https://feascript.com
+ *  Version: 0.2.0 | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
