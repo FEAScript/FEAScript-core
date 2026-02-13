@@ -96,7 +96,7 @@ export function assembleStokesMatrix(meshData, boundaryConditions) {
   const totalDOFs = 2 * totalNodesVelocity + totalNodesPressure;
 
   debugLog(
-    `Stokes DOFs: ${totalNodesVelocity} velocity nodes (Q2), ${totalNodesPressure} pressure nodes (Q1), ${totalDOFs} total DOFs`
+    `Stokes DOFs: ${totalNodesVelocity} velocity nodes (Q2), ${totalNodesPressure} pressure nodes (Q1), ${totalDOFs} total DOFs`,
   );
 
   // Initialize Jacobian matrix and residual vector
@@ -154,13 +154,13 @@ export function assembleStokesMatrix(meshData, boundaryConditions) {
         // Get velocity (Q2) basis functions for the current Gauss point
         const velocityBasisFunctionsAndDerivatives = velocityBasisFunctions.getBasisFunctions(
           gaussPoints[gaussPointIndex1],
-          gaussPoints[gaussPointIndex2]
+          gaussPoints[gaussPointIndex2],
         );
 
         // Get pressure (Q1) basis functions for the current Gauss point
         const pressureBasisFunctionsAndDerivatives = pressureBasisFunctions.getBasisFunctions(
           gaussPoints[gaussPointIndex1],
-          gaussPoints[gaussPointIndex2]
+          gaussPoints[gaussPointIndex2],
         );
 
         // Perform isoparametric mapping using Q2 velocity basis functions
@@ -241,7 +241,7 @@ export function assembleStokesMatrix(meshData, boundaryConditions) {
     elementOrder,
     totalNodesVelocity,
     totalNodesPressure,
-    q2ToPressureMap
+    q2ToPressureMap,
   );
 
   flowBoundaryConditions.imposeDirichletBoundaryConditions(residualVector, jacobianMatrix);

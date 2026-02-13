@@ -33,7 +33,7 @@ export class FlowBoundaryConditions {
     elementOrder,
     totalNodesVelocity,
     totalNodesPressure,
-    q2ToPressureMap
+    q2ToPressureMap,
   ) {
     this.boundaryConditions = boundaryConditions;
     this.boundaryElements = boundaryElements;
@@ -58,11 +58,11 @@ export class FlowBoundaryConditions {
    * classic stiffness/conductivity matrix and `residualVector`
    * corresponds to the traditional load (RHS) vector.
    *
-  * Supported boundary condition types:
-  *  - "constantVelocity": Set velocity components at boundary nodes
-  *    Format: ["constantVelocity", uValue, vValue]
-  *  - "stressFree": Natural boundary condition (zero traction), no assembly needed
-  *    Format: ["stressFree"]
+   * Supported boundary condition types:
+   *  - "constantVelocity": Set velocity components at boundary nodes
+   *    Format: ["constantVelocity", uValue, vValue]
+   *  - "stressFree": Natural boundary condition (zero traction), no assembly needed
+   *    Format: ["stressFree"]
    */
   imposeDirichletBoundaryConditions(residualVector, jacobianMatrix) {
     const totalDOFs = residualVector.length;
@@ -80,7 +80,7 @@ export class FlowBoundaryConditions {
           const uValue = this.boundaryConditions[boundaryKey][1];
           const vValue = this.boundaryConditions[boundaryKey][2];
           debugLog(
-            `Boundary ${boundaryKey}: Applying constant velocity condition (u=${uValue}, v=${vValue})`
+            `Boundary ${boundaryKey}: Applying constant velocity condition (u=${uValue}, v=${vValue})`,
           );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
             if (this.elementOrder === "quadratic") {
@@ -97,7 +97,7 @@ export class FlowBoundaryConditions {
                 debugLog(
                   `  - Applied velocity Dirichlet to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
                 // Apply u-velocity Dirichlet boundary condition
                 residualVector[uDOF] = uValue;
@@ -127,7 +127,7 @@ export class FlowBoundaryConditions {
                 debugLog(
                   `  - Applied velocity Dirichlet to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
                 // Apply u-velocity Dirichlet boundary condition
                 residualVector[uDOF] = uValue;
