@@ -4,7 +4,6 @@ FEAScript makes use of the following third-party software:
    - License: Apache 2.0 (https://github.com/josdejong/mathjs/blob/develop/LICENSE)
    - Source: https://github.com/josdejong/mathjs
 
-
 2. **plotly.js**
    - License: MIT (https://github.com/plotly/plotly.js/blob/master/LICENSE)
    - Source: https://github.com/plotly/plotly.js/tree/master

@@ -1,7 +1,7 @@
 {
   "name": "feascript",
-  "version": "0.2.0 (RC)",
-  "description": "Lightweight finite element simulation library built in JavaScript for browser-based physics and engineering simulations",
+  "version": "0.2.0",
+  "description": "Lightweight finite element simulation library built in JavaScript",
   "main": "dist/feascript.cjs.js",
   "module": "dist/feascript.esm.js",
   "browser": "dist/feascript.umd.js",

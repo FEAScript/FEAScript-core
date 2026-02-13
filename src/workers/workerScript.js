@@ -2,16 +2,13 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 (RC) | https://feascript.com
+ *  Version: 0.2.0 | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
 
 // External imports
 import * as Comlink from "../vendor/comlink.mjs";
-
-// Internal imports
-import { basicLog } from "../utilities/loggingScript.js";
 
 /**
  * Class to facilitate communication with web workers for FEAScript operations
@@ -88,7 +85,6 @@ export class FEAScriptWorker {
    */
   async setModelConfig(modelConfig) {
     await this._ensureReady();
-    basicLog(`FEAScriptWorker: Setting model config to: ${modelConfig}`);
     return this.feaWorker.setModelConfig(modelConfig);
   }
 
@@ -99,7 +95,6 @@ export class FEAScriptWorker {
    */
   async setMeshConfig(meshConfig) {
     await this._ensureReady();
-    basicLog(`FEAScriptWorker: Setting mesh config`);
     return this.feaWorker.setMeshConfig(meshConfig);
   }
 
@@ -111,7 +106,6 @@ export class FEAScriptWorker {
    */
   async addBoundaryCondition(boundaryKey, condition) {
     await this._ensureReady();
-    basicLog(`FEAScriptWorker: Adding boundary condition for boundary: ${boundaryKey}`);
     return this.feaWorker.addBoundaryCondition(boundaryKey, condition);
   }
 
@@ -122,7 +116,6 @@ export class FEAScriptWorker {
    */
   async setSolverMethod(solverMethod) {
     await this._ensureReady();
-    basicLog(`FEAScriptWorker: Setting solver method to: ${solverMethod}`);
     return this.feaWorker.setSolverMethod(solverMethod);
   }
 
@@ -132,13 +125,9 @@ export class FEAScriptWorker {
    */
   async solve() {
     await this._ensureReady();
-    basicLog("FEAScriptWorker: Requesting solution from worker...");
-
     const startTime = performance.now();
     const result = await this.feaWorker.solve();
     const endTime = performance.now();
-
-    basicLog(`FEAScriptWorker: Solution completed in ${((endTime - startTime) / 1000).toFixed(2)}s`);
     return result;
   }
 
