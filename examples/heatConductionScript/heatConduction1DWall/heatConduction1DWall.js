@@ -31,8 +31,8 @@ model.setMeshConfig({
 });
 
 // Define boundary conditions
-model.addBoundaryCondition("0", ["convection", 1, 25]);
-model.addBoundaryCondition("1", ["constantTemp", 5]);
+model.addBoundaryCondition("0", ["convection", 1, 25]); // Left boundary
+model.addBoundaryCondition("1", ["constantTemp", 5]); // Right boundary
 
 // Set solver method (optional)
 model.setSolverMethod("lusolve");

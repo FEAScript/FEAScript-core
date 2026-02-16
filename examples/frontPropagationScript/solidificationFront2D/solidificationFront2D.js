@@ -33,10 +33,10 @@ model.setMeshConfig({
 });
 
 // Define boundary conditions
-model.addBoundaryCondition("0", ["constantValue", 0]); // Bottom
-model.addBoundaryCondition("1", ["constantValue", 0]); // Left
-model.addBoundaryCondition("2", ["zeroGradient"]); // Top
-model.addBoundaryCondition("3", ["constantValue", 0]); // Right
+model.addBoundaryCondition("0", ["constantValue", 0]); // Bottom boundary
+model.addBoundaryCondition("1", ["constantValue", 0]); // Left boundary
+model.addBoundaryCondition("2", ["zeroGradient"]); // Top boundary
+model.addBoundaryCondition("3", ["constantValue", 0]); // Right boundary
 
 // Set solver method (optional)
 model.setSolverMethod("lusolve");

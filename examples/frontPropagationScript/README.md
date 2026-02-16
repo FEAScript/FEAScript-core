@@ -1,4 +1,4 @@
-<img src="https://feascript.github.io/FEAScript-website/assets/feascript-front-propagation.png" width="80" alt="FEAScript Logo">
+<img src="https://feascript.github.io/FEAScript-website/assets/feascript-front-propagation.png" width="80" alt="FEAScript frontPropagation Logo">
 
 # Front Propagation Examples
 

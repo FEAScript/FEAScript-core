@@ -39,8 +39,8 @@ model.setMeshConfig({
 });
 
 // Define boundary conditions
-model.addBoundaryCondition("0", ["constantValue", 1]); // Left boundary, u(0) = 1
-model.addBoundaryCondition("1", "zeroGradient"); // Right boundary, zero gradient (du/dx = 0)
+model.addBoundaryCondition("0", ["constantValue", 1]); // Left boundary
+model.addBoundaryCondition("1", "zeroGradient"); // Right boundary
 
 // Set solver method
 model.setSolverMethod("lusolve");

@@ -20,23 +20,23 @@ console.log("FEAScript Version:", printVersion);
 const model = new FEAScriptModel();
 
 // Select physics/PDE
-model.setModelConfig("heatConductionScript");
+model.setModelConfig("creepingFlowScript");
 
 // Define mesh configuration
 model.setMeshConfig({
   meshDimension: "2D",
   elementOrder: "quadratic",
-  numElementsX: 8,
-  numElementsY: 4,
+  numElementsX: 12,
+  numElementsY: 6,
   maxX: 4,
   maxY: 2,
 });
 
 // Define boundary conditions
-model.addBoundaryCondition("0", ["constantTemp", 200]); // Bottom boundary
-model.addBoundaryCondition("1", ["symmetry"]); // Left boundary
-model.addBoundaryCondition("2", ["convection", 1, 20]); // Top boundary
-model.addBoundaryCondition("3", ["constantTemp", 200]); // Right boundary
+model.addBoundaryCondition("0", ["constantVelocity", 0, 0]); // Bottom boundary
+model.addBoundaryCondition("1", ["constantVelocity", 0, 0]); // Left boundary
+model.addBoundaryCondition("2", ["constantVelocity", 1, 0]); // Top boundary
+model.addBoundaryCondition("3", ["constantVelocity", 0, 0]); // Right boundary
 
 // Set solver method (optional)
 model.setSolverMethod("lusolve");

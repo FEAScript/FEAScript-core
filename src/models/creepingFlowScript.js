@@ -15,7 +15,7 @@ import { FlowBoundaryConditions } from "./flowBoundaryConditions.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**
- * Function to assemble the Jacobian matrix and residual vector for the steady Stokes flow model
+ * Function to assemble the Jacobian matrix and residual vector for the steady creeping flow (Stokes) model
  * using Taylor-Hood (Q2-Q1) mixed finite elements
  *
  * DOF ordering in the assembled system:
@@ -39,8 +39,8 @@ import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
  * classic stiffness/conductivity matrix and `residualVector`
  * corresponds to the traditional load (RHS) vector.
  */
-export function assembleStokesMatrix(meshData, boundaryConditions) {
-  basicLog("Starting Stokes flow matrix assembly...");
+export function assembleCreepingFlowMatrix(meshData, boundaryConditions) {
+  basicLog("Starting creeping flow matrix assembly...");
 
   // Extract mesh data
   const {
@@ -56,10 +56,10 @@ export function assembleStokesMatrix(meshData, boundaryConditions) {
 
   // Validate mesh configuration
   if (meshDimension !== "2D") {
-    errorLog("Stokes solver requires a 2D mesh");
+    errorLog("Creeping flow solver requires a 2D mesh");
   }
   if (elementOrder !== "quadratic") {
-    errorLog("Stokes solver requires quadratic elements for Taylor-Hood (Q2-Q1) formulation");
+    errorLog("Creeping flow solver requires quadratic elements for Taylor-Hood (Q2-Q1) formulation");
   }
 
   // Number of velocity nodes (Q2) is the total number of nodes in the quadratic mesh
@@ -96,7 +96,7 @@ export function assembleStokesMatrix(meshData, boundaryConditions) {
   const totalDOFs = 2 * totalNodesVelocity + totalNodesPressure;
 
   debugLog(
-    `Stokes DOFs: ${totalNodesVelocity} velocity nodes (Q2), ${totalNodesPressure} pressure nodes (Q1), ${totalDOFs} total DOFs`,
+    `Creeping flow DOFs: ${totalNodesVelocity} velocity nodes (Q2), ${totalNodesPressure} pressure nodes (Q1), ${totalDOFs} total DOFs`,
   );
 
   // Initialize Jacobian matrix and residual vector
@@ -245,7 +245,7 @@ export function assembleStokesMatrix(meshData, boundaryConditions) {
   );
 
   flowBoundaryConditions.imposeDirichletBoundaryConditions(residualVector, jacobianMatrix);
-  basicLog("Stokes flow matrix assembly completed");
+  basicLog("Creeping flow matrix assembly completed");
 
   return {
     jacobianMatrix,

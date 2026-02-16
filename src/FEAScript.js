@@ -15,7 +15,7 @@ import { prepareMesh } from "./mesh/meshUtilsScript.js";
 import { assembleFrontPropagationMat } from "./models/frontPropagationScript.js";
 import { assembleGeneralFormPDEMat, assembleGeneralFormPDEFront } from "./models/generalFormPDEScript.js";
 import { assembleHeatConductionMat, assembleHeatConductionFront } from "./models/heatConductionScript.js";
-import { assembleStokesMatrix } from "./models/stokesScript.js";
+import { assembleCreepingFlowMatrix } from "./models/creepingFlowScript.js";
 import { runFrontalSolver } from "./methods/frontalSolverScript.js";
 import { basicLog, debugLog, warnLog, errorLog } from "./utilities/loggingScript.js";
 
@@ -200,11 +200,11 @@ export class FEAScriptModel {
         });
         solutionVector = linearSystemResult.solutionVector;
       }
-    } else if (this.solverConfig === "stokesScript") {
-      // Use regular linear solver methods for steady Stokes flow
-      const stokesResult = assembleStokesMatrix(meshData, this.boundaryConditions);
-      jacobianMatrix = stokesResult.jacobianMatrix;
-      residualVector = stokesResult.residualVector;
+    } else if (this.solverConfig === "creepingFlowScript") {
+      // Use regular linear solver methods for steady creeping flow
+      const creepingFlowResult = assembleCreepingFlowMatrix(meshData, this.boundaryConditions);
+      jacobianMatrix = creepingFlowResult.jacobianMatrix;
+      residualVector = creepingFlowResult.residualVector;
 
       const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector, {
         maxIterations: options.maxIterations ?? this.maxIterations,
@@ -212,11 +212,11 @@ export class FEAScriptModel {
       });
       solutionVector = linearSystemResult.solutionVector;
 
-      // Store Stokes-specific metadata for solution extraction
-      this._stokesMetadata = {
-        totalNodesVelocity: stokesResult.totalNodesVelocity,
-        totalNodesPressure: stokesResult.totalNodesPressure,
-        pressureNodeIndices: stokesResult.pressureNodeIndices,
+      // Store creeping-flow-specific metadata for solution extraction
+      this._creepingFlowMetadata = {
+        totalNodesVelocity: creepingFlowResult.totalNodesVelocity,
+        totalNodesPressure: creepingFlowResult.totalNodesPressure,
+        pressureNodeIndices: creepingFlowResult.pressureNodeIndices,
       };
     }
     console.timeEnd("totalSolvingTime");
