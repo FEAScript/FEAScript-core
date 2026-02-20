@@ -10,16 +10,22 @@
 
 > 🚧 **FEAScript is currently under heavy development.** Its functionality and interfaces may change rapidly as new features and enhancements are introduced.
 
-## Contents
+## Features
+
+- <b>Physics models:</b> creeping (Stokes) flow, front propagation, heat conduction
+- <b>Meshing:</b> simple 1D/2D mesh generation, unstructured mesh import from Gmsh (`.msh`)
+- <b>Solvers:</b> frontal, Jacobi (CPU/WebGPU) and LU, Newton–Raphson for nonlinear systems
+- <b>Performance:</b> web worker support for multi-threaded computation
+- <b>Visualization:</b> interactive plots with Plotly
+
+<!-- ## Contents
 
 - [How to Use FEAScript](#ways-to-use-feascript)
-  - [Use FEAScript in the Browser](#use-feascript-in-the-browser)
-  - [Use FEAScript with Node.js](#use-feascript-with-nodejs)
-  - [Use FEAScript in JavaScript Playgrounds](#use-feascript-in-javascript-playgrounds)
-- [Quick Example](#quick-example)
+- [Features](#features)
+- [Examples](#examples)
 - [Support FEAScript](#support-feascript)
 - [Contributing](#contributing)
-- [License](#license)
+- [License](#license) -->
 
 ## How to Use FEAScript
 
@@ -95,7 +101,7 @@ When running examples from within this repository, this step isn’t needed as t
 
 👉 Explore Node.js use cases on the [examples directory](https://github.com/FEAScript/FEAScript-core/tree/main/examples).
 
-## Quick Example
+## Examples
 
 Here is a minimal browser-based example using the FEAScript API. Adapt paths, physics model, and boundary conditions as needed for your specific problem:
 
