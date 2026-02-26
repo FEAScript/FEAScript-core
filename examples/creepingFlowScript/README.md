@@ -7,7 +7,7 @@ This directory contains Node.js examples demonstrating how to use the FEAScript 
 
 ## Examples
 
-#### 1. Lid-Driven Cavity (2D Creeping Flow) (`lidDrivenCavity2DCreepingFlow.js`)
+#### 1. Creeping Flow on a Lid-Driven 2D Cavity (`lidDrivenCavity2DCreepingFlow.js`)
 
 This example solves a 2D lid-driven cavity flow using the creeping flow solver with Taylor-Hood (Q2-Q1) elements. For detailed information on the model setup, refer to the corresponding [tutorial](https://feascript.com/tutorials/lid-driven-cavity-2d-creeping-flow.html) on the FEAScript website.
 
@@ -31,4 +31,4 @@ npm install feascript mathjs
 node lidDrivenCavity2DCreepingFlow.js
 ```
 
-(for the "Lid-Driven Cavity (2D Creeping Flow)" example)
+(for the "Creeping Flow on a Lid-Driven 2D Cavity" example)
