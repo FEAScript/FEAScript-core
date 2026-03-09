@@ -18,7 +18,9 @@
   },
   "scripts": {
     "build": "rollup -c",
+    "prepare": "npm run build",
     "prepublishOnly": "npm run build",
+    "pretest": "npm run build",
     "test": "for file in $(find examples -name '*.js' -type f | sort); do echo 'Running' \"$file\"; if node \"$file\" > /dev/null 2>&1; then echo 'Success'; else echo 'Failed'; fi; done"
   },
   "repository": {
