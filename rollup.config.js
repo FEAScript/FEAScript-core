@@ -39,5 +39,5 @@ export default {
     }),
     terser(),
   ],
-  external: [],
+  external: ["@kitware/vtk.js"],
 };
