@@ -30,11 +30,6 @@ import { errorLog } from "../utilities/loggingScript.js";
 
 const rendererCache = new Map();
 
-/**
- * Create a configurable color scale definition for vtk rendering.
- * @param {object} [options] - Color scale options
- * @returns {object} Normalized color scale definition
- */
 export function createColorScale(options = {}) {
   return {
     presetName: options.presetName ?? "Cool to Warm",
@@ -44,11 +39,6 @@ export function createColorScale(options = {}) {
   };
 }
 
-/**
- * Create a configurable contour-lines definition.
- * @param {object} [options] - Contour options
- * @returns {object} Normalized contour line definition
- */
 export function createContourLineOptions(options = {}) {
   return {
     enabled: options.enabled ?? true,
@@ -58,13 +48,6 @@ export function createContourLineOptions(options = {}) {
   };
 }
 
-/**
- * Function to create plots of the solution vector using vtk.js.
- * @param {object} model - Object containing model properties
- * @param {object} result - Object containing solution vector and mesh information
- * @param {string} plotType - The type of plot
- * @param {string} plotDivId - The id of the div where the plot will be rendered
- */
 export function plotSolution(model, result, plotType, plotDivId, renderOptions = {}) {
   console.time("plottingTime");
 
@@ -78,13 +61,6 @@ export function plotSolution(model, result, plotType, plotDivId, renderOptions =
   console.timeEnd("plottingTime");
 }
 
-/**
- * Function to generate a dense visualization grid and interpolate the FEM solution on it.
- * @param {object} model - Object containing model properties
- * @param {object} result - Object containing solution vector and mesh information
- * @param {string} plotType - The type of plot
- * @param {string} plotDivId - The id of the div where the plot will be rendered
- */
 export function plotInterpolatedSolution(model, result, plotType, plotDivId, renderOptions = {}) {
   console.time("plottingTime");
 
@@ -100,14 +76,6 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId, ren
   console.timeEnd("plottingTime");
 }
 
-/**
- * Convert FEAScript standard solver output to vtk-friendly typed buffers.
- * @param {object} model - FE model configuration holder
- * @param {object} result - Solver result object with solutionVector and nodesCoordinates
- * @param {object} [meshData] - Optional prepared mesh data
- * @param {object} [options] - Conversion options
- * @returns {object} VTK friendly dataset and vtkPolyData instance
- */
 export function transformSolverOutputToVtkData(model, result, meshData = null, options = {}) {
   const preparedMesh = meshData ?? prepareMesh(model.meshConfig);
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
@@ -137,24 +105,11 @@ export function transformSolverOutputToVtkData(model, result, meshData = null, o
   };
 }
 
-/**
- * Convert FEAScript standard solver output to a VTP (XML PolyData) string.
- * @param {object} model - FE model configuration holder
- * @param {object} result - Solver result object
- * @param {object} [meshData] - Optional prepared mesh data
- * @param {object} [options] - Conversion options
- * @returns {string} VTP XML string
- */
 export function transformSolverOutputToVTP(model, result, meshData = null, options = {}) {
   const vtkData = transformSolverOutputToVtkData(model, result, meshData, options);
   return buildVTPString(vtkData);
 }
 
-/**
- * Build browser-friendly typed arrays for downstream on-device ML workflows.
- * @param {object} result - Solver result object
- * @returns {object} Typed arrays ready for ML preprocessing/inference
- */
 export function transformSolverOutputToMLBuffers(result) {
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const scalars = extractScalarSolution(result.solutionVector, nodesXCoordinates.length);
@@ -188,8 +143,7 @@ function renderVtkScene(vtkData, plotDivId, solverConfig, plotType, renderOption
   }
 
   if (rendererCache.has(plotDivId)) {
-    const previous = rendererCache.get(plotDivId);
-    previous.delete();
+    rendererCache.get(plotDivId).delete();
     rendererCache.delete(plotDivId);
   }
 
@@ -226,10 +180,7 @@ function renderVtkScene(vtkData, plotDivId, solverConfig, plotType, renderOption
 
   const actor = vtkActor.newInstance();
   actor.setMapper(mapper);
-  if (vtkData.mode === "line") {
-    actor.getProperty().setLineWidth(3);
-  }
-
+  if (vtkData.mode === "line") actor.getProperty().setLineWidth(3);
   renderer.addActor(actor);
 
   if (colorScale.showScalarBar) {
@@ -246,9 +197,7 @@ function renderVtkScene(vtkData, plotDivId, solverConfig, plotType, renderOption
 
   renderer.resetCamera();
   renderWindow.render();
-
   rendererCache.set(plotDivId, genericRenderWindow);
-
   container.title = `${plotType} plot - ${solverConfig}`;
 }
 
@@ -300,97 +249,71 @@ function addContourLinesToRenderer(renderer, vtkData, scalarRange, contourOption
 }
 
 function reverseColorMapPreset(preset, reverse) {
-  if (!reverse || !preset || !Array.isArray(preset.RGBPoints) || preset.RGBPoints.length < 8) {
-    return preset;
-  }
-
-  const rgbPoints = preset.RGBPoints;
-  const minX = rgbPoints[0];
-  const maxX = rgbPoints[rgbPoints.length - 4];
+  if (!reverse || !preset?.RGBPoints?.length) return preset;
+  const rgb = preset.RGBPoints;
+  const minX = rgb[0];
+  const maxX = rgb[rgb.length - 4];
   const reversed = [];
-
-  for (let i = rgbPoints.length - 4; i >= 0; i -= 4) {
-    reversed.push(maxX - (rgbPoints[i] - minX), rgbPoints[i + 1], rgbPoints[i + 2], rgbPoints[i + 3]);
+  for (let i = rgb.length - 4; i >= 0; i -= 4) {
+    reversed.push(maxX - (rgb[i] - minX), rgb[i + 1], rgb[i + 2], rgb[i + 3]);
   }
-
-  return {
-    ...preset,
-    RGBPoints: reversed,
-  };
+  return { ...preset, RGBPoints: reversed };
 }
 
 function buildPolyData(points, scalars, cells, mode = "surface") {
   const polyData = vtkPolyData.newInstance();
   polyData.getPoints().setData(points, 3);
-
   if (cells.length > 0) {
-    if (mode === "line") {
-      polyData.getLines().setData(cells);
-    } else {
-      polyData.getPolys().setData(cells);
-    }
+    if (mode === "line") polyData.getLines().setData(cells);
+    else polyData.getPolys().setData(cells);
   }
-
   const scalarData = vtkDataArray.newInstance({
     name: "solution",
     numberOfComponents: 1,
     values: scalars,
   });
   polyData.getPointData().setScalars(scalarData);
-
   return polyData;
 }
 
 function buildPointsArray(nodesXCoordinates, nodesYCoordinates) {
-  const totalNodes = nodesXCoordinates.length;
-  const points = new Float32Array(totalNodes * 3);
-
-  for (let nodeIndex = 0; nodeIndex < totalNodes; nodeIndex++) {
-    const base = nodeIndex * 3;
-    points[base] = Number(nodesXCoordinates[nodeIndex]) || 0;
-    points[base + 1] = Number(nodesYCoordinates?.[nodeIndex]) || 0;
+  const points = new Float32Array(nodesXCoordinates.length * 3);
+  for (let i = 0; i < nodesXCoordinates.length; i++) {
+    const base = i * 3;
+    points[base] = Number(nodesXCoordinates[i]) || 0;
+    points[base + 1] = Number(nodesYCoordinates?.[i]) || 0;
     points[base + 2] = 0;
   }
-
   return points;
 }
 
 function extractScalarSolution(solutionVector, expectedLength) {
   const scalars = new Float32Array(expectedLength);
-
   for (let i = 0; i < expectedLength; i++) {
     const value = solutionVector?.[i];
     scalars[i] = Number(Array.isArray(value) ? value[0] : value) || 0;
   }
-
   return scalars;
 }
 
 function buildLineCellsFromPoints(totalPoints) {
-  if (totalPoints < 2) {
-    return new Uint32Array(0);
-  }
-
+  if (totalPoints < 2) return new Uint32Array(0);
   const packed = new Uint32Array((totalPoints - 1) * 3);
   let offset = 0;
-
   for (let i = 0; i < totalPoints - 1; i++) {
     packed[offset++] = 2;
     packed[offset++] = i;
     packed[offset++] = i + 1;
   }
-
   return packed;
 }
 
 function buildCellArrayFromNop(nop) {
   const packed = [];
-
   for (let i = 0; i < nop.length; i++) {
     const cell = convertElementNodesToLinearCell(nop[i]);
     packed.push(cell.length, ...cell);
   }
-
   return Uint32Array.from(packed);
 }
 
@@ -439,90 +362,60 @@ function convertElementNodesToLinearCell(elementNodes) {
 }
 
 function getScalarRange(scalars) {
-  if (!scalars || scalars.length === 0) {
-    return [0, 1];
-  }
-
+  if (!scalars?.length) return [0, 1];
   let minValue = Number.POSITIVE_INFINITY;
   let maxValue = Number.NEGATIVE_INFINITY;
-
   for (let i = 0; i < scalars.length; i++) {
     const value = scalars[i];
-    if (!Number.isFinite(value)) {
-      continue;
-    }
+    if (!Number.isFinite(value)) continue;
     if (value < minValue) minValue = value;
     if (value > maxValue) maxValue = value;
   }
-
-  if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) {
-    return [0, 1];
-  }
-
-  if (minValue === maxValue) {
-    return [minValue - 1, maxValue + 1];
-  }
-
+  if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) return [0, 1];
+  if (minValue === maxValue) return [minValue - 1, maxValue + 1];
   return [minValue, maxValue];
 }
 
 function countPackedCells(packedCells) {
-  let count = 0;
-  let offset = 0;
+  let count = 0, offset = 0;
   while (offset < packedCells.length) {
-    const npts = packedCells[offset];
-    offset += npts + 1;
+    offset += packedCells[offset] + 1;
     count++;
   }
   return count;
 }
 
 function packedCellsToConnectivityAndOffsets(packedCells) {
-  const connectivity = [];
-  const offsets = [];
-
-  let offset = 0;
-  let running = 0;
-
+  const connectivity = [], offsets = [];
+  let offset = 0, running = 0;
   while (offset < packedCells.length) {
     const npts = packedCells[offset++];
-    for (let i = 0; i < npts; i++) {
-      connectivity.push(packedCells[offset++]);
-    }
+    for (let i = 0; i < npts; i++) connectivity.push(packedCells[offset++]);
     running += npts;
     offsets.push(running);
   }
-
   return { connectivity, offsets };
 }
 
 function buildVTPString(vtkData) {
   const { connectivity, offsets } = packedCellsToConnectivityAndOffsets(vtkData.cells);
   const numberOfPoints = vtkData.points.length / 3;
-  const numberOfPolys = vtkData.mode === "line" ? 0 : offsets.length;
-  const numberOfLines = vtkData.mode === "line" ? offsets.length : 0;
-
-  const pointsText = Array.from(vtkData.points).join(" ");
-  const scalarsText = Array.from(vtkData.scalars).join(" ");
-  const connectivityText = connectivity.join(" ");
-  const offsetsText = offsets.join(" ");
-
-  const topologyTag = vtkData.mode === "line" ? "Lines" : "Polys";
-
+  const isLine = vtkData.mode === "line";
+  const topologyTag = isLine ? "Lines" : "Polys";
   return [
     '<?xml version="1.0"?>',
     '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">',
     "  <PolyData>",
-    `    <Piece NumberOfPoints="${numberOfPoints}" NumberOfVerts="0" NumberOfLines="${numberOfLines}" NumberOfStrips="0" NumberOfPolys="${numberOfPolys}">`,
+    `    <Piece NumberOfPoints="${numberOfPoints}" NumberOfVerts="0" NumberOfLines="${isLine ? offsets.length : 0}" NumberOfStrips="0" NumberOfPolys="${isLine ? 0 : offsets.length}">`,
     '      <PointData Scalars="solution">',
-    `        <DataArray type="Float32" Name="solution" NumberOfComponents="1" format="ascii">${scalarsText}</DataArray>`,
+    `        <DataArray type="Float32" Name="solution" NumberOfComponents="1" format="ascii">${Array.from(vtkData.scalars).join(" ")}</DataArray>`,
     "      </PointData>",
     "      <Points>",
-    `        <DataArray type="Float32" NumberOfComponents="3" format="ascii">${pointsText}</DataArray>`,
+    `        <DataArray type="Float32" NumberOfComponents="3" format="ascii">${Array.from(vtkData.points).join(" ")}</DataArray>`,
     "      </Points>",
     `      <${topologyTag}>`,
-    `        <DataArray type="Int32" Name="connectivity" format="ascii">${connectivityText}</DataArray>`,
-    `        <DataArray type="Int32" Name="offsets" format="ascii">${offsetsText}</DataArray>`,
+    `        <DataArray type="Int32" Name="connectivity" format="ascii">${connectivity.join(" ")}</DataArray>`,
+    `        <DataArray type="Int32" Name="offsets" format="ascii">${offsets.join(" ")}</DataArray>`,
     `      </${topologyTag}>`,
     "    </Piece>",
     "  </PolyData>",
