@@ -7,16 +7,41 @@
  * ════════════════════════════════════════════════════════════════
  */
 
-import vtkActor from "@kitware/vtk.js/Rendering/Core/Actor";
-import vtkColorTransferFunction from "@kitware/vtk.js/Rendering/Core/ColorTransferFunction";
-import vtkColorMaps from "@kitware/vtk.js/Rendering/Core/ColorTransferFunction/ColorMaps";
-import vtkDataArray from "@kitware/vtk.js/Common/Core/DataArray";
-import vtkImageData from "@kitware/vtk.js/Common/DataModel/ImageData";
-import vtkImageMarchingSquares from "@kitware/vtk.js/Filters/General/ImageMarchingSquares";
-import vtkGenericRenderWindow from "@kitware/vtk.js/Rendering/Misc/GenericRenderWindow";
-import vtkMapper from "@kitware/vtk.js/Rendering/Core/Mapper";
-import vtkPolyData from "@kitware/vtk.js/Common/DataModel/PolyData";
-import vtkScalarBarActor from "@kitware/vtk.js/Rendering/Core/ScalarBarActor";
+let _vtkModules = null;
+
+async function loadVtkModules() {
+  if (_vtkModules) return _vtkModules;
+  await import("@kitware/vtk.js/Rendering/Profiles/Geometry");
+  const [
+    { default: vtkActor },
+    { default: vtkColorTransferFunction },
+    { default: vtkColorMaps },
+    { default: vtkDataArray },
+    { default: vtkImageData },
+    { default: vtkImageMarchingSquares },
+    { default: vtkGenericRenderWindow },
+    { default: vtkMapper },
+    { default: vtkPolyData },
+    { default: vtkScalarBarActor },
+  ] = await Promise.all([
+    import("@kitware/vtk.js/Rendering/Core/Actor"),
+    import("@kitware/vtk.js/Rendering/Core/ColorTransferFunction"),
+    import("@kitware/vtk.js/Rendering/Core/ColorTransferFunction/ColorMaps"),
+    import("@kitware/vtk.js/Common/Core/DataArray"),
+    import("@kitware/vtk.js/Common/DataModel/ImageData"),
+    import("@kitware/vtk.js/Filters/General/ImageMarchingSquares"),
+    import("@kitware/vtk.js/Rendering/Misc/GenericRenderWindow"),
+    import("@kitware/vtk.js/Rendering/Core/Mapper"),
+    import("@kitware/vtk.js/Common/DataModel/PolyData"),
+    import("@kitware/vtk.js/Rendering/Core/ScalarBarActor"),
+  ]);
+  _vtkModules = {
+    vtkActor, vtkColorTransferFunction, vtkColorMaps, vtkDataArray,
+    vtkImageData, vtkImageMarchingSquares, vtkGenericRenderWindow,
+    vtkMapper, vtkPolyData, vtkScalarBarActor,
+  };
+  return _vtkModules;
+}
 
 import {
   prepareMesh,
@@ -47,35 +72,35 @@ export function createContourLineOptions(options = {}) {
   };
 }
 
-export function plotSolution(model, result, plotType, plotDivId, renderOptions = {}) {
+export async function plotSolution(model, result, plotType, plotDivId, renderOptions = {}) {
   console.time("plottingTime");
 
   const meshDimension = model.meshConfig.meshDimension;
   const meshData = prepareMesh(model.meshConfig);
-  const vtkData = transformSolverOutputToVtkData(model, result, meshData, {
+  const vtkData = await transformSolverOutputToVtkData(model, result, meshData, {
     mode: meshDimension === "1D" && plotType === "line" ? "line" : "surface",
   });
 
-  renderVtkScene(vtkData, plotDivId, model.solverConfig, plotType, renderOptions);
+  await renderVtkScene(vtkData, plotDivId, model.solverConfig, plotType, renderOptions);
   console.timeEnd("plottingTime");
 }
 
-export function plotInterpolatedSolution(model, result, plotType, plotDivId, renderOptions = {}) {
+export async function plotInterpolatedSolution(model, result, plotType, plotDivId, renderOptions = {}) {
   console.time("plottingTime");
 
   if (model.meshConfig.meshDimension !== "2D" || plotType !== "contour") {
-    plotSolution(model, result, plotType, plotDivId, renderOptions);
+    await plotSolution(model, result, plotType, plotDivId, renderOptions);
     console.timeEnd("plottingTime");
     return;
   }
 
   const meshData = prepareMesh(model.meshConfig);
-  const interpolatedVtkData = buildInterpolatedVtkData(model, result, meshData);
-  renderVtkScene(interpolatedVtkData, plotDivId, model.solverConfig, `${plotType}-interpolated`, renderOptions);
+  const interpolatedVtkData = await buildInterpolatedVtkData(model, result, meshData);
+  await renderVtkScene(interpolatedVtkData, plotDivId, model.solverConfig, `${plotType}-interpolated`, renderOptions);
   console.timeEnd("plottingTime");
 }
 
-export function transformSolverOutputToVtkData(model, result, meshData = null, options = {}) {
+export async function transformSolverOutputToVtkData(model, result, meshData = null, options = {}) {
   const preparedMesh = meshData ?? prepareMesh(model.meshConfig);
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const solutionArray = extractScalarSolution(result.solutionVector, nodesXCoordinates.length);
@@ -87,7 +112,7 @@ export function transformSolverOutputToVtkData(model, result, meshData = null, o
       ? buildLineCellsFromPoints(nodesXCoordinates.length)
       : buildCellArrayFromNop(preparedMesh.nop ?? []);
 
-  const polyData = buildPolyData(points, solutionArray, cells, mode);
+  const polyData = await buildPolyData(points, solutionArray, cells, mode);
 
   return {
     points,
@@ -104,8 +129,8 @@ export function transformSolverOutputToVtkData(model, result, meshData = null, o
   };
 }
 
-export function transformSolverOutputToVTP(model, result, meshData = null, options = {}) {
-  const vtkData = transformSolverOutputToVtkData(model, result, meshData, options);
+export async function transformSolverOutputToVTP(model, result, meshData = null, options = {}) {
+  const vtkData = await transformSolverOutputToVtkData(model, result, meshData, options);
   return buildVTPString(vtkData);
 }
 
@@ -129,11 +154,12 @@ export function transformSolverOutputToMLBuffers(result) {
   };
 }
 
-function renderVtkScene(vtkData, plotDivId, solverConfig, plotType, renderOptions = {}) {
+async function renderVtkScene(vtkData, plotDivId, solverConfig, plotType, renderOptions = {}) {
   if (typeof document === "undefined") {
     errorLog("vtk.js visualization requires a browser environment");
     return;
   }
+  const { vtkActor, vtkColorTransferFunction, vtkColorMaps, vtkGenericRenderWindow, vtkMapper, vtkScalarBarActor } = await loadVtkModules();
 
   const container = document.getElementById(plotDivId);
   if (!container) {
@@ -191,7 +217,7 @@ function renderVtkScene(vtkData, plotDivId, solverConfig, plotType, renderOption
 
   const contourLines = createContourLineOptions(renderOptions.contourLines ?? { enabled: false });
   if (contourLines.enabled && vtkData.mode !== "line") {
-    addContourLinesToRenderer(renderer, vtkData, scalarRange, contourLines);
+    await addContourLinesToRenderer(renderer, vtkData, scalarRange, contourLines);
   }
 
   renderer.resetCamera();
@@ -200,11 +226,12 @@ function renderVtkScene(vtkData, plotDivId, solverConfig, plotType, renderOption
   container.title = `${plotType} plot - ${solverConfig}`;
 }
 
-function addContourLinesToRenderer(renderer, vtkData, scalarRange, contourOptions) {
+async function addContourLinesToRenderer(renderer, vtkData, scalarRange, contourOptions) {
   const gridMeta = vtkData.metadata?.interpolationGrid;
   if (!gridMeta) {
     return;
   }
+  const { vtkActor, vtkDataArray, vtkImageData, vtkImageMarchingSquares, vtkMapper } = await loadVtkModules();
 
   const imageData = vtkImageData.newInstance();
   imageData.setDimensions(gridMeta.nx, gridMeta.ny, 1);
@@ -259,7 +286,8 @@ function reverseColorMapPreset(preset, reverse) {
   return { ...preset, RGBPoints: reversed };
 }
 
-function buildPolyData(points, scalars, cells, mode = "surface") {
+async function buildPolyData(points, scalars, cells, mode = "surface") {
+  const { vtkPolyData, vtkDataArray } = await loadVtkModules();
   const polyData = vtkPolyData.newInstance();
   polyData.getPoints().setData(points, 3);
   if (cells.length > 0) {
@@ -422,7 +450,7 @@ function buildVTPString(vtkData) {
   ].join("\n");
 }
 
-function buildInterpolatedVtkData(model, result, meshData) {
+async function buildInterpolatedVtkData(model, result, meshData) {
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const basisFunctions = new BasisFunctions({
     meshDimension: model.meshConfig.meshDimension,
@@ -527,7 +555,7 @@ function buildInterpolatedVtkData(model, result, meshData) {
 
   const points = buildPointsArray(visNodeXCoordinates, visNodeYCoordinates);
   const cells = buildStructuredGridCells(visNodesX, visNodesY, insideMask);
-  const polyData = buildPolyData(points, visSolution, cells, "surface");
+  const polyData = await buildPolyData(points, visSolution, cells, "surface");
 
   return {
     points,
