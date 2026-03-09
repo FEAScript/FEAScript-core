@@ -11,13 +11,13 @@ export { FEAScriptModel } from "./FEAScript.js";
 export { importGmshQuadTri } from "./readers/gmshReaderScript.js"; //TODO rename importGmshQuadTri to importGmsh
 export { logSystem } from "./utilities/loggingScript.js";
 export {
-	plotSolution,
-	plotInterpolatedSolution,
-	createColorScale,
-	createContourLineOptions,
-	transformSolverOutputToVtkData,
-	transformSolverOutputToVTP,
-	transformSolverOutputToMLBuffers,
+  plotSolution,
+  plotInterpolatedSolution,
+  createColorScale,
+  createContourLineOptions,
+  transformSolverOutputToVtkData,
+  transformSolverOutputToVTP,
+  transformSolverOutputToMLBuffers,
 } from "./visualization/vtkSolutionScript.js";
 export { FEAScriptWorker } from "./workers/workerScript.js";
 export const printVersion = "0.2.0";
