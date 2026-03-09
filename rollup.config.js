@@ -39,5 +39,5 @@ export default {
     }),
     terser(),
   ],
-  external: ["@kitware/vtk.js"],
+  external: (id) => id === "@kitware/vtk.js" || id.startsWith("@kitware/vtk.js/"),
 };

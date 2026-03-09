@@ -7,7 +7,6 @@
  * ════════════════════════════════════════════════════════════════
  */
 
-import "@kitware/vtk.js/Rendering/Profiles/Geometry";
 import vtkActor from "@kitware/vtk.js/Rendering/Core/Actor";
 import vtkColorTransferFunction from "@kitware/vtk.js/Rendering/Core/ColorTransferFunction";
 import vtkColorMaps from "@kitware/vtk.js/Rendering/Core/ColorTransferFunction/ColorMaps";
