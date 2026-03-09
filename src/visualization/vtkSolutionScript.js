@@ -430,10 +430,18 @@ function buildInterpolatedVtkData(model, result, meshData) {
     elementOrder: model.meshConfig.elementOrder,
   });
 
-  const minX = Math.min(...nodesXCoordinates);
-  const maxX = Math.max(...nodesXCoordinates);
-  const minY = Math.min(...nodesYCoordinates);
-  const maxY = Math.max(...nodesYCoordinates);
+  let minX = nodesXCoordinates[0];
+  let maxX = nodesXCoordinates[0];
+  let minY = nodesYCoordinates[0];
+  let maxY = nodesYCoordinates[0];
+  for (let i = 1; i < nodesXCoordinates.length; i++) {
+    const x = nodesXCoordinates[i];
+    const y = nodesYCoordinates[i];
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+  }
 
   const lengthX = maxX - minX;
   const lengthY = maxY - minY;
