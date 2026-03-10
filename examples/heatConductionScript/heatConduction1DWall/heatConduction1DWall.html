@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+
+<!--
+  ════════════════════════════════════════════════════════════════
+   FEAScript Core Library
+   Lightweight Finite Element Simulation in JavaScript
+   Version: 0.2.0 | https://feascript.com
+   MIT License © 2023–2026 FEAScript
+  ════════════════════════════════════════════════════════════════
+-->
+
+<html>
+  <head>
+    <title>FEAScript Example: Heat Conduction 1D Wall</title>
+    <meta charset="UTF-8" />
+    <!-- Link to the CSS files -->
+    <link href="https://feascript.com/feascript-website.css" rel="stylesheet" type="text/css" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
+    <!-- Import the Math.js library for mathematical operations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.12.0/math.min.js"></script>
+    <!-- Import the Plotly.js library for plotting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.3/plotly.min.js"></script>
+  </head>
+
+  <body>
+    <h2>Heat Conduction 1D Wall</h2>
+
+    <!-- Container element where the solution plot will be rendered -->
+    <div id="resultsCanvas"></div>
+
+    <script type="module">
+      // Import FEAScript library
+      import { FEAScriptModel, plotSolution, printVersion } from "https://core.feascript.com/dist/feascript.esm.js";
+      // import { FEAScriptModel, plotSolution, printVersion } from "../../../src/index.js";
+
+      window.addEventListener("DOMContentLoaded", () => {
+        console.log("FEAScript Version:", printVersion);
+
+        // Create a new FEAScript model
+        const model = new FEAScriptModel();
+
+        // Select physics/PDE
+        model.setModelConfig("heatConductionScript");
+
+        // Define mesh configuration
+        model.setMeshConfig({
+          meshDimension: "1D",
+          elementOrder: "linear",
+          numElementsX: 10,
+          maxX: 0.15,
+        });
+
+        // Define boundary conditions
+        model.addBoundaryCondition("0", ["convection", 1, 25]); // Left boundary
+        model.addBoundaryCondition("1", ["constantTemp", 5]); // Right boundary
+
+        // Set solver method
+        model.setSolverMethod("lusolve");
+
+        // Solve the problem
+        const result = model.solve();
+
+        // Print results to console
+        console.log(`Number of nodes: ${result.nodesCoordinates.nodesXCoordinates.length}`);
+        console.log("Solution vector:", result.solutionVector);
+
+        // Plot the solution as a 1D line plot
+        plotSolution(model, result, "line", "resultsCanvas");
+      });
+    </script>
+  </body>
+</html>

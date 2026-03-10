@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+
+<!--
+  ════════════════════════════════════════════════════════════════
+   FEAScript Core Library
+   Lightweight Finite Element Simulation in JavaScript
+   Version: 0.2.0 | https://feascript.com
+   MIT License © 2023–2026 FEAScript
+  ════════════════════════════════════════════════════════════════
+-->
+
+<html>
+  <head>
+    <title>FEAScript Example: Advection-Diffusion 1D</title>
+    <meta charset="UTF-8" />
+    <!-- Link to the CSS files -->
+    <link href="https://feascript.com/feascript-website.css" rel="stylesheet" type="text/css" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
+    <!-- Import the Math.js library for mathematical operations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.12.0/math.min.js"></script>
+    <!-- Import the Plotly.js library for plotting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.3/plotly.min.js"></script>
+  </head>
+
+  <body>
+    <h2>Advection-Diffusion 1D</h2>
+
+    <!-- Container element where the solution plot will be rendered -->
+    <div id="resultsCanvas"></div>
+
+    <script type="module">
+      // Import FEAScript library
+      import { FEAScriptModel, plotSolution, printVersion } from "https://core.feascript.com/dist/feascript.esm.js";
+      // import { FEAScriptModel, plotSolution, printVersion } from "../../../src/index.js";
+
+      window.addEventListener("DOMContentLoaded", () => {
+        console.log("FEAScript Version:", printVersion);
+
+        // Create a new FEAScript model
+        const model = new FEAScriptModel();
+
+        // Select physics/PDE
+        model.setModelConfig("generalFormPDEScript", {
+          coefficientFunctions: {
+            // Equation d²u/dx² - 10 du/dx = 10 * exp(-200 * (x - 0.5)²)
+            A: (x) => 1, // Diffusion coefficient
+            B: (x) => -10, // Advection coefficient
+            C: (x) => 0, // Reaction coefficient
+            D: (x) => 10 * Math.exp(-200 * Math.pow(x - 0.5, 2)), // Source term
+          },
+        });
+
+        // Define mesh configuration
+        model.setMeshConfig({
+          meshDimension: "1D",
+          elementOrder: "quadratic",
+          numElementsX: 20,
+          maxX: 1.0,
+        });
+
+        // Define boundary conditions
+        model.addBoundaryCondition("0", ["constantValue", 1]); // Left boundary
+        model.addBoundaryCondition("1", "zeroGradient"); // Right boundary
+
+        // Set solver method
+        model.setSolverMethod("lusolve");
+
+        // Solve the problem
+        const result = model.solve();
+
+        // Print results to console
+        console.log(`Number of nodes in mesh: ${result.nodesCoordinates.nodesXCoordinates.length}`);
+        console.log("Solution vector:", result.solutionVector);
+
+        // Plot the solution as a 1D line plot
+        plotSolution(model, result, "line", "resultsCanvas");
+      });
+    </script>
+  </body>
+</html>
