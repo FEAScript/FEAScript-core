@@ -293,7 +293,13 @@ async function renderPlotlyScene(model, result, plotType, plotDivId, interpolate
     errorLog("Plotly visualization requires a browser environment");
     return;
   }
-  const { default: Plotly } = await import("plotly.js");
+  let Plotly;
+  try {
+    ({ default: Plotly } = await import("plotly.js"));
+  } catch {
+    errorLog("plotly.js is not installed. Install it with `npm install plotly.js` to use the Plotly backend.");
+    return;
+  }
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const meshDimension = model.meshConfig.meshDimension;
   const plotWidth = typeof window !== "undefined" ? Math.min(window.innerWidth, 600) : 600;
