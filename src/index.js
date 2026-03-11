@@ -18,6 +18,6 @@ export {
   transformSolverOutputToVtkData,
   transformSolverOutputToVTP,
   transformSolverOutputToMLBuffers,
-} from "./visualization/vtkSolutionScript.js";
+} from "./visualization/vizSolutionScript.js";
 export { FEAScriptWorker } from "./workers/workerScript.js";
 export const printVersion = "0.2.0";

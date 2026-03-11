@@ -74,29 +74,43 @@ export function createContourLineOptions(options = {}) {
 
 export async function plotSolution(model, result, plotType, plotDivId, renderOptions = {}) {
   console.time("plottingTime");
+  const backend = renderOptions.backend ?? "vtk";
 
-  const meshDimension = model.meshConfig.meshDimension;
-  const meshData = prepareMesh(model.meshConfig);
-  const vtkData = await transformSolverOutputToVtkData(model, result, meshData, {
-    mode: meshDimension === "1D" && plotType === "line" ? "line" : "surface",
-  });
-
-  await renderVtkScene(vtkData, plotDivId, model.solverConfig, plotType, renderOptions);
+  if (backend === "plotly") {
+    await renderPlotlyScene(model, result, plotType, plotDivId, false, renderOptions);
+  } else {
+    const meshDimension = model.meshConfig.meshDimension;
+    const meshData = prepareMesh(model.meshConfig);
+    const vtkData = await transformSolverOutputToVtkData(model, result, meshData, {
+      mode: meshDimension === "1D" && plotType === "line" ? "line" : "surface",
+    });
+    await renderVtkScene(vtkData, plotDivId, model.solverConfig, plotType, renderOptions);
+  }
   console.timeEnd("plottingTime");
 }
 
 export async function plotInterpolatedSolution(model, result, plotType, plotDivId, renderOptions = {}) {
   console.time("plottingTime");
+  const backend = renderOptions.backend ?? "vtk";
 
-  if (model.meshConfig.meshDimension !== "2D" || plotType !== "contour") {
-    await plotSolution(model, result, plotType, plotDivId, renderOptions);
-    console.timeEnd("plottingTime");
-    return;
+  if (backend === "plotly") {
+    if (model.meshConfig.meshDimension === "2D" && plotType === "contour") {
+      const meshData = prepareMesh(model.meshConfig);
+      const grid = await buildInterpolatedGridValues(model, result, meshData);
+      await renderPlotlyScene(model, result, plotType, plotDivId, true, renderOptions, grid);
+    } else {
+      await renderPlotlyScene(model, result, plotType, plotDivId, false, renderOptions);
+    }
+  } else {
+    if (model.meshConfig.meshDimension !== "2D" || plotType !== "contour") {
+      await plotSolution(model, result, plotType, plotDivId, renderOptions);
+      console.timeEnd("plottingTime");
+      return;
+    }
+    const meshData = prepareMesh(model.meshConfig);
+    const interpolatedVtkData = await buildInterpolatedVtkData(model, result, meshData);
+    await renderVtkScene(interpolatedVtkData, plotDivId, model.solverConfig, `${plotType}-interpolated`, renderOptions);
   }
-
-  const meshData = prepareMesh(model.meshConfig);
-  const interpolatedVtkData = await buildInterpolatedVtkData(model, result, meshData);
-  await renderVtkScene(interpolatedVtkData, plotDivId, model.solverConfig, `${plotType}-interpolated`, renderOptions);
   console.timeEnd("plottingTime");
 }
 
@@ -272,6 +286,90 @@ async function addContourLinesToRenderer(renderer, vtkData, scalarRange, contour
   contourActor.getProperty().setColor(...contourOptions.color);
   contourActor.getProperty().setLineWidth(contourOptions.lineWidth);
   renderer.addActor(contourActor);
+}
+
+async function renderPlotlyScene(model, result, plotType, plotDivId, interpolated, renderOptions = {}, prebuiltGrid = null) {
+  if (typeof document === "undefined") {
+    errorLog("Plotly visualization requires a browser environment");
+    return;
+  }
+  const { default: Plotly } = await import("plotly.js");
+  const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
+  const meshDimension = model.meshConfig.meshDimension;
+  const plotWidth = typeof window !== "undefined" ? Math.min(window.innerWidth, 600) : 600;
+  const colorScale = renderOptions.colorScale ?? {};
+  const plotlyColorscale = colorScale.reverse ? "RdBu" : "RdBu_r";
+  const scalarBarTitle = colorScale.scalarBarTitle ?? "Solution";
+
+  let traces, layout;
+
+  if (meshDimension === "1D") {
+    const scalars = extractScalarSolution(result.solutionVector, nodesXCoordinates.length);
+    traces = [{
+      x: Array.from(nodesXCoordinates),
+      y: Array.from(scalars),
+      mode: "lines",
+      type: "scatter",
+      line: { color: "royalblue" },
+    }];
+    layout = {
+      title: `${plotType} plot - ${model.solverConfig}`,
+      xaxis: { title: "x" },
+      yaxis: { title: "Solution" },
+      width: plotWidth,
+    };
+  } else if (interpolated && prebuiltGrid) {
+    const { visNodesX, visNodesY, visSolution, insideMask, minX, minY, deltaX, deltaY, lengthX, lengthY } = prebuiltGrid;
+    const xVals = Array.from({ length: visNodesX }, (_, i) => minX + i * deltaX);
+    const yVals = Array.from({ length: visNodesY }, (_, i) => minY + i * deltaY);
+    // Plotly contour expects z[iy][ix]
+    const zGrid = Array.from({ length: visNodesY }, (_, iy) =>
+      Array.from({ length: visNodesX }, (_, ix) => {
+        const idx = ix * visNodesY + iy;
+        return insideMask[idx] ? visSolution[idx] : null;
+      })
+    );
+    const showContourLines = renderOptions.contourLines?.enabled ?? true;
+    traces = [{
+      x: xVals,
+      y: yVals,
+      z: zGrid,
+      type: "contour",
+      colorscale: plotlyColorscale,
+      colorbar: { title: scalarBarTitle },
+      contours: { coloring: showContourLines ? "fill" : "heatmap", showlines: showContourLines },
+      ncontours: renderOptions.contourLines?.numberOfContours ?? 12,
+    }];
+    layout = {
+      title: `${plotType} plot (interpolated) - ${model.solverConfig}`,
+      xaxis: { title: "x", scaleanchor: "y", scaleratio: 1 },
+      yaxis: { title: "y" },
+      width: plotWidth,
+      height: plotWidth * (lengthY / lengthX),
+    };
+  } else {
+    const scalars = extractScalarSolution(result.solutionVector, nodesXCoordinates.length);
+    traces = [{
+      x: Array.from(nodesXCoordinates),
+      y: nodesYCoordinates ? Array.from(nodesYCoordinates) : undefined,
+      mode: "markers",
+      type: "scatter",
+      marker: {
+        color: Array.from(scalars),
+        colorscale: plotlyColorscale,
+        showscale: true,
+        colorbar: { title: scalarBarTitle },
+      },
+    }];
+    layout = {
+      title: `${plotType} plot - ${model.solverConfig}`,
+      xaxis: { title: "x", scaleanchor: "y", scaleratio: 1 },
+      yaxis: { title: "y" },
+      width: plotWidth,
+    };
+  }
+
+  await Plotly.newPlot(plotDivId, traces, layout, { responsive: true });
 }
 
 function reverseColorMapPreset(preset, reverse) {
@@ -450,7 +548,7 @@ function buildVTPString(vtkData) {
   ].join("\n");
 }
 
-async function buildInterpolatedVtkData(model, result, meshData) {
+async function buildInterpolatedGridValues(model, result, meshData) {
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const basisFunctions = new BasisFunctions({
     meshDimension: model.meshConfig.meshDimension,
@@ -552,6 +650,18 @@ async function buildInterpolatedVtkData(model, result, meshData) {
       }
     }
   }
+
+  return {
+    visNodesX, visNodesY,
+    minX, minY, deltaX, deltaY, lengthX, lengthY,
+    visNodeXCoordinates, visNodeYCoordinates,
+    visSolution, insideMask,
+  };
+}
+
+async function buildInterpolatedVtkData(model, result, meshData) {
+  const grid = await buildInterpolatedGridValues(model, result, meshData);
+  const { visNodesX, visNodesY, minX, minY, deltaX, deltaY, visNodeXCoordinates, visNodeYCoordinates, visSolution, insideMask } = grid;
 
   const points = buildPointsArray(visNodeXCoordinates, visNodeYCoordinates);
   const cells = buildStructuredGridCells(visNodesX, visNodesY, insideMask);

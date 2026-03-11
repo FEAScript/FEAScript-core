@@ -66,7 +66,12 @@
   },
   "peerDependencies": {
     "mathjs": "^11.12.0",
-    "@kitware/vtk.js": "^32.12.0"
+    "@kitware/vtk.js": "^32.12.0",
+    "plotly.js": "^2.35.3"
+  },
+  "peerDependenciesMeta": {
+    "@kitware/vtk.js": { "optional": true },
+    "plotly.js": { "optional": true }
   },
   "devDependencies": {
     "@kitware/vtk.js": "^32.12.0",
