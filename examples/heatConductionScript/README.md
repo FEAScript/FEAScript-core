@@ -28,7 +28,11 @@ Implementation using a Gmsh-generated mesh for a rhomboid domain (the mesh file,
 
 For detailed information on the model setup, refer to the corresponding [tutorial](https://feascript.com/tutorials/heat-conduction-2d-rhom-fin-gmsh.html) in the FEAScript website.
 
-## Running the Examples
+## HTML Examples
+
+Each example also includes an HTML variant (e.g., `heatConduction1DWall.html`, `heatConduction2DFin.html`) that runs the same simulation in the browser with built-in visualization using Plotly.js. Simply open the HTML file in a web browser to run.
+
+## Running the Node.js Examples
 
 #### 1. Create package.json with ES module support:
 

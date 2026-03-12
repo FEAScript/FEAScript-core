@@ -11,7 +11,11 @@ This directory contains Node.js examples demonstrating how to use the FEAScript 
 
 This example solves a 2D lid-driven cavity flow using the creeping flow solver with Taylor-Hood (Q2-Q1) elements. For detailed information on the model setup, refer to the corresponding [tutorial](https://feascript.com/tutorials/lid-driven-cavity-2d-creeping-flow.html) on the FEAScript website.
 
-## Running the Examples
+## HTML Examples
+
+Each example also includes an HTML variant (e.g., `lidDrivenCavity2DCreepingFlow.html`) that runs the same simulation in the browser with built-in visualization using Plotly.js. Simply open the HTML file in a web browser to run.
+
+## Running the Node.js Examples
 
 #### 1. Create package.json with ES module support:
 
