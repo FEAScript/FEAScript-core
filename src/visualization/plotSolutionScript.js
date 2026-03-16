@@ -74,7 +74,7 @@ export function createContourLineOptions(options = {}) {
 
 export async function plotSolution(model, result, plotType, plotDivId, renderOptions = {}) {
   console.time("plottingTime");
-  const backend = renderOptions.backend ?? "vtk";
+  const backend = renderOptions.backend ?? "plotly";
 
   if (backend === "plotly") {
     await renderPlotlyScene(model, result, plotType, plotDivId, false, renderOptions);
@@ -89,9 +89,13 @@ export async function plotSolution(model, result, plotType, plotDivId, renderOpt
   console.timeEnd("plottingTime");
 }
 
+export async function plotSolutionVtk(model, result, plotType, plotDivId, renderOptions = {}) {
+  return plotSolution(model, result, plotType, plotDivId, { ...renderOptions, backend: "vtk" });
+}
+
 export async function plotInterpolatedSolution(model, result, plotType, plotDivId, renderOptions = {}) {
   console.time("plottingTime");
-  const backend = renderOptions.backend ?? "vtk";
+  const backend = renderOptions.backend ?? "plotly";
 
   if (backend === "plotly") {
     if (model.meshConfig.meshDimension === "2D" && plotType === "contour") {
@@ -103,8 +107,7 @@ export async function plotInterpolatedSolution(model, result, plotType, plotDivI
     }
   } else {
     if (model.meshConfig.meshDimension !== "2D" || plotType !== "contour") {
-      await plotSolution(model, result, plotType, plotDivId, renderOptions);
-      console.timeEnd("plottingTime");
+      await plotSolution(model, result, plotType, plotDivId, { ...renderOptions, backend: "vtk" });
       return;
     }
     const meshData = prepareMesh(model.meshConfig);
@@ -112,6 +115,10 @@ export async function plotInterpolatedSolution(model, result, plotType, plotDivI
     await renderVtkScene(interpolatedVtkData, plotDivId, model.solverConfig, `${plotType}-interpolated`, renderOptions);
   }
   console.timeEnd("plottingTime");
+}
+
+export async function plotInterpolatedSolutionVtk(model, result, plotType, plotDivId, renderOptions = {}) {
+  return plotInterpolatedSolution(model, result, plotType, plotDivId, { ...renderOptions, backend: "vtk" });
 }
 
 export async function transformSolverOutputToVtkData(model, result, meshData = null, options = {}) {
@@ -207,7 +214,7 @@ async function renderVtkScene(vtkData, plotDivId, solverConfig, plotType, render
   const scalarRange = getScalarRange(vtkData.scalars);
   mapper.setScalarRange(scalarRange[0], scalarRange[1]);
 
-  const colorScale = createColorScale(renderOptions.colorScale ?? {});
+  const colorScale = renderOptions.colorScale ?? createColorScale({});
   const lookupTable = vtkColorTransferFunction.newInstance();
   const preset = vtkColorMaps.getPresetByName(colorScale.presetName) ??
     vtkColorMaps.getPresetByName("Cool to Warm");
@@ -293,12 +300,14 @@ async function renderPlotlyScene(model, result, plotType, plotDivId, interpolate
     errorLog("Plotly visualization requires a browser environment");
     return;
   }
-  let Plotly;
-  try {
-    ({ default: Plotly } = await import("plotly.js"));
-  } catch {
-    errorLog("plotly.js is not installed. Install it with `npm install plotly.js` to use the Plotly backend.");
-    return;
+  let Plotly = typeof window !== "undefined" ? window.Plotly : undefined;
+  if (!Plotly) {
+    try {
+      ({ default: Plotly } = await import("plotly.js"));
+    } catch {
+      errorLog("plotly.js is not available. Load it via a <script> tag or install it with `npm install plotly.js`.");
+      return;
+    }
   }
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const meshDimension = model.meshConfig.meshDimension;

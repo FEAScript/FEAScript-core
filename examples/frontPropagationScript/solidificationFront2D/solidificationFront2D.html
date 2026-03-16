@@ -18,8 +18,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
     <!-- Import the Math.js library for mathematical operations -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.12.0/math.min.js"></script>
-    <!-- Import the Plotly.js library for plotting -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.3/plotly.min.js"></script>
+    <!-- Import map for VTK.js modules -->
+    <script type="importmap">
+      {
+        "imports": {
+          "@kitware/vtk.js/": "https://esm.sh/@kitware/vtk.js@32.12.0/"
+        }
+      }
+    </script>
   </head>
 
   <body>
@@ -30,10 +36,10 @@
 
     <script type="module">
       // Import FEAScript library
-      import { FEAScriptModel, plotSolution, printVersion } from "https://core.feascript.com/dist/feascript.esm.js";
-      // import { FEAScriptModel, plotSolution, printVersion } from "../../../src/index.js";
+      import { FEAScriptModel, plotInterpolatedSolutionVtk, createColorScale, createContourLineOptions, printVersion } from "https://core.feascript.com/dist/feascript.esm.js";
+      // import { FEAScriptModel, plotInterpolatedSolutionVtk, createColorScale, createContourLineOptions, printVersion } from "../../../src/index.js";
 
-      window.addEventListener("DOMContentLoaded", () => {
+      window.addEventListener("DOMContentLoaded", async () => {
         console.log("FEAScript Version:", printVersion);
 
         // Create a new FEAScript model
@@ -69,7 +75,17 @@
         console.log("Solution vector:", result.solutionVector);
 
         // Plot the solution as a 2D contour plot
-        plotSolution(model, result, "contour", "resultsCanvas");
+        await plotInterpolatedSolutionVtk(model, result, "contour", "resultsCanvas", {
+          colorScale: createColorScale({
+            presetName: "Cool to Warm",
+            scalarBarTitle: "Solution",
+          }),
+          contourLines: createContourLineOptions({
+            enabled: true,
+            numberOfContours: 14,
+            lineWidth: 1.25,
+          }),
+        });
       });
     </script>
   </body>

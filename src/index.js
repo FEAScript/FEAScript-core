@@ -12,12 +12,14 @@ export { importGmshQuadTri } from "./readers/gmshReaderScript.js"; //TODO rename
 export { logSystem } from "./utilities/loggingScript.js";
 export {
   plotSolution,
+  plotSolutionVtk,
   plotInterpolatedSolution,
+  plotInterpolatedSolutionVtk,
   createColorScale,
   createContourLineOptions,
   transformSolverOutputToVtkData,
   transformSolverOutputToVTP,
   transformSolverOutputToMLBuffers,
-} from "./visualization/vizSolutionScript.js";
+} from "./visualization/plotSolutionScript.js";
 export { FEAScriptWorker } from "./workers/workerScript.js";
 export const printVersion = "0.2.0";
