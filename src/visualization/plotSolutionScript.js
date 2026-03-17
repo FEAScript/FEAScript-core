@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 | https://feascript.com
+ *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -11,7 +11,7 @@ let _vtkModules = null;
 
 async function loadVtkModules() {
   if (_vtkModules) return _vtkModules;
-  await import("@kitware/vtk.js/Rendering/Profiles/Geometry");
+  await import("@kitware/vtk.js/Rendering/Profiles/Geometry.js");
   const [
     { default: vtkActor },
     { default: vtkColorTransferFunction },
@@ -24,16 +24,16 @@ async function loadVtkModules() {
     { default: vtkPolyData },
     { default: vtkScalarBarActor },
   ] = await Promise.all([
-    import("@kitware/vtk.js/Rendering/Core/Actor"),
-    import("@kitware/vtk.js/Rendering/Core/ColorTransferFunction"),
-    import("@kitware/vtk.js/Rendering/Core/ColorTransferFunction/ColorMaps"),
-    import("@kitware/vtk.js/Common/Core/DataArray"),
-    import("@kitware/vtk.js/Common/DataModel/ImageData"),
-    import("@kitware/vtk.js/Filters/General/ImageMarchingSquares"),
-    import("@kitware/vtk.js/Rendering/Misc/GenericRenderWindow"),
-    import("@kitware/vtk.js/Rendering/Core/Mapper"),
-    import("@kitware/vtk.js/Common/DataModel/PolyData"),
-    import("@kitware/vtk.js/Rendering/Core/ScalarBarActor"),
+    import("@kitware/vtk.js/Rendering/Core/Actor.js"),
+    import("@kitware/vtk.js/Rendering/Core/ColorTransferFunction.js"),
+    import("@kitware/vtk.js/Rendering/Core/ColorTransferFunction/ColorMaps.js"),
+    import("@kitware/vtk.js/Common/Core/DataArray.js"),
+    import("@kitware/vtk.js/Common/DataModel/ImageData.js"),
+    import("@kitware/vtk.js/Filters/General/ImageMarchingSquares.js"),
+    import("@kitware/vtk.js/Rendering/Misc/GenericRenderWindow.js"),
+    import("@kitware/vtk.js/Rendering/Core/Mapper.js"),
+    import("@kitware/vtk.js/Common/DataModel/PolyData.js"),
+    import("@kitware/vtk.js/Rendering/Core/ScalarBarActor.js"),
   ]);
   _vtkModules = {
     vtkActor, vtkColorTransferFunction, vtkColorMaps, vtkDataArray,
@@ -230,7 +230,25 @@ async function renderVtkScene(vtkData, plotDivId, solverConfig, plotType, render
   renderer.addActor(actor);
 
   if (colorScale.showScalarBar) {
-    const scalarBarActor = vtkScalarBarActor.newInstance();
+    const scalarBarActor = vtkScalarBarActor.newInstance({
+      generateTicks: (helper) => {
+        const bounds = helper.getLastTickBounds();
+        if (!bounds || bounds.length < 2) return;
+        const [minVal, maxVal] = bounds;
+        const count = 5;
+        const step = (maxVal - minVal) / (count - 1);
+        const ticks = Array.from({ length: count }, (_, i) => minVal + i * step);
+        helper.setTicks(ticks);
+        helper.setTickStrings(
+          ticks.map(v => {
+            const abs = Math.abs(v);
+            if (abs === 0) return "0";
+            if (abs >= 0.01 && abs < 10000) return parseFloat(v.toPrecision(4)).toString();
+            return v.toExponential(2);
+          })
+        );
+      },
+    });
     scalarBarActor.setAxisLabel(colorScale.scalarBarTitle);
     scalarBarActor.setScalarsToColors(lookupTable);
     renderer.addActor2D(scalarBarActor);

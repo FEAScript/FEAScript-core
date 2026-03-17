@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 | https://feascript.com
+ *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -22,4 +22,4 @@ export {
   transformSolverOutputToMLBuffers,
 } from "./visualization/plotSolutionScript.js";
 export { FEAScriptWorker } from "./workers/workerScript.js";
-export const printVersion = "0.2.0";
+export const printVersion = "0.3.0 (RC)";
