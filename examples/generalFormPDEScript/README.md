@@ -10,10 +10,6 @@ This directory contains Node.js examples demonstrating how to use the FEAScript 
 
 This example demonstrates solving a one-dimensional advection-diffusion problem with a Gaussian source term. The problem models the transport of a substance under the effects of both diffusion and advection. For detailed information on the model setup, refer to the corresponding [tutorial](https://feascript.com/tutorials/advection-diffusion-1d.html) in the FEAScript website.
 
-## HTML Examples
-
-Each example also includes an HTML variant (e.g., `advectionDiffusion1D.html`) that runs the same simulation in the browser with built-in visualization using Plotly.js. Simply open the HTML file in a web browser to run.
-
 ## Running the Node.js Examples
 
 #### 1. Create package.json with ES module support:

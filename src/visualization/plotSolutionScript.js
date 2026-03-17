@@ -94,14 +94,15 @@ export async function plotSolutionVtk(model, result, plotType, plotDivId, render
 }
 
 export async function plotInterpolatedSolution(model, result, plotType, plotDivId, renderOptions = {}) {
-  console.time("plottingTime");
   const backend = renderOptions.backend ?? "plotly";
 
   if (backend === "plotly") {
     if (model.meshConfig.meshDimension === "2D" && plotType === "contour") {
+      console.time("plottingTime");
       const meshData = prepareMesh(model.meshConfig);
       const grid = await buildInterpolatedGridValues(model, result, meshData);
       await renderPlotlyScene(model, result, plotType, plotDivId, true, renderOptions, grid);
+      console.timeEnd("plottingTime");
     } else {
       await renderPlotlyScene(model, result, plotType, plotDivId, false, renderOptions);
     }
@@ -110,11 +111,12 @@ export async function plotInterpolatedSolution(model, result, plotType, plotDivI
       await plotSolution(model, result, plotType, plotDivId, { ...renderOptions, backend: "vtk" });
       return;
     }
+    console.time("plottingTime");
     const meshData = prepareMesh(model.meshConfig);
     const interpolatedVtkData = await buildInterpolatedVtkData(model, result, meshData);
     await renderVtkScene(interpolatedVtkData, plotDivId, model.solverConfig, `${plotType}-interpolated`, renderOptions);
+    console.timeEnd("plottingTime");
   }
-  console.timeEnd("plottingTime");
 }
 
 export async function plotInterpolatedSolutionVtk(model, result, plotType, plotDivId, renderOptions = {}) {
@@ -221,6 +223,7 @@ async function renderVtkScene(vtkData, plotDivId, solverConfig, plotType, render
   const mappedPreset = reverseColorMapPreset(preset, colorScale.reverse);
   lookupTable.applyColorMap(mappedPreset);
   lookupTable.setMappingRange(scalarRange[0], scalarRange[1]);
+  lookupTable.setNanColor(1, 1, 1, 0);
   lookupTable.updateRange();
   mapper.setLookupTable(lookupTable);
 
@@ -251,6 +254,8 @@ async function renderVtkScene(vtkData, plotDivId, solverConfig, plotType, render
     });
     scalarBarActor.setAxisLabel(colorScale.scalarBarTitle);
     scalarBarActor.setScalarsToColors(lookupTable);
+    scalarBarActor.setTickTextStyle({ color: "black", fontSize: 14 });
+    scalarBarActor.setAxisTextStyle({ color: "black", fontStyle: "bold", fontSize: 14 });
     renderer.addActor2D(scalarBarActor);
   }
 
