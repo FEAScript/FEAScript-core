@@ -13,6 +13,7 @@
   <head>
     <title>FEAScript Example: Heat Conduction 1D Wall</title>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- Link to the CSS files -->
     <link href="https://feascript.com/feascript-website.css" rel="stylesheet" type="text/css" />
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
@@ -46,8 +47,7 @@
 
     <script type="module">
       // Import FEAScript library
-      import { FEAScriptModel, plotSolutionVtk, printVersion } from "https://core.feascript.com/dist/feascript.esm.js";
-      // import { FEAScriptModel, plotSolutionVtk, printVersion } from "../../../src/index.js";
+      import { FEAScriptModel, plotSolutionVtk, printVersion } from "../../../src/index.js";
 
       window.addEventListener("DOMContentLoaded", async () => {
         console.log("FEAScript Version:", printVersion);

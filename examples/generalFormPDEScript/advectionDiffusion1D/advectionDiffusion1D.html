@@ -13,12 +13,13 @@
   <head>
     <title>FEAScript Example: Advection-Diffusion 1D</title>
     <meta charset="UTF-8" />
-    <!-- Link to the CSS files -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.png" />
+  
     <link href="https://feascript.com/feascript-website.css" rel="stylesheet" type="text/css" />
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
-    <!-- Import the Math.js library for mathematical operations -->
+   
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.12.0/math.min.js"></script>
-    <!-- Import map for VTK.js modules -->
+
     <script type="importmap">
       {
         "imports": {
@@ -41,32 +42,25 @@
   <body>
     <h2>Advection-Diffusion 1D</h2>
 
-    <!-- Container element where the solution plot will be rendered -->
     <div id="resultsCanvas"></div>
 
     <script type="module">
-      // Import FEAScript library
-      import { FEAScriptModel, plotSolutionVtk, printVersion } from "https://core.feascript.com/dist/feascript.esm.js";
-      // import { FEAScriptModel, plotSolutionVtk, printVersion } from "../../../src/index.js";
+      import { FEAScriptModel, plotSolutionVtk, printVersion } from "../../../src/index.js";
 
       window.addEventListener("DOMContentLoaded", async () => {
         console.log("FEAScript Version:", printVersion);
 
-        // Create a new FEAScript model
         const model = new FEAScriptModel();
 
-        // Select physics/PDE
         model.setModelConfig("generalFormPDEScript", {
           coefficientFunctions: {
-            // Equation d²u/dx² - 10 du/dx = 10 * exp(-200 * (x - 0.5)²)
-            A: (x) => 1, // Diffusion coefficient
-            B: (x) => -10, // Advection coefficient
-            C: (x) => 0, // Reaction coefficient
-            D: (x) => 10 * Math.exp(-200 * Math.pow(x - 0.5, 2)), // Source term
+            A: (x) => 1, 
+            B: (x) => -10, 
+            C: (x) => 0, 
+            D: (x) => 10 * Math.exp(-200 * Math.pow(x - 0.5, 2)), 
           },
         });
 
-        // Define mesh configuration
         model.setMeshConfig({
           meshDimension: "1D",
           elementOrder: "quadratic",
@@ -74,21 +68,16 @@
           maxX: 1.0,
         });
 
-        // Define boundary conditions
-        model.addBoundaryCondition("0", ["constantValue", 1]); // Left boundary
-        model.addBoundaryCondition("1", "zeroGradient"); // Right boundary
+        model.addBoundaryCondition("0", ["constantValue", 1]); 
+        model.addBoundaryCondition("1", "zeroGradient"); 
 
-        // Set solver method
         model.setSolverMethod("lusolve");
 
-        // Solve the problem
         const result = model.solve();
 
-        // Print results to console
         console.log(`Number of nodes in mesh: ${result.nodesCoordinates.nodesXCoordinates.length}`);
         console.log("Solution vector:", result.solutionVector);
 
-        // Plot the solution as a 1D line plot
         await plotSolutionVtk(model, result, "line", "resultsCanvas");
       });
     </script>
