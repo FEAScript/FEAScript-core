@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 | https://feascript.com
+ *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -105,7 +105,7 @@ export function assembleHeatConductionMat(meshData, boundaryConditions) {
           // Get basis functions for the current Gauss point
           const basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
             gaussPoints[gaussPointIndex1],
-            gaussPoints[gaussPointIndex2]
+            gaussPoints[gaussPointIndex2],
           );
 
           // Perform isoparametric mapping
@@ -148,7 +148,7 @@ export function assembleHeatConductionMat(meshData, boundaryConditions) {
     boundaryElements,
     nop,
     meshDimension,
-    elementOrder
+    elementOrder,
   );
 
   // Impose Convection boundary conditions
@@ -159,7 +159,7 @@ export function assembleHeatConductionMat(meshData, boundaryConditions) {
     gaussWeights,
     nodesXCoordinates,
     nodesYCoordinates,
-    basisFunctions
+    basisFunctions,
   );
 
   // Impose ConstantTemp boundary conditions
@@ -209,7 +209,7 @@ export function assembleHeatConductionFront({ elementIndex, nop, meshData, basis
     for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
       // Get basis functions for the current Gauss point
       const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(
-        gaussPoints[gaussPointIndex1]
+        gaussPoints[gaussPointIndex1],
       );
 
       // Perform isoparametric mapping

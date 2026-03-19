@@ -1,6 +1,6 @@
 {
   "name": "feascript",
-  "version": "0.2.0",
+  "version": "0.3.0-RC",
   "description": "Lightweight finite element simulation library built in JavaScript",
   "main": "dist/feascript.cjs.js",
   "module": "dist/feascript.esm.js",
@@ -18,7 +18,9 @@
   },
   "scripts": {
     "build": "rollup -c",
+    "prepare": "npm run build",
     "prepublishOnly": "npm run build",
+    "pretest": "npm run build",
     "test": "for file in $(find examples -name '*.js' -type f | sort); do echo 'Running' \"$file\"; if node \"$file\" > /dev/null 2>&1; then echo 'Success'; else echo 'Failed'; fi; done"
   },
   "repository": {
@@ -64,9 +66,15 @@
   },
   "peerDependencies": {
     "mathjs": "^11.12.0",
+    "@kitware/vtk.js": "^32.12.0",
     "plotly.js": "^2.35.3"
   },
+  "peerDependenciesMeta": {
+    "@kitware/vtk.js": { "optional": true },
+    "plotly.js": { "optional": true }
+  },
   "devDependencies": {
+    "@kitware/vtk.js": "^32.12.0",
     "@rollup/plugin-commonjs": "^28.0.3",
     "@rollup/plugin-node-resolve": "^16.0.1",
     "mathjs": "^11.12.0",

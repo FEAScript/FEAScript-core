@@ -2,10 +2,7 @@
 
 # FEAScript-core
 
-[![GitHub release](https://img.shields.io/github/v/release/FEAScript/FEAScript-core?logo=github)](https://github.com/FEAScript/FEAScript-core/releases)
 [![npm version](https://img.shields.io/npm/v/feascript)](https://www.npmjs.com/package/feascript)
-[![Last Commit](https://img.shields.io/github/last-commit/FEAScript/FEAScript-core?logo=github)](https://github.com/FEAScript/FEAScript-core/commits/main)
-[![License](https://img.shields.io/github/license/FEAScript/FEAScript-core?logo=github)](https://github.com/FEAScript/FEAScript-core/blob/main/LICENSE)
 
 [FEAScript](https://feascript.com/) is a lightweight finite element simulation library written in JavaScript. It empowers users to perform simulations for physics and engineering applications in both browser-based and server-side environments. This is the core library of the FEAScript project.
 
@@ -19,7 +16,7 @@
 - <b>Meshing:</b> simple 1D/2D mesh generation, unstructured mesh import from Gmsh (`.msh`)
 - <b>Solvers:</b> frontal, Jacobi (CPU/WebGPU) and LU, Newton–Raphson for nonlinear systems
 - <b>Performance:</b> web worker support for multi-threaded computation
-- <b>Visualization:</b> interactive plots with Plotly
+- <b>Visualization:</b> interactive rendering with vtk.js and Plotly
 
 <!-- ## Contents
 
@@ -84,7 +81,7 @@ FEAScript works well in interactive JavaScript playgrounds where you can write c
 Install FEAScript and its peer dependencies from npm as follows:
 
 ```bash
-npm install feascript mathjs plotly.js
+npm install feascript mathjs @kitware/vtk.js
 ```
 
 Then, import it in your JavaScript file:

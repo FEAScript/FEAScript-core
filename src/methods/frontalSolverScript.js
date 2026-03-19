@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 | https://feascript.com
+ *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -74,12 +74,12 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
       meshData.boundaryElements,
       meshData.nop,
       meshData.meshDimension,
-      meshData.elementOrder
+      meshData.elementOrder,
     );
 
     dirichletBoundaryConditionsHandler.imposeConstantTempBoundaryConditionsFront(
       frontalData.nodeConstraintCode,
-      frontalData.boundaryValues
+      frontalData.boundaryValues,
     );
     // Front propagation model (frontPropagationScript solver)
   } else if (assembleFront === assembleFrontPropagationFront) {
@@ -88,12 +88,12 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
       meshData.boundaryElements,
       meshData.nop,
       meshData.meshDimension,
-      meshData.elementOrder
+      meshData.elementOrder,
     );
 
     dirichletBoundaryConditionsHandler.imposeConstantValueBoundaryConditionsFront(
       frontalData.nodeConstraintCode,
-      frontalData.boundaryValues
+      frontalData.boundaryValues,
     );
   }
   // Initialize global residual vector
@@ -130,14 +130,14 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
       debugLog(
         `${nodesXCoordinates[nodeIndex].toExponential(5)}  ${frontalData.solutionVector[
           nodeIndex
-        ].toExponential(5)}`
+        ].toExponential(5)}`,
       );
     } else {
       // 2D case - output X, Y coordinates and temperature
       debugLog(
         `${nodesXCoordinates[nodeIndex].toExponential(5)}  ${nodesYCoordinates[nodeIndex].toExponential(
-          5
-        )}  ${frontalData.solutionVector[nodeIndex].toExponential(5)}`
+          5,
+        )}  ${frontalData.solutionVector[nodeIndex].toExponential(5)}`,
       );
     }
   }
@@ -205,7 +205,10 @@ function initializeFrontalArrays(nodesPerElement, numElements) {
  * @returns {number} Estimated front size
  */
 function estimateFrontSize(nodesPerElement, numElements) {
-  const frontWidthEstimate = Math.max(Math.ceil(Math.sqrt(numElements)) * nodesPerElement, nodesPerElement * 2);
+  const frontWidthEstimate = Math.max(
+    Math.ceil(Math.sqrt(numElements)) * nodesPerElement,
+    nodesPerElement * 2,
+  );
   return frontWidthEstimate * numElements;
 }
 // Old function to estimate the required front size
@@ -256,7 +259,9 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
     for (const boundaryKey in meshData.boundaryElements) {
       if (
         thermalBoundaryConditions.boundaryConditions[boundaryKey]?.[0] === "convection" &&
-        meshData.boundaryElements[boundaryKey].some(([boundaryElementIndex, _]) => boundaryElementIndex === elementIndex)
+        meshData.boundaryElements[boundaryKey].some(
+          ([boundaryElementIndex, _]) => boundaryElementIndex === elementIndex,
+        )
       ) {
         isOnRobinTypeBoundary = true;
         break;
@@ -272,7 +277,7 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
         meshData.nodesYCoordinates,
         gaussPoints,
         gaussWeights,
-        basisFunctions
+        basisFunctions,
       );
       boundaryLocalJacobianMatrix = result.localJacobianMatrix;
       boundaryResidualVector = result.localResidualVector;
@@ -527,7 +532,7 @@ function runFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions, assem
 
       if (Math.abs(pivotValue) < 1e-10) {
         errorLog(
-          `Matrix singular or ill-conditioned, currentElementIndex=${elementData.currentElementIndex}, pivotGlobalRowIndex=${pivotGlobalRowIndex}, pivotColumnGlobalIndex=${pivotColumnGlobalIndex}, pivotValue=${pivotValue}`
+          `Matrix singular or ill-conditioned, currentElementIndex=${elementData.currentElementIndex}, pivotGlobalRowIndex=${pivotGlobalRowIndex}, pivotColumnGlobalIndex=${pivotColumnGlobalIndex}, pivotValue=${pivotValue}`,
         );
       }
 
@@ -651,7 +656,7 @@ function runFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions, assem
       frontStorage.pivotRow[0] = 1;
       if (Math.abs(pivotValue) < 1e-10) {
         errorLog(
-          `Matrix singular or ill-conditioned, currentElementIndex=${elementData.currentElementIndex}, pivotGlobalRowIndex=${pivotGlobalRowIndex}, pivotColumnGlobalIndex=${pivotColumnGlobalIndex}, pivotValue=${pivotValue}`
+          `Matrix singular or ill-conditioned, currentElementIndex=${elementData.currentElementIndex}, pivotGlobalRowIndex=${pivotGlobalRowIndex}, pivotColumnGlobalIndex=${pivotColumnGlobalIndex}, pivotValue=${pivotValue}`,
         );
       }
 

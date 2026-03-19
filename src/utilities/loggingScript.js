@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 | https://feascript.com
+ *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -18,7 +18,7 @@ export function logSystem(level) {
   if (level !== "basic" && level !== "debug") {
     console.log(
       "%c[WARN] Invalid log level: " + level + ". Using basic instead.",
-      "color: #FFC107; font-weight: bold;"
+      "color: #FFC107; font-weight: bold;",
     ); // Yellow for warnings
     currentLogLevel = "basic";
   } else {

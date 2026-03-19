@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 | https://feascript.com
+ *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -49,7 +49,7 @@ export class ThermalBoundaryConditions {
         if (this.boundaryConditions[boundaryKey][0] === "constantTemp") {
           const tempValue = this.boundaryConditions[boundaryKey][1];
           debugLog(
-            `Boundary ${boundaryKey}: Applying constant temperature of ${tempValue} K (Dirichlet condition)`
+            `Boundary ${boundaryKey}: Applying constant temperature of ${tempValue} K (Dirichlet condition)`,
           );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
             if (this.elementOrder === "linear") {
@@ -62,7 +62,7 @@ export class ThermalBoundaryConditions {
                 debugLog(
                   `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
                 // Set the residual vector to the ConstantTemp value
                 residualVector[globalNodeIndex] = tempValue;
@@ -83,7 +83,7 @@ export class ThermalBoundaryConditions {
                 debugLog(
                   `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
                 // Set the residual vector to the ConstantTemp value
                 residualVector[globalNodeIndex] = tempValue;
@@ -103,7 +103,7 @@ export class ThermalBoundaryConditions {
         if (this.boundaryConditions[boundaryKey][0] === "constantTemp") {
           const tempValue = this.boundaryConditions[boundaryKey][1];
           debugLog(
-            `Boundary ${boundaryKey}: Applying constant temperature of ${tempValue} K (Dirichlet condition)`
+            `Boundary ${boundaryKey}: Applying constant temperature of ${tempValue} K (Dirichlet condition)`,
           );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
             if (this.elementOrder === "linear") {
@@ -118,7 +118,7 @@ export class ThermalBoundaryConditions {
                 debugLog(
                   `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
                 // Set the residual vector to the ConstantTemp value
                 residualVector[globalNodeIndex] = tempValue;
@@ -141,7 +141,7 @@ export class ThermalBoundaryConditions {
                 debugLog(
                   `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
                 // Set the residual vector to the ConstantTemp value
                 residualVector[globalNodeIndex] = tempValue;
@@ -170,7 +170,7 @@ export class ThermalBoundaryConditions {
         if (this.boundaryConditions[boundaryKey][0] === "constantTemp") {
           const tempValue = this.boundaryConditions[boundaryKey][1];
           debugLog(
-            `Boundary ${boundaryKey}: Applying constant temperature of ${tempValue} K (Dirichlet condition)`
+            `Boundary ${boundaryKey}: Applying constant temperature of ${tempValue} K (Dirichlet condition)`,
           );
 
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
@@ -185,7 +185,7 @@ export class ThermalBoundaryConditions {
                 debugLog(
                   `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
 
                 // Set boundary condition code and value
@@ -203,7 +203,7 @@ export class ThermalBoundaryConditions {
                 debugLog(
                   `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
 
                 // Set boundary condition code and value
@@ -219,7 +219,7 @@ export class ThermalBoundaryConditions {
         if (this.boundaryConditions[boundaryKey][0] === "constantTemp") {
           const tempValue = this.boundaryConditions[boundaryKey][1];
           debugLog(
-            `Boundary ${boundaryKey}: Applying constant temperature of ${tempValue} K (Dirichlet condition)`
+            `Boundary ${boundaryKey}: Applying constant temperature of ${tempValue} K (Dirichlet condition)`,
           );
 
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
@@ -236,7 +236,7 @@ export class ThermalBoundaryConditions {
                 debugLog(
                   `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
 
                 // Set boundary condition code and value
@@ -256,7 +256,7 @@ export class ThermalBoundaryConditions {
                 debugLog(
                   `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
 
                 // Set boundary condition code and value
@@ -287,7 +287,7 @@ export class ThermalBoundaryConditions {
     gaussWeights,
     nodesXCoordinates,
     nodesYCoordinates,
-    basisFunctions
+    basisFunctions,
   ) {
     // Extract convection parameters from boundary conditions
     let convectionHeatTranfCoeff = [];
@@ -306,7 +306,7 @@ export class ThermalBoundaryConditions {
           const convectionCoeff = convectionHeatTranfCoeff[boundaryKey];
           const extTemp = convectionExtTemp[boundaryKey];
           debugLog(
-            `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionCoeff} W/(m²·K) and external temperature T∞=${extTemp} K`
+            `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionCoeff} W/(m²·K) and external temperature T∞=${extTemp} K`,
           );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
             let nodeIndex;
@@ -332,7 +332,7 @@ export class ThermalBoundaryConditions {
             debugLog(
               `  - Applied convection boundary condition to node ${globalNodeIndex + 1} (element ${
                 elementIndex + 1
-              }, local node ${nodeIndex + 1})`
+              }, local node ${nodeIndex + 1})`,
             );
             residualVector[globalNodeIndex] += -convectionCoeff * extTemp;
             jacobianMatrix[globalNodeIndex][globalNodeIndex] += convectionCoeff;
@@ -345,7 +345,7 @@ export class ThermalBoundaryConditions {
           const convectionCoeff = convectionHeatTranfCoeff[boundaryKey];
           const extTemp = convectionExtTemp[boundaryKey];
           debugLog(
-            `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionCoeff} W/(m²·K) and external temperature T∞=${extTemp} K`
+            `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionCoeff} W/(m²·K) and external temperature T∞=${extTemp} K`,
           );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
             if (this.elementOrder === "linear") {
@@ -422,7 +422,7 @@ export class ThermalBoundaryConditions {
                 debugLog(
                   `  - Applied convection boundary condition to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${localNodeIndex + 1})`
+                  }, local node ${localNodeIndex + 1})`,
                 );
 
                 // Apply boundary condition with proper Jacobian for all sides
@@ -521,7 +521,7 @@ export class ThermalBoundaryConditions {
                   debugLog(
                     `  - Applied convection boundary condition to node ${globalNodeIndex + 1} (element ${
                       elementIndex + 1
-                    }, local node ${localNodeIndex + 1})`
+                    }, local node ${localNodeIndex + 1})`,
                   );
 
                   // Apply boundary condition with proper Jacobian for all sides
@@ -572,7 +572,7 @@ export class ThermalBoundaryConditions {
     nodesYCoordinates,
     gaussPoints,
     gaussWeights,
-    basisFunctions
+    basisFunctions,
   ) {
     // Extract convection parameters from boundary conditions
     let convectionHeatTranfCoeff = [];
@@ -598,12 +598,12 @@ export class ThermalBoundaryConditions {
         const convectionCoeff = convectionHeatTranfCoeff[boundaryKey];
         const extTemp = convectionExtTemp[boundaryKey];
         debugLog(
-          `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionCoeff} W/(m²·K) and external temperature T∞=${extTemp} K`
+          `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionCoeff} W/(m²·K) and external temperature T∞=${extTemp} K`,
         );
 
         // Find if this element is on this boundary and which side
         const boundaryElement = this.boundaryElements[boundaryKey].find(
-          ([boundaryElementIndex, _]) => boundaryElementIndex === elementIndex
+          ([boundaryElementIndex, _]) => boundaryElementIndex === elementIndex,
         );
 
         if (boundaryElement) {
@@ -622,7 +622,7 @@ export class ThermalBoundaryConditions {
             debugLog(
               `  - Applied convection boundary condition to node ${nodeIndex + 1} (element ${
                 elementIndex + 1
-              }, local node ${nodeIndex + 1})`
+              }, local node ${nodeIndex + 1})`,
             );
             localResidualVector[nodeIndex] += -convectionCoeff * extTemp;
             localJacobianMatrix[nodeIndex][nodeIndex] += convectionCoeff;

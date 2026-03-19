@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 | https://feascript.com
+ *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -76,7 +76,7 @@ export class Mesh {
 
       debugLog(
         "Initial parsed mesh nodal numbering from Gmsh format: " +
-          JSON.stringify(this.parsedMesh.nodalNumbering)
+          JSON.stringify(this.parsedMesh.nodalNumbering),
       );
 
       // Check if it has quadElements or triangleElements structure from gmshReader
@@ -130,7 +130,7 @@ export class Mesh {
 
       debugLog(
         "Nodal numbering after mapping from Gmsh to FEAScript format: " +
-          JSON.stringify(this.parsedMesh.nodalNumbering)
+          JSON.stringify(this.parsedMesh.nodalNumbering),
       );
 
       // Process boundary elements if they exist and if physical property mapping exists
@@ -177,7 +177,7 @@ export class Mesh {
                   debugLog(
                     `Processing boundary node pair: [${node1}, ${node2}] for boundary ${prop.tag} (${
                       prop.name || "unnamed"
-                    })`
+                    })`,
                   );
 
                   // Search through all elements to find which one contains both nodes
@@ -203,11 +203,11 @@ export class Mesh {
 
                         debugLog(
                           `  Found element ${elementIndex} containing boundary nodes. Element nodes: [${elementConnectivity.join(
-                            ", "
-                          )}]`
+                            ", ",
+                          )}]`,
                         );
                         debugLog(
-                          `  Node ${node1} is at index ${node1Index}, Node ${node2} is at index ${node2Index} in the element`
+                          `  Node ${node1} is at index ${node1Index}, Node ${node2} is at index ${node2Index} in the element`,
                         );
 
                         // Based on FEAScript linear quadrilateral numbering:
@@ -244,7 +244,7 @@ export class Mesh {
                         // Add the element and side to the boundary elements array
                         this.parsedMesh.boundaryElements[prop.tag].push([elementIndex, side]);
                         debugLog(
-                          `  Added element-side pair [${elementIndex}, ${side}] to boundary tag ${prop.tag}`
+                          `  Added element-side pair [${elementIndex}, ${side}] to boundary tag ${prop.tag}`,
                         );
                         foundElement = true;
                         break;
@@ -261,11 +261,11 @@ export class Mesh {
 
                         debugLog(
                           `  Found element ${elementIndex} containing boundary nodes. Element nodes: [${elementConnectivity.join(
-                            ", "
-                          )}]`
+                            ", ",
+                          )}]`,
                         );
                         debugLog(
-                          `  Node ${node1} is at index ${node1Index}, Node ${node2} is at index ${node2Index} in the element`
+                          `  Node ${node1} is at index ${node1Index}, Node ${node2} is at index ${node2Index} in the element`,
                         );
 
                         // Based on FEAScript quadratic quadrilateral numbering:
@@ -321,7 +321,7 @@ export class Mesh {
                         // Add the element and side to the boundary elements array
                         this.parsedMesh.boundaryElements[prop.tag].push([elementIndex, side]);
                         debugLog(
-                          `  Added element-side pair [${elementIndex}, ${side}] to boundary tag ${prop.tag}`
+                          `  Added element-side pair [${elementIndex}, ${side}] to boundary tag ${prop.tag}`,
                         );
                         foundElement = true;
                         break;
@@ -331,7 +331,7 @@ export class Mesh {
 
                   if (!foundElement) {
                     errorLog(
-                      `Could not find element containing boundary nodes ${node1} and ${node2}. Boundary may be incomplete.`
+                      `Could not find element containing boundary nodes ${node1} and ${node2}. Boundary may be incomplete.`,
                     );
                   }
                 });
@@ -543,7 +543,7 @@ export class Mesh2D extends Mesh {
       (this.numElementsX === null || this.maxX === null || this.numElementsY === null || this.maxY === null)
     ) {
       errorLog(
-        "numElementsX, maxX, numElementsY, and maxY are required parameters when generating a 2D mesh from geometry"
+        "numElementsX, maxX, numElementsY, and maxY are required parameters when generating a 2D mesh from geometry",
       );
     }
   }
@@ -630,7 +630,7 @@ export class Mesh2D extends Mesh {
       this.numElementsX,
       this.numElementsY,
       totalNodesY,
-      this.elementOrder
+      this.elementOrder,
     );
 
     // Find boundary elements

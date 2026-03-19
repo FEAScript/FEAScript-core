@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 | https://feascript.com
+ *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -33,7 +33,7 @@ export function assembleFrontPropagationMat(
   meshData,
   boundaryConditions,
   solutionVector,
-  eikonalActivationFlag
+  eikonalActivationFlag,
 ) {
   basicLog("Starting front propagation matrix assembly...");
 
@@ -122,7 +122,7 @@ export function assembleFrontPropagationMat(
           // Get basis functions for the current Gauss point
           let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
             gaussPoints[gaussPointIndex1],
-            gaussPoints[gaussPointIndex2]
+            gaussPoints[gaussPointIndex2],
           );
 
           // Perform isoparametric mapping
@@ -231,7 +231,7 @@ export function assembleFrontPropagationMat(
     boundaryElements,
     nop,
     meshDimension,
-    elementOrder
+    elementOrder,
   );
 
   // Impose Dirichlet boundary conditions

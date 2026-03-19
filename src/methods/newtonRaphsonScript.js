@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 | https://feascript.com
+ *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -62,7 +62,7 @@ export function newtonRaphson(assembleMat, context = {}) {
         assembleFrontPropagationFront,
         context.meshData,
         context.boundaryConditions,
-        { solutionVector, eikonalActivationFlag: context.eikonalActivationFlag }
+        { solutionVector, eikonalActivationFlag: context.eikonalActivationFlag },
       );
       deltaX = frontalResult.solutionVector;
     } else {
@@ -71,7 +71,7 @@ export function newtonRaphson(assembleMat, context = {}) {
         context.meshData,
         context.boundaryConditions,
         solutionVector, // The solution vector is required in the case of a non-linear equation
-        context.eikonalActivationFlag // Currently used only in the front propagation solver (TODO refactor in case of a solver not needing it)
+        context.eikonalActivationFlag, // Currently used only in the front propagation solver (TODO refactor in case of a solver not needing it)
       ));
 
       // Solve the linear system based on the specified solver method

@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 | https://feascript.com
+ *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -30,7 +30,7 @@ class webgpuFEAScriptWorker {
    * Function to initialize the WebGPU worker and compute engine
    * @param {string} [powerPreference='high-performance'] - The power preference for the GPU adapter
    */
-  async initialize(powerPreference = 'high-performance') {
+  async initialize(powerPreference = "high-performance") {
     if (!this.initialized) {
       const originalRequestAdapter = navigator.gpu.requestAdapter.bind(navigator.gpu);
       navigator.gpu.requestAdapter = async (options = {}) => {

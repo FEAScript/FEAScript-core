@@ -10,10 +10,6 @@ This directory contains Node.js examples demonstrating how to use the FEAScript 
 
 This example demonstrates solving an eikonal equation in a 2D domain to track the movement of a solidification interface. For detailed information on the model setup, refer to the corresponding [tutorial](https://feascript.com/tutorials/solidification-front-2d.html) in the FEAScript website.
 
-## HTML Examples
-
-Each example also includes an HTML variant (e.g., `solidificationFront2D.html`) that runs the same simulation in the browser with built-in visualization using Plotly.js. Simply open the HTML file in a web browser to run.
-
 ## Running the Node.js Examples
 
 #### 1. Create package.json with ES module support:

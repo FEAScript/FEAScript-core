@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 | https://feascript.com
+ *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -24,7 +24,6 @@ import * as Comlink from "../vendor/comlink.mjs";
  *  - iterations: Number of iterations performed (for iterative methods)
  */
 export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, options = {}) {
-
   // Extract options
   const { maxIterations = 10000, tolerance = 1e-4 } = options;
 
@@ -93,7 +92,6 @@ async function createDefaultComputeEngine() {
  *  - iterations: Number of iterations performed (for iterative methods)
  */
 export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, residualVector, options = {}) {
-  
   // Extract options
   const { maxIterations = 10000, tolerance = 1e-4 } = options;
 
@@ -101,8 +99,8 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
   console.time("systemSolving");
 
   // Normalize inputs
-  const A = Array.isArray(jacobianMatrix) ? jacobianMatrix : jacobianMatrix?.toArray?.() ?? jacobianMatrix;
-  const b = Array.isArray(residualVector) ? residualVector : residualVector?.toArray?.() ?? residualVector;
+  const A = Array.isArray(jacobianMatrix) ? jacobianMatrix : (jacobianMatrix?.toArray?.() ?? jacobianMatrix);
+  const b = Array.isArray(residualVector) ? residualVector : (residualVector?.toArray?.() ?? residualVector);
 
   let created = null;
   let computeEngine = null;
@@ -138,7 +136,7 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
   basicLog(`System solved successfully (${solverMethod})`);
 
   if (created) {
-    await computeEngine?.destroy?.().catch(() => { });
+    await computeEngine?.destroy?.().catch(() => {});
     created.worker.terminate();
   }
 
