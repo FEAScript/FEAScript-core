@@ -2,7 +2,10 @@
 
 # FEAScript-core
 
+[![GitHub release](https://img.shields.io/github/v/release/FEAScript/FEAScript-core?logo=github)](https://github.com/FEAScript/FEAScript-core/releases)
 [![npm version](https://img.shields.io/npm/v/feascript)](https://www.npmjs.com/package/feascript)
+[![Last Commit](https://img.shields.io/github/last-commit/FEAScript/FEAScript-core?logo=github)](https://github.com/FEAScript/FEAScript-core/commits/main)
+[![License](https://img.shields.io/github/license/FEAScript/FEAScript-core?logo=github)](https://github.com/FEAScript/FEAScript-core/blob/main/LICENSE)
 
 [FEAScript](https://feascript.com/) is a lightweight finite element simulation library written in JavaScript. It empowers users to perform simulations for physics and engineering applications in both browser-based and server-side environments. This is the core library of the FEAScript project.
 
@@ -81,7 +84,7 @@ FEAScript works well in interactive JavaScript playgrounds where you can write c
 Install FEAScript and its peer dependencies from npm as follows:
 
 ```bash
-npm install feascript mathjs @kitware/vtk.js
+npm install feascript mathjs
 ```
 
 Then, import it in your JavaScript file:
