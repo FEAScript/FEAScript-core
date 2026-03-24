@@ -39,5 +39,5 @@ export default {
     }),
     terser(),
   ],
-  external: [],
+  external: (id) => id === "@kitware/vtk.js" || id.startsWith("@kitware/vtk.js/") || id === "plotly.js",
 };

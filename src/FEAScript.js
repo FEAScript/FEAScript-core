@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 | https://feascript.com
+ *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -34,19 +34,18 @@ export class FEAScriptModel {
     this.solverMethod = "lusolve"; // Default solver method
     this.coefficientFunctions = null; // Add storage for coefficient functions
     warnLog(
-      "FEAScript is provided “as is” without any warranty. The authors are not responsible for any damages or losses that may result from using the software. See the license for more details: https://github.com/FEAScript/FEAScript-core/blob/main/LICENSE"
+      "FEAScript is provided “as is” without any warranty. The authors are not responsible for any damages or losses that may result from using the software. See the license for more details: https://github.com/FEAScript/FEAScript-core/blob/main/LICENSE",
     );
     basicLog("FEAScriptModel instance created");
   }
 
   /**
-   * Method to set the solver configuration
-   * @param {string} solverConfig - Parameter specifying the type of solver
+   * Method to set the model configuration
+   * @param {string} modelConfig - Parameter specifying the type of model
    * @param {object} [options] - Optional additional configuration
    */
-  setSolverConfig(solverConfig, options = {}) {
-    this.solverConfig = solverConfig;
-    warnLog("setSolverConfig() is deprecated. Use setModelConfig() instead");
+  setModelConfig(modelConfig, options = {}) {
+    this.solverConfig = modelConfig;
 
     // Store coefficient functions if provided
     if (options?.coefficientFunctions !== undefined) {
@@ -63,12 +62,7 @@ export class FEAScriptModel {
       debugLog(`tolerance set to ${this.tolerance}`);
     }
 
-    debugLog(`solverConfig set to ${solverConfig}`);
-  }
-
-  // Alias modelConfig to solverConfig (solverConfig is deprecated, use setModelConfig instead)
-  setModelConfig(modelConfig, options = {}) {
-    this.setSolverConfig(modelConfig, options);
+    debugLog(`solverConfig set to ${modelConfig}`);
   }
 
   setMeshConfig(meshConfig) {
@@ -97,7 +91,7 @@ export class FEAScriptModel {
     }
     /**
      * For consistency across both linear and nonlinear formulations,
-     * we always refer to the assembled right-hand side vector as 
+     * we always refer to the assembled right-hand side vector as
      * `residualVector` and the assembled system matrix as `jacobianMatrix`.
      *
      * In linear problems `jacobianMatrix` is equivalent to the
@@ -131,7 +125,7 @@ export class FEAScriptModel {
         const frontalResult = runFrontalSolver(
           assembleHeatConductionFront,
           meshData,
-          this.boundaryConditions
+          this.boundaryConditions,
         );
         solutionVector = frontalResult.solutionVector;
       } else {
@@ -184,14 +178,14 @@ export class FEAScriptModel {
       // Check if using frontal solver
       if (this.solverMethod === "frontal") {
         errorLog(
-          "Frontal solver is not yet supported for generalFormPDEScript. Please use 'lusolve' or 'jacobi'."
+          "Frontal solver is not yet supported for generalFormPDEScript. Please use 'lusolve' or 'jacobi'.",
         );
       } else {
         // Use regular linear solver methods
         ({ jacobianMatrix, residualVector } = assembleGeneralFormPDEMat(
           meshData,
           this.boundaryConditions,
-          this.coefficientFunctions
+          this.coefficientFunctions,
         ));
 
         const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector, {
@@ -264,7 +258,7 @@ export class FEAScriptModel {
             computeEngine,
             maxIterations: options.maxIterations ?? this.maxIterations,
             tolerance: options.tolerance ?? this.tolerance,
-          }
+          },
         );
         solutionVector = x;
       } else {

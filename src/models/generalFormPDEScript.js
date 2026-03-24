@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 | https://feascript.com
+ *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -65,7 +65,7 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
       for (let gaussPointIndex = 0; gaussPointIndex < gaussPoints.length; gaussPointIndex++) {
         // Get basis functions for the current Gauss point
         const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(
-          gaussPoints[gaussPointIndex]
+          gaussPoints[gaussPointIndex],
         );
 
         // Perform isoparametric mapping
@@ -138,7 +138,7 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
     boundaryElements,
     nop,
     meshDimension,
-    elementOrder
+    elementOrder,
   );
 
   // Apply Dirichlet boundary conditions only
@@ -191,7 +191,7 @@ export function assembleGeneralFormPDEFront({
     for (let gaussPointIndex = 0; gaussPointIndex < gaussPoints.length; gaussPointIndex++) {
       // Get basis functions for the current Gauss point
       const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(
-        gaussPoints[gaussPointIndex]
+        gaussPoints[gaussPointIndex],
       );
 
       // Perform isoparametric mapping

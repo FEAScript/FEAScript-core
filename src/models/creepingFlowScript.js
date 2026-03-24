@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 | https://feascript.com
+ *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -11,7 +11,7 @@
 import { performIsoparametricMapping2D } from "../mesh/meshUtilsScript.js";
 import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
 import { NumericalIntegration } from "../methods/numericalIntegrationScript.js";
-import { FlowBoundaryConditions } from "./flowBoundaryConditions.js";
+import { FlowBoundaryConditions } from "./flowBoundaryConditionsScript.js";
 import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
 
 /**

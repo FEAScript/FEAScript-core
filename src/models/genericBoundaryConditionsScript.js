@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Lightweight Finite Element Simulation in JavaScript
- *  Version: 0.2.0 | https://feascript.com
+ *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -60,7 +60,7 @@ export class GenericBoundaryConditions {
                 debugLog(
                   `  - Applied constant value to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
                 // Set the residual vector to the value
                 residualVector[globalNodeIndex] = value;
@@ -81,7 +81,7 @@ export class GenericBoundaryConditions {
                 debugLog(
                   `  - Applied constant value to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
                 // Set the residual vector to the value
                 residualVector[globalNodeIndex] = value;
@@ -114,7 +114,7 @@ export class GenericBoundaryConditions {
                 debugLog(
                   `  - Applied constant value to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
                 // Set the residual vector to the value
                 residualVector[globalNodeIndex] = value;
@@ -137,7 +137,7 @@ export class GenericBoundaryConditions {
                 debugLog(
                   `  - Applied constant value to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
                 // Set the residual vector to the value
                 residualVector[globalNodeIndex] = value;
@@ -177,7 +177,7 @@ export class GenericBoundaryConditions {
                 debugLog(
                   `  - Applied constant value to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
                 nodeConstraintCode[globalNodeIndex] = 1;
                 boundaryValues[globalNodeIndex] = value;
@@ -192,7 +192,7 @@ export class GenericBoundaryConditions {
                 debugLog(
                   `  - Applied constant value to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
                 nodeConstraintCode[globalNodeIndex] = 1;
                 boundaryValues[globalNodeIndex] = value;
@@ -219,7 +219,7 @@ export class GenericBoundaryConditions {
                 debugLog(
                   `  - Applied constant value to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
                 nodeConstraintCode[globalNodeIndex] = 1;
                 boundaryValues[globalNodeIndex] = value;
@@ -236,7 +236,7 @@ export class GenericBoundaryConditions {
                 debugLog(
                   `  - Applied constant value to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
-                  }, local node ${nodeIndex + 1})`
+                  }, local node ${nodeIndex + 1})`,
                 );
                 nodeConstraintCode[globalNodeIndex] = 1;
                 boundaryValues[globalNodeIndex] = value;
