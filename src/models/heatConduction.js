@@ -12,9 +12,9 @@ import {
   initializeFEA,
   performIsoparametricMapping1D,
   performIsoparametricMapping2D,
-} from "../mesh/meshUtilsScript.js";
-import { ThermalBoundaryConditions } from "./thermalBoundaryConditionsScript.js";
-import { basicLog, debugLog } from "../utilities/loggingScript.js";
+} from "../mesh/meshUtils.js";
+import { ThermalBoundaryConditions } from "./thermalBoundaryConditions.js";
+import { basicLog, debugLog } from "../utilities/logging.js";
 
 /**
  * Function to assemble the Jacobian matrix and residuals vector for the solid heat transfer model

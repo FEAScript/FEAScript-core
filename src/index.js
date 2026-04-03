@@ -8,9 +8,9 @@
  */
 
 export { FEAScriptModel } from "./FEAScript.js";
-export { importGmshQuadTri } from "./readers/gmshReaderScript.js"; //TODO rename importGmshQuadTri to importGmsh
-export { logSystem } from "./utilities/loggingScript.js";
-export { plotSolution, plotInterpolatedSolution } from "./visualization/plotlyPlotScript.js";
+export { importGmshMesh } from "./readers/gmshReader.js";
+export { logSystem } from "./utilities/logging.js";
+export { plotSolution, plotInterpolatedSolution } from "./visualization/plotlyPlot.js";
 export {
   plotSolutionVtk,
   plotInterpolatedSolutionVtk,
@@ -19,6 +19,6 @@ export {
   transformSolverOutputToVtkData,
   transformSolverOutputToVTP,
   transformSolverOutputToMLBuffers,
-} from "./visualization/vtkPlotScript.js";
-export { FEAScriptWorker } from "./workers/workerScript.js";
+} from "./visualization/vtkPlot.js";
+export { FEAScriptWorker } from "./workers/worker.js";
 export const printVersion = "0.3.0 (RC)";

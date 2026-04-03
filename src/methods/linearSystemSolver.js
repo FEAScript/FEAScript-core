@@ -8,8 +8,8 @@
  */
 
 // Internal imports
-import { jacobiSolver } from "./jacobiSolverScript.js";
-import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+import { jacobiSolver } from "./jacobiSolver.js";
+import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 import * as Comlink from "../vendor/comlink.mjs";
 
 /**
@@ -72,7 +72,7 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
 
 // Helper to lazily create a default WebGPU compute engine (Comlink + worker)
 async function createDefaultComputeEngine() {
-  const worker = new Worker(new URL("../workers/webgpuWorkerScript.js", import.meta.url), {
+  const worker = new Worker(new URL("../workers/webgpuWorker.js", import.meta.url), {
     type: "module",
   });
   const computeEngine = Comlink.wrap(worker);

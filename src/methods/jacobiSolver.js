@@ -24,7 +24,7 @@ export function jacobiSolver(A, b, x0, options = {}) {
 
   const n = A.length;
   let x = [...x0];
-  let xNew = new Array(n);
+  let xNew = new Array(n).fill(0);
 
   // Jacobi update: xNew[i] = (b[i] - sum(A[i][j] * x[j] for j != i)) / A[i][i]
   for (let iter = 0; iter < maxIterations; iter++) {
@@ -44,8 +44,8 @@ export function jacobiSolver(A, b, x0, options = {}) {
       maxDiff = Math.max(maxDiff, Math.abs(xNew[i] - x[i]));
     }
 
-    // Copy new solution for the next iteration
-    x = [...xNew];
+    // Swap buffers to avoid allocating/copying every iteration
+    [x, xNew] = [xNew, x];
 
     if (maxDiff < tolerance) {
       return { solutionVector: x, iterations: iter + 1, converged: true };

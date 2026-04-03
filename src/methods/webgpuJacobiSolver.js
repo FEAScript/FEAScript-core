@@ -11,7 +11,7 @@
 import * as ti from "../vendor/taichi.esm.js";
 
 // Internal imports
-import { debugLog, errorLog } from "../utilities/loggingScript.js";
+import { debugLog, errorLog } from "../utilities/logging.js";
 
 /**
  * Class to provide GPU-accelerated Jacobi solver using Taichi.js/WebGPU

@@ -33,7 +33,7 @@ export class FEAScriptWorker {
    */
   async _initWorker() {
     try {
-      this.worker = new Worker(new URL("./wrapperScript.js", import.meta.url), {
+      this.worker = new Worker(new URL("./wrapper.js", import.meta.url), {
         type: "module",
       });
 

@@ -8,11 +8,11 @@
  */
 
 /**
- * Plotly-based plotting functions are provided by plotlyPlotScript.js
- * VTK.js-based plotting and data transformation functions are provided by vtkPlotScript.js
+ * Plotly-based plotting functions are provided by plotlyPlot.js
+ * VTK.js-based plotting and data transformation functions are provided by vtkPlot.js
  */
 
-export { plotSolution, plotInterpolatedSolution } from "./plotlyPlotScript.js";
+export { plotSolution, plotInterpolatedSolution } from "./plotlyPlot.js";
 
 export {
   plotSolutionVtk,
@@ -22,4 +22,4 @@ export {
   transformSolverOutputToVtkData,
   transformSolverOutputToVTP,
   transformSolverOutputToMLBuffers,
-} from "./vtkPlotScript.js";
+} from "./vtkPlot.js";

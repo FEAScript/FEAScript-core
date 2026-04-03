@@ -19,14 +19,12 @@ Thank you for your interest in contributing! FEAScript is in early development, 
 ## Variable & File Naming
 
 - Use [camelCase](https://en.wikipedia.org/wiki/Camel_case) formatting for variable names throughout the code
-- All JavaScript source files in FEAScript end with the suffix `Script` before the `.js` extension (e.g., `loggingScript.js`, `meshGenerationScript.js`, `newtonRaphsonScript.js`). This is an explicit, project‑level stylistic choice to:
-  - Visually distinguish internal FEAScript modules from third‑party or external library files
-  - Keep historical and stylistic consistency across the codebase
+- JavaScript source file names use camelCase (e.g., `logging.js`, `meshGeneration.js`, `newtonRaphson.js`)
 
 ### Exceptions
 
 - Public entry file: `index.js` (standard entry point convention)
-- Core model file: `FEAScript.js` (matches the library name; appending "Script" would be redundant)
+- Core model file: `FEAScript.js` (matches the library name)
 
 ## File Structure
 
@@ -54,7 +52,7 @@ Example:
 import { mathLibrary } from "math-package";
 
 // Internal imports
-import { relatedFunction } from "../utilities/helperScript.js";
+import { relatedFunction } from "../utilities/helper.js";
 
 /**
  * Class to handle specific functionality

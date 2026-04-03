@@ -8,7 +8,7 @@
  */
 
 // Internal imports
-import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 
 /**
  * Class to handle flow boundary conditions application for Stokes and Navier-Stokes models

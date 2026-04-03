@@ -8,14 +8,14 @@
  */
 
 // Internal imports
-import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 
 /**
  * Function to import mesh data from Gmsh (.msh v4.1) containing quadrilateral and triangular elements
  * @param {File} file
  * @returns {object}
  */
-const importGmshQuadTri = async (file) => {
+const importGmshMesh = async (file) => {
   let result = {
     nodesXCoordinates: [],
     nodesYCoordinates: [],
@@ -283,4 +283,4 @@ const importGmshQuadTri = async (file) => {
   return result;
 };
 
-export { importGmshQuadTri };
+export { importGmshMesh };

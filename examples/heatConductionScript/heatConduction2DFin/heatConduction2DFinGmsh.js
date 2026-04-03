@@ -17,7 +17,7 @@ import * as math from "mathjs";
 global.math = math;
 
 // Import FEAScript library
-import { FEAScriptModel, importGmshQuadTri, printVersion } from "feascript";
+import { FEAScriptModel, importGmshMesh, printVersion } from "feascript";
 
 console.log("FEAScript Version:", printVersion);
 
@@ -42,7 +42,7 @@ async function main() {
   };
 
   // Parse the mesh data
-  const result = await importGmshQuadTri(mockFile);
+  const result = await importGmshMesh(mockFile);
 
   // Define mesh configuration with the parsed result
   model.setMeshConfig({
