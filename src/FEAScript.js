@@ -8,16 +8,16 @@
  */
 
 // Internal imports
-import { newtonRaphson } from "./methods/newtonRaphsonScript.js";
-import { solveLinearSystem } from "./methods/linearSystemSolverScript.js";
-import { solveLinearSystemAsync } from "./methods/linearSystemSolverScript.js";
-import { prepareMesh } from "./mesh/meshUtilsScript.js";
-import { assembleFrontPropagationMat } from "./models/frontPropagationScript.js";
-import { assembleGeneralFormPDEMat, assembleGeneralFormPDEFront } from "./models/generalFormPDEScript.js";
-import { assembleHeatConductionMat, assembleHeatConductionFront } from "./models/heatConductionScript.js";
-import { assembleCreepingFlowMatrix } from "./models/creepingFlowScript.js";
-import { runFrontalSolver } from "./methods/frontalSolverScript.js";
-import { basicLog, debugLog, warnLog, errorLog } from "./utilities/loggingScript.js";
+import { newtonRaphson } from "./methods/newtonRaphson.js";
+import { solveLinearSystem } from "./methods/linearSystemSolver.js";
+import { solveLinearSystemAsync } from "./methods/linearSystemSolver.js";
+import { prepareMesh } from "./mesh/meshUtils.js";
+import { assembleFrontPropagationMat } from "./models/frontPropagation.js";
+import { assembleGeneralFormPDEMat, assembleGeneralFormPDEFront } from "./models/generalFormPDE.js";
+import { assembleHeatConductionMat, assembleHeatConductionFront } from "./models/heatConduction.js";
+import { assembleCreepingFlowMatrix } from "./models/creepingFlow.js";
+import { runFrontalSolver } from "./methods/frontalSolver.js";
+import { basicLog, debugLog, warnLog, errorLog } from "./utilities/logging.js";
 
 /**
  * Class to implement finite element analysis in JavaScript

@@ -8,11 +8,11 @@
  */
 
 // Internal imports
-import { euclideanNorm } from "../methods/euclideanNormScript.js";
-import { solveLinearSystem } from "./linearSystemSolverScript.js";
-import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
-import { runFrontalSolver } from "./frontalSolverScript.js";
-import { assembleFrontPropagationFront } from "../models/frontPropagationScript.js";
+import { euclideanNorm } from "../methods/euclideanNorm.js";
+import { solveLinearSystem } from "./linearSystemSolver.js";
+import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
+import { runFrontalSolver } from "./frontalSolver.js";
+import { assembleFrontPropagationFront } from "../models/frontPropagation.js";
 
 /**
  * Function to solve a system of non-linear equations using the Newton-Raphson method
@@ -53,7 +53,7 @@ export function newtonRaphson(assembleMat, context = {}) {
   while (iterations < maxIterations && !converged) {
     // Update solution
     for (let i = 0; i < solutionVector.length; i++) {
-      solutionVector[i] = Number(solutionVector[i]) + Number(deltaX[i]);
+      solutionVector[i] = solutionVector[i] + deltaX[i];
     }
 
     // Check if using frontal solver

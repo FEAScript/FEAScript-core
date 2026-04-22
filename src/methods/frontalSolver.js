@@ -8,13 +8,13 @@
  */
 
 // Internal imports
-import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
-import { initializeFEA } from "../mesh/meshUtilsScript.js";
-import { assembleHeatConductionFront } from "../models/heatConductionScript.js";
-import { ThermalBoundaryConditions } from "../models/thermalBoundaryConditionsScript.js";
-import { assembleFrontPropagationFront } from "../models/frontPropagationScript.js";
-import { GenericBoundaryConditions } from "../models/genericBoundaryConditionsScript.js";
-import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+import { BasisFunctions } from "../mesh/basisFunctions.js";
+import { initializeFEA } from "../mesh/meshUtils.js";
+import { assembleHeatConductionFront } from "../models/heatConduction.js";
+import { ThermalBoundaryConditions } from "../models/thermalBoundaryConditions.js";
+import { assembleFrontPropagationFront } from "../models/frontPropagation.js";
+import { GenericBoundaryConditions } from "../models/genericBoundaryConditions.js";
+import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 
 // Create object templates
 const frontalData = {};
@@ -67,7 +67,7 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
 
   // Handle Dirichlet-type boundary conditions differently based on which solver is being used
   let dirichletBoundaryConditionsHandler;
-  // Solid heat transfer model (heatConductionScript solver)
+  // Solid heat transfer model (heatConduction solver)
   if (assembleFront === assembleHeatConductionFront) {
     dirichletBoundaryConditionsHandler = new ThermalBoundaryConditions(
       boundaryConditions,
@@ -81,7 +81,7 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
       frontalData.nodeConstraintCode,
       frontalData.boundaryValues,
     );
-    // Front propagation model (frontPropagationScript solver)
+    // Front propagation model (frontPropagation solver)
   } else if (assembleFront === assembleFrontPropagationFront) {
     dirichletBoundaryConditionsHandler = new GenericBoundaryConditions(
       boundaryConditions,
@@ -252,7 +252,7 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
     .map(() => Array(FEAData.nodesPerElement).fill(0));
   let boundaryResidualVector = Array(FEAData.nodesPerElement).fill(0);
 
-  // heatConductionScript solver
+  // heatConduction solver
   if (assembleFront === assembleHeatConductionFront) {
     // Check if this element is on a Robin-type boundary
     let isOnRobinTypeBoundary = false;

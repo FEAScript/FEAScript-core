@@ -13,9 +13,9 @@ import {
   pointInsideQuadrilateral,
   computeNodeNeighbors,
   getBoundarySegments,
-} from "../mesh/meshUtilsScript.js";
-import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
-import { errorLog } from "../utilities/loggingScript.js";
+} from "../mesh/meshUtils.js";
+import { BasisFunctions } from "../mesh/basisFunctions.js";
+import { errorLog } from "../utilities/logging.js";
 
 let _vtkModules = null;
 

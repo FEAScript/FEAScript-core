@@ -8,10 +8,10 @@
  */
 
 // Internal imports
-import { BasisFunctions } from "./basisFunctionsScript.js";
-import { Mesh1D, Mesh2D } from "./meshGenerationScript.js";
-import { NumericalIntegration } from "../methods/numericalIntegrationScript.js";
-import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+import { BasisFunctions } from "./basisFunctions.js";
+import { Mesh1D, Mesh2D } from "./meshGeneration.js";
+import { NumericalIntegration } from "../methods/numericalIntegration.js";
+import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 
 /**
  * Function to prepare the mesh for finite element analysis

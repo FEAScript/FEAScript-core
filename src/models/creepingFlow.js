@@ -8,11 +8,11 @@
  */
 
 // Internal imports
-import { performIsoparametricMapping2D } from "../mesh/meshUtilsScript.js";
-import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
-import { NumericalIntegration } from "../methods/numericalIntegrationScript.js";
-import { FlowBoundaryConditions } from "./flowBoundaryConditionsScript.js";
-import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+import { performIsoparametricMapping2D } from "../mesh/meshUtils.js";
+import { BasisFunctions } from "../mesh/basisFunctions.js";
+import { NumericalIntegration } from "../methods/numericalIntegration.js";
+import { FlowBoundaryConditions } from "./flowBoundaryConditions.js";
+import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 
 /**
  * Function to assemble the Jacobian matrix and residual vector for the steady creeping flow (Stokes) model

@@ -12,12 +12,12 @@ let currentLogLevel = "basic";
 
 /**
  * Function to set the logging system level
- * @param {string} level - Logging level (basic, debug)
+ * @param {string} level - Logging level (none, basic, debug)
  */
 export function logSystem(level) {
-  if (level !== "basic" && level !== "debug") {
+  if (level !== "none" && level !== "basic" && level !== "debug") {
     console.log(
-      "%c[WARN] Invalid log level: " + level + ". Using basic instead.",
+      "%c[WARN] Invalid log level: " + level + ". Using basic instead. Allowed levels: none, basic, debug.",
       "color: #FFC107; font-weight: bold;",
     ); // Yellow for warnings
     currentLogLevel = "basic";
@@ -42,7 +42,9 @@ export function debugLog(message) {
  * @param {string} message - Message to log
  */
 export function basicLog(message) {
-  console.log("%c[INFO] " + message, "color: #4CAF50; font-weight: bold;");
+  if (currentLogLevel === "basic" || currentLogLevel === "debug") {
+    console.log("%c[INFO] " + message, "color: #4CAF50; font-weight: bold;");
+  }
 }
 
 /**

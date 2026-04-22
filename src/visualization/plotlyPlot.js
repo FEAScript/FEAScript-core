@@ -13,9 +13,9 @@ import {
   pointInsideQuadrilateral,
   computeNodeNeighbors,
   getBoundarySegments,
-} from "../mesh/meshUtilsScript.js";
-import { BasisFunctions } from "../mesh/basisFunctionsScript.js";
-import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+} from "../mesh/meshUtils.js";
+import { BasisFunctions } from "../mesh/basisFunctions.js";
+import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 
 /**
  * Function to create plots of the solution vector

@@ -8,9 +8,9 @@
  */
 
 // Internal imports
-import { initializeFEA, performIsoparametricMapping1D } from "../mesh/meshUtilsScript.js";
-import { GenericBoundaryConditions } from "./genericBoundaryConditionsScript.js";
-import { basicLog, debugLog, errorLog } from "../utilities/loggingScript.js";
+import { initializeFEA, performIsoparametricMapping1D } from "../mesh/meshUtils.js";
+import { GenericBoundaryConditions } from "./genericBoundaryConditions.js";
+import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 
 /**
  * Function to assemble the Jacobian matrix and residuals vector for the general form PDE model
