@@ -20,10 +20,14 @@ FEAScript makes use of the following third-party software:
    - License: MIT (https://github.com/plotly/plotly.js/blob/master/LICENSE)
    - Source: https://github.com/plotly/plotly.js/tree/master
 
-6. **taichi.js**
+6. **stdlib-js**
+   - License: Apache-2.0 (https://github.com/stdlib-js/blas/blob/main/LICENSE)
+   - Source: https://github.com/stdlib-js/stdlib
+
+7. **taichi.js**
    - License: MIT (https://github.com/AmesingFlank/taichi.js/blob/main/LICENSE)
    - Source: https://github.com/AmesingFlank/taichi.js
 
-7. **vtk.js**
+8. **vtk.js**
    - License: BSD 3-Clause (https://github.com/Kitware/vtk-js/blob/master/LICENSE)
    - Source: https://github.com/Kitware/vtk-js

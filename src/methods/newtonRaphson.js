@@ -8,7 +8,7 @@
  */
 
 // Internal imports
-import { euclideanNorm } from "../methods/euclideanNorm.js";
+import { euclideanNorm } from "../methods/blasUtilities.js";
 import { solveLinearSystem } from "./linearSystemSolver.js";
 import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 import { runFrontalSolver } from "./frontalSolver.js";
