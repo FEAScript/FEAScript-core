@@ -27,7 +27,7 @@ export function jacobiSolver(A, b, x0, options = {}) {
 
   const n = A.length;
 
-  // Pre-convert inputs to Float64Arrays for BLAS operations
+  // Convert inputs to Float64Arrays for BLAS operations
   const Arows = A.map((row) => new Float64Array(row));
   const bVec = new Float64Array(b);
   let x = new Float64Array(x0);
@@ -37,16 +37,13 @@ export function jacobiSolver(A, b, x0, options = {}) {
   // Jacobi update: xNew[i] = (b[i] - (A[i] · x) + A[i][i] * x[i]) / A[i][i]
   for (let iter = 0; iter < maxIterations; iter++) {
     for (let i = 0; i < n; i++) {
-      // Use BLAS ddot to compute the full dot product A[i] · x, then subtract the diagonal contribution
       const rowDot = dotProduct(Arows[i], x);
       xNew[i] = (bVec[i] - rowDot + Arows[i][i] * x[i]) / Arows[i][i];
     }
 
-    // Compute diff = xNew - x and check convergence using BLAS dnrm2 (L2 norm)
+    // Compute diff and copy xNew into x
     for (let i = 0; i < n; i++) diff[i] = xNew[i] - x[i];
     const residual = euclideanNorm(diff);
-
-    // Copy xNew into x using BLAS dcopy
     copyVector(xNew, x);
 
     if (residual < tolerance) {
