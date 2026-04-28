@@ -72,7 +72,10 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
 
 // Helper to lazily create a default WebGPU compute engine (Comlink + worker)
 async function createDefaultComputeEngine() {
-  const worker = new Worker(new URL("../workers/webgpuWorker.js", import.meta.url), {
+  const wrapperUrl = new URL("../workers/webgpuWorker.js", import.meta.url).href;
+  const workerCode = `import "${wrapperUrl}";`;
+  const blob = new Blob([workerCode], { type: "application/javascript" });
+  const worker = new Worker(URL.createObjectURL(blob), {
     type: "module",
   });
   const computeEngine = Comlink.wrap(worker);

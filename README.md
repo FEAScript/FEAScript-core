@@ -84,7 +84,7 @@ FEAScript works well in interactive JavaScript playgrounds where you can write c
 Install FEAScript and its peer dependencies from npm as follows:
 
 ```bash
-npm install feascript mathjs
+npm install feascript
 ```
 
 Then, import it in your JavaScript file:

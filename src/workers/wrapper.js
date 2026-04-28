@@ -8,7 +8,7 @@
  */
 
 // External imports
-import { create, all } from "https://cdn.jsdelivr.net/npm/mathjs@latest/+esm";
+import { create, all } from "mathjs";
 import * as Comlink from "../vendor/comlink.mjs";
 
 // Internal imports
