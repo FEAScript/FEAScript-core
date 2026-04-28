@@ -12,9 +12,10 @@
  */
 
 // External imports
-import dnrm2 from "https://cdn.jsdelivr.net/gh/stdlib-js/blas-base-dnrm2@esm/index.mjs";
-import ddot from "https://cdn.jsdelivr.net/gh/stdlib-js/blas-base-ddot@esm/index.mjs";
-import dcopy from "https://cdn.jsdelivr.net/gh/stdlib-js/blas-base-dcopy@esm/index.mjs";
+import dnrm2 from "@stdlib/blas-base-dnrm2";
+import ddot from "@stdlib/blas-base-ddot";
+import dcopy from "@stdlib/blas-base-dcopy";
+import daxpy from "@stdlib/blas-base-daxpy";
 
 /**
  * Computes the Euclidean (L2) norm of a vector using BLAS dnrm2
@@ -45,4 +46,15 @@ export function dotProduct(x, y) {
  */
 export function copyVector(src, dest) {
   dcopy(src.length, src, 1, dest, 1);
+}
+
+/**
+ * Computes y = alpha * x + y using BLAS daxpy (in-place on y)
+ * @param {number} alpha - Scalar multiplier for x
+ * @param {Array|Float64Array} x - Input vector
+ * @param {Float64Array} y - Accumulation vector (modified in place)
+ */
+export function axpy(alpha, x, y) {
+  const fx = x instanceof Float64Array ? x : new Float64Array(x);
+  daxpy(fx.length, alpha, fx, 1, y, 1);
 }

@@ -39,7 +39,7 @@ model.addBoundaryCondition("2", ["convection", 1, 20]); // Top boundary
 model.addBoundaryCondition("3", ["constantTemp", 200]); // Right boundary
 
 // Set solver method (optional)
-model.setSolverMethod("lusolve");
+model.setSolverMethod("frontal");
 
 // Solve the problem
 const { solutionVector, nodesCoordinates } = model.solve();

@@ -9,6 +9,7 @@ Thank you for your interest in contributing! FEAScript is in early development, 
 - [File Structure](#file-structure)
 - [Branching & Workflow](#branching--workflow)
 - [Local Testing](#local-testing)
+- [Running the Node.js Examples](#running-the-nodejs-examples)
 
 ## Development Environment & Coding Style
 
@@ -101,10 +102,67 @@ Before submitting a pull request, test your modifications by running the FEAScri
 import { FEAScriptModel, plotSolution, printVersion } from "[USER_DIRECTORY]/FEAScript-core/src/index.js";
 ```
 
-FEAScript can be run on a local server. Ensure you start the server from the workspace root directory, where both `FEAScript-core` and `FEAScript-website` folders are located, to correctly resolve relative paths in the HTML files. To start a local server, you can use [Python HTTP Server](https://docs.python.org/3/library/http.server.html):
+FEAScript can be run on a local server. You **must** start the server from the workspace root directory (the folder that contains both `FEAScript-core/` and `FEAScript-website/`), not from inside either subfolder. The HTML files use relative paths such as `../feascript-website.css` and `../../FEAScript-core/src/index.js` that only resolve correctly from that root.
 
 ```bash
-python -m http.server
+# Navigate to the workspace root first
+cd /path/to/FEAScript-workspace
+
+# Then start the server
+python3 -m http.server
 ```
 
-where the server will be available at `http://127.0.0.1:8000/`. Static file server npm packages like [serve](https://github.com/vercel/serve#readme) and [Vite](https://vite.dev/) can also be used.
+The server will be available at `http://127.0.0.1:8000/`. Open a tutorial at its full path, e.g.:
+
+```
+http://127.0.0.1:8000/FEAScript-website/tutorials/solidification-front-2d-worker.html
+```
+
+Static file server npm packages like [serve](https://github.com/vercel/serve#readme) and [Vite](https://vite.dev/) can also be used.
+
+## Running the Node.js Examples
+
+All examples under `examples/` can be run directly with Node.js to verify the library works in a non-browser environment. Run them from the `FEAScript-core/` directory (so that the `feascript` package resolves via `node_modules`):
+
+```bash
+cd /path/to/FEAScript-workspace/FEAScript-core
+
+# Heat conduction — 1D wall
+node examples/heatConductionScript/heatConduction1DWall/heatConduction1DWall.js
+
+# Heat conduction — 2D fin (structured mesh)
+node examples/heatConductionScript/heatConduction2DFin/heatConduction2DFin.js
+
+# Heat conduction — 2D fin (rectangular Gmsh mesh)
+node examples/heatConductionScript/heatConduction2DFin/heatConduction2DFinGmsh.js
+
+# Heat conduction — 2D rhomboid fin (Gmsh mesh)
+node examples/heatConductionScript/heatConduction2DFin/heatConduction2DRhomFinGmsh.js
+
+# Advection-diffusion — 1D with Gaussian source
+node examples/generalFormPDEScript/advectionDiffusion1D/advectionDiffusion1D.js
+
+# Solidification front propagation — 2D
+node examples/frontPropagationScript/solidificationFront2D/solidificationFront2D.js
+
+# Lid-driven cavity — 2D creeping flow
+node examples/creepingFlowScript/lidDrivenCavity2DCreepingFlow/lidDrivenCavity2DCreepingFlow.js
+```
+
+Each script prints its computed solution array to the console. A successful run exits with code 0 and produces numerical output; any import or runtime error indicates a problem.
+
+To run all examples in one go and check for failures:
+
+```bash
+for f in \
+  examples/heatConductionScript/heatConduction1DWall/heatConduction1DWall.js \
+  examples/heatConductionScript/heatConduction2DFin/heatConduction2DFin.js \
+  examples/heatConductionScript/heatConduction2DFin/heatConduction2DFinGmsh.js \
+  examples/heatConductionScript/heatConduction2DFin/heatConduction2DRhomFinGmsh.js \
+  examples/generalFormPDEScript/advectionDiffusion1D/advectionDiffusion1D.js \
+  examples/frontPropagationScript/solidificationFront2D/solidificationFront2D.js \
+  examples/creepingFlowScript/lidDrivenCavity2DCreepingFlow/lidDrivenCavity2DCreepingFlow.js; do
+  echo -n "  $f ... "
+  node "$f" > /dev/null 2>&1 && echo "OK" || echo "FAILED"
+done
+```

@@ -8,7 +8,7 @@
  */
 
 // Internal imports
-import { euclideanNorm } from "../methods/blasUtilities.js";
+import { euclideanNorm, axpy } from "../methods/blasUtilities.js";
 import { solveLinearSystem } from "./linearSystemSolver.js";
 import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 import { runFrontalSolver } from "./frontalSolver.js";
@@ -28,8 +28,6 @@ export function newtonRaphson(assembleMat, context = {}) {
   let errorNorm = 0;
   let converged = false;
   let iterations = 0;
-  let deltaX = [];
-  let solutionVector = [];
   let jacobianMatrix = [];
   let residualVector = [];
 
@@ -37,24 +35,20 @@ export function newtonRaphson(assembleMat, context = {}) {
   const { maxIterations = 100, tolerance = 1e-4 } = context;
 
   // Calculate system size
-  let totalNodes = context.meshData.nodesXCoordinates.length;
+  const totalNodes = context.meshData.nodesXCoordinates.length;
 
-  // Initialize arrays with proper size
-  for (let i = 0; i < totalNodes; i++) {
-    deltaX[i] = 0;
-    solutionVector[i] = 0;
-  }
+  // Initialize solution and update vectors as zero-filled typed arrays
+  let solutionVector = new Float64Array(totalNodes);
+  let deltaX = new Float64Array(totalNodes);
 
   // Initialize solution from context if available
   if (context.initialSolution && context.initialSolution.length === totalNodes) {
-    solutionVector = [...context.initialSolution];
+    solutionVector = new Float64Array(context.initialSolution);
   }
 
   while (iterations < maxIterations && !converged) {
-    // Update solution
-    for (let i = 0; i < solutionVector.length; i++) {
-      solutionVector[i] = solutionVector[i] + deltaX[i];
-    }
+    // Update solution: solutionVector += deltaX (BLAS daxpy)
+    axpy(1.0, deltaX, solutionVector);
 
     // Check if using frontal solver
     if (context.solverMethod === "frontal") {

@@ -22,7 +22,7 @@ echo '{"type":"module"}' > package.json
 #### 2. Install dependencies:
 
 ```bash
-npm install feascript mathjs
+npm install feascript
 ```
 
 #### 3. Run the example:

@@ -33,7 +33,19 @@ export class FEAScriptWorker {
    */
   async _initWorker() {
     try {
-      this.worker = new Worker(new URL("./wrapper.js", import.meta.url), {
+      // Determine the worker file based on how this module was loaded:
+      //   - Source mode (URL contains /src/workers/): use the pre-built bundle so that
+      //     all bare-specifier deps (mathjs, @stdlib/*) are inlined; Firefox module
+      //     workers do not inherit the page's import map so bare specifiers would fail.
+      //   - Bundle mode (feascript.esm.js in dist/): the worker bundle is a sibling file.
+      const base = import.meta.url;
+      const workerFile = base.includes("/src/workers/")
+        ? "../../dist/feascript-worker.esm.js"
+        : "./feascript-worker.esm.js";
+      const wrapperUrl = new URL(workerFile, base).href;
+      const workerCode = `import "${wrapperUrl}";`;
+      const blob = new Blob([workerCode], { type: "application/javascript" });
+      this.worker = new Worker(URL.createObjectURL(blob), {
         type: "module",
       });
 
