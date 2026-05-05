@@ -6,8 +6,10 @@
 [![npm version](https://img.shields.io/npm/v/feascript)](https://www.npmjs.com/package/feascript)
 [![Last Commit](https://img.shields.io/github/last-commit/FEAScript/FEAScript-core?logo=github)](https://github.com/FEAScript/FEAScript-core/commits/main)
 [![License](https://img.shields.io/github/license/FEAScript/FEAScript-core?logo=github)](https://github.com/FEAScript/FEAScript-core/blob/main/LICENSE)
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/FEAScript)
+[![Donate on Liberapay](https://img.shields.io/badge/Donate-Liberapay-F6C915?logo=liberapay&logoColor=black)](https://liberapay.com/FEAScript/donate)
 
-[FEAScript](https://feascript.com/) is a lightweight finite element simulation library written in JavaScript. It empowers users to perform simulations for physics and engineering applications in both browser-based and server-side environments. This is the core library of the FEAScript project.
+[FEAScript](https://feascript.com/) is a finite element simulation library developed in JavaScript. It enables engineering simulations across both browser-based and server-side environments without the overhead of traditional desktop software. 🎯 **Our goal is to provide the most powerful JavaScript API for FEM.** We are closing the gap between complex computational mechanics and the accessibility of the web, empowering developers to build professional-grade simulation tools that work on any device, anywhere. This is the core library of the FEAScript project.
 
 <img src="https://feascript.github.io/FEAScript-website/assets/cold-plate-logo-results-and-mesh.gif" width="300" alt="Results of heat conduction around the FEAScript logo"> <br/>
 
