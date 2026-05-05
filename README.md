@@ -155,12 +155,8 @@ Here is a minimal browser-based example using the FEAScript API. Adapt paths, ph
 
 > 💖 **If you find FEAScript useful, please consider supporting its development through a donation:**
 
-<a href="https://github.com/sponsors/FEAScript">
-  <img alt="GitHub Sponsors" src="https://feascript.github.io/FEAScript-website/assets/Sponsor_GitHub.svg">
-</a>
-<a href="https://liberapay.com/FEAScript/donate">
-  <img alt="Donate using Liberapay" src="https://feascript.github.io/FEAScript-website/assets/Sponsor_Liberapay.svg">
-</a>
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/FEAScript)
+[![Donate on Liberapay](https://img.shields.io/badge/Donate-Liberapay-F6C915?logo=liberapay&logoColor=black)](https://liberapay.com/FEAScript/donate)
 
 Your support helps ensure the continued development and maintenance of this project.
 
