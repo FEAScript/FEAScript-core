@@ -20,6 +20,7 @@ import { basicLog, debugLog } from "../utilities/logging.js";
  * Function to assemble the Jacobian matrix and residuals vector for the solid heat transfer model
  * @param {object} meshData - Object containing prepared mesh data
  * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
+ * @param {object} coefficientFunctions - Heat transfer coefficient and heat source functions
  * @returns {object} An object containing:
  *  - jacobianMatrix: The assembled Jacobian matrix
  *  - residualVector: The assembled residual vector
@@ -32,7 +33,7 @@ import { basicLog, debugLog } from "../utilities/logging.js";
  * classic stiffness/conductivity matrix and `residualVector`
  * corresponds to the traditional load (RHS) vector.
  */
-export function assembleHeatConductionMat(meshData, boundaryConditions) {
+export function assembleHeatConductionMat(meshData, boundaryConditions, coefficientFunctions) {
   basicLog("Starting solid heat transfer matrix assembly...");
 
   // Extract mesh data
@@ -45,6 +46,15 @@ export function assembleHeatConductionMat(meshData, boundaryConditions) {
     meshDimension,
     elementOrder,
   } = meshData;
+
+
+  // Extract coefficient functions
+  let heatTransferCoefficient = 1;
+  let thermalConductivity = 1;
+  if (coefficientFunctions) {
+    heatTransferCoefficient = coefficientFunctions.heatTransferCoefficient;
+    thermalConductivity = coefficientFunctions.thermalConductivity;
+  }
 
   // Initialize FEA components
   const FEAData = initializeFEA(meshData);

@@ -60,7 +60,7 @@ export class FlowBoundaryConditions {
    *
    * Supported boundary condition types:
    *  - "constantVelocity": Set velocity components at boundary nodes
-   *    Format: ["constantVelocity", uValue, vValue]
+   *    Format: ["constantVelocity", xVelocityValue, yVelocityValue]
    *  - "stressFree": Natural boundary condition (zero traction), no assembly needed
    *    Format: ["stressFree"]
    */
@@ -70,17 +70,17 @@ export class FlowBoundaryConditions {
 
     if (this.meshDimension === "2D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
-        const bcType = this.boundaryConditions[boundaryKey][0];
+        const boundaryConditionType = this.boundaryConditions[boundaryKey][0];
 
-        if (bcType === "stressFree") {
+        if (boundaryConditionType === "stressFree") {
           hasStressFree = true;
           // Natural boundary condition - no explicit assembly needed
           debugLog(`Boundary ${boundaryKey}: Applying stress-free condition (natural BC)`);
-        } else if (bcType === "constantVelocity") {
-          const uValue = this.boundaryConditions[boundaryKey][1];
-          const vValue = this.boundaryConditions[boundaryKey][2];
+        } else if (boundaryConditionType === "constantVelocity") {
+          const xVelocityValue = this.boundaryConditions[boundaryKey][1];
+          const yVelocityValue = this.boundaryConditions[boundaryKey][2];
           debugLog(
-            `Boundary ${boundaryKey}: Applying constant velocity condition (u=${uValue}, v=${vValue})`,
+            `Boundary ${boundaryKey}: Applying constant velocity condition (u=${xVelocityValue}, v=${yVelocityValue})`,
           );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
             if (this.elementOrder === "quadratic") {
@@ -92,26 +92,26 @@ export class FlowBoundaryConditions {
               };
               boundarySides[side].forEach((nodeIndex) => {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-                const uDOF = globalNodeIndex;
-                const vDOF = this.totalNodesVelocity + globalNodeIndex;
+                const xVelocityDegreeOfFreedom = globalNodeIndex;
+                const yVelocityDegreeOfFreedom = this.totalNodesVelocity + globalNodeIndex;
                 debugLog(
                   `  - Applied velocity Dirichlet to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`,
                 );
                 // Apply u-velocity Dirichlet boundary condition
-                residualVector[uDOF] = uValue;
+                residualVector[xVelocityDegreeOfFreedom] = xVelocityValue;
                 for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
-                  jacobianMatrix[uDOF][colIndex] = 0;
+                  jacobianMatrix[xVelocityDegreeOfFreedom][colIndex] = 0;
                 }
-                jacobianMatrix[uDOF][uDOF] = 1;
+                jacobianMatrix[xVelocityDegreeOfFreedom][xVelocityDegreeOfFreedom] = 1;
 
                 // Apply v-velocity Dirichlet boundary condition
-                residualVector[vDOF] = vValue;
+                residualVector[yVelocityDegreeOfFreedom] = yVelocityValue;
                 for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
-                  jacobianMatrix[vDOF][colIndex] = 0;
+                  jacobianMatrix[yVelocityDegreeOfFreedom][colIndex] = 0;
                 }
-                jacobianMatrix[vDOF][vDOF] = 1;
+                jacobianMatrix[yVelocityDegreeOfFreedom][yVelocityDegreeOfFreedom] = 1;
               });
             } else if (this.elementOrder === "linear") {
               const boundarySides = {
@@ -122,26 +122,26 @@ export class FlowBoundaryConditions {
               };
               boundarySides[side].forEach((nodeIndex) => {
                 const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-                const uDOF = globalNodeIndex;
-                const vDOF = this.totalNodesVelocity + globalNodeIndex;
+                const xVelocityDegreeOfFreedom = globalNodeIndex;
+                const yVelocityDegreeOfFreedom = this.totalNodesVelocity + globalNodeIndex;
                 debugLog(
                   `  - Applied velocity Dirichlet to node ${globalNodeIndex + 1} (element ${
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`,
                 );
                 // Apply u-velocity Dirichlet boundary condition
-                residualVector[uDOF] = uValue;
+                residualVector[xVelocityDegreeOfFreedom] = xVelocityValue;
                 for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
-                  jacobianMatrix[uDOF][colIndex] = 0;
+                  jacobianMatrix[xVelocityDegreeOfFreedom][colIndex] = 0;
                 }
-                jacobianMatrix[uDOF][uDOF] = 1;
+                jacobianMatrix[xVelocityDegreeOfFreedom][xVelocityDegreeOfFreedom] = 1;
 
                 // Apply v-velocity Dirichlet boundary condition
-                residualVector[vDOF] = vValue;
+                residualVector[yVelocityDegreeOfFreedom] = yVelocityValue;
                 for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
-                  jacobianMatrix[vDOF][colIndex] = 0;
+                  jacobianMatrix[yVelocityDegreeOfFreedom][colIndex] = 0;
                 }
-                jacobianMatrix[vDOF][vDOF] = 1;
+                jacobianMatrix[yVelocityDegreeOfFreedom][yVelocityDegreeOfFreedom] = 1;
               });
             }
           });
@@ -151,12 +151,12 @@ export class FlowBoundaryConditions {
       // If no stress-free boundary exists, pin pressure at one node to remove null space
       // (pressure is determined only up to a constant for all-Dirichlet velocity problems)
       if (!hasStressFree) {
-        const pDOF = 2 * this.totalNodesVelocity; // First pressure DOF
+        const pressureDegreeOfFreedom = 2 * this.totalNodesVelocity; // First pressure DOF
         for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
-          jacobianMatrix[pDOF][colIndex] = 0;
+          jacobianMatrix[pressureDegreeOfFreedom][colIndex] = 0;
         }
-        jacobianMatrix[pDOF][pDOF] = 1;
-        residualVector[pDOF] = 0;
+        jacobianMatrix[pressureDegreeOfFreedom][pressureDegreeOfFreedom] = 1;
+        residualVector[pressureDegreeOfFreedom] = 0;
         debugLog("Pinned pressure at first pressure node (p = 0) to remove null space");
       }
     }
