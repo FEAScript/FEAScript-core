@@ -47,13 +47,14 @@ export function assembleHeatConductionMat(meshData, boundaryConditions, coeffici
     elementOrder,
   } = meshData;
 
-
   // Extract coefficient functions
   let heatTransferCoefficient = 1;
   let thermalConductivity = 1;
+  let heatSource = 0;
   if (coefficientFunctions) {
-    heatTransferCoefficient = coefficientFunctions.heatTransferCoefficient;
-    thermalConductivity = coefficientFunctions.thermalConductivity;
+    heatTransferCoefficient = coefficientFunctions.heatTransferCoefficient ?? 1;
+    thermalConductivity = coefficientFunctions.thermalConductivity ?? 1;
+    heatSource = coefficientFunctions.heatSource ?? 0;
   }
 
   // Initialize FEA components
@@ -95,16 +96,34 @@ export function assembleHeatConductionMat(meshData, boundaryConditions, coeffici
         // Extract mapping results
         const { detJacobian, basisFunctionDerivX } = mappingResult;
 
+        // Calculate the physical x coordinate at this Gauss point
+        let xCoord = 0;
+        for (let i = 0; i < nodesPerElement; i++) {
+          xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunctionsAndDerivatives.basisFunction[i];
+        }
+
+        // Evaluate thermal conductivity and heat source at this Gauss point
+        const k =
+          typeof thermalConductivity === "function" ? thermalConductivity(xCoord) : thermalConductivity;
+        const Q = typeof heatSource === "function" ? heatSource(xCoord) : heatSource;
+
         // Computation of Galerkin's residuals and Jacobian matrix
         for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
           let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
-          // residualVector is zero for this case
+
+          // Heat source contribution to residual vector
+          residualVector[localToGlobalMap1] -=
+            gaussWeights[gaussPointIndex1] *
+            detJacobian *
+            Q *
+            basisFunctionsAndDerivatives.basisFunction[localNodeIndex1];
 
           for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
             let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
             jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
               -gaussWeights[gaussPointIndex1] *
               detJacobian *
+              k *
               (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2]);
           }
         }
@@ -132,10 +151,32 @@ export function assembleHeatConductionMat(meshData, boundaryConditions, coeffici
           // Extract mapping results
           const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = mappingResult;
 
+          // Calculate the physical (x, y) coordinates at this Gauss point
+          let xCoord = 0;
+          let yCoord = 0;
+          for (let i = 0; i < nodesPerElement; i++) {
+            xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunctionsAndDerivatives.basisFunction[i];
+            yCoord += nodesYCoordinates[localToGlobalMap[i]] * basisFunctionsAndDerivatives.basisFunction[i];
+          }
+
+          // Evaluate thermal conductivity and heat source at this Gauss point
+          const k =
+            typeof thermalConductivity === "function"
+              ? thermalConductivity(xCoord, yCoord)
+              : thermalConductivity;
+          const Q = typeof heatSource === "function" ? heatSource(xCoord, yCoord) : heatSource;
+
           // Computation of Galerkin's residuals and Jacobian matrix
           for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
             let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
-            // residualVector is zero for this case
+
+            // Heat source contribution to residual vector
+            residualVector[localToGlobalMap1] -=
+              gaussWeights[gaussPointIndex1] *
+              gaussWeights[gaussPointIndex2] *
+              detJacobian *
+              Q *
+              basisFunctionsAndDerivatives.basisFunction[localNodeIndex1];
 
             for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
               let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
@@ -143,6 +184,7 @@ export function assembleHeatConductionMat(meshData, boundaryConditions, coeffici
                 -gaussWeights[gaussPointIndex1] *
                 gaussWeights[gaussPointIndex2] *
                 detJacobian *
+                k *
                 (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] +
                   basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
             }
@@ -194,10 +236,25 @@ export function assembleHeatConductionMat(meshData, boundaryConditions, coeffici
  *  - localResidualVector: Residual vector contributions
  *  - ngl: Array mapping local node indices to global node indices
  */
-export function assembleHeatConductionFront({ elementIndex, nop, meshData, basisFunctions, FEAData }) {
+export function assembleHeatConductionFront({
+  elementIndex,
+  nop,
+  meshData,
+  basisFunctions,
+  FEAData,
+  coefficientFunctions,
+}) {
   // Extract numerical integration parameters and mesh coordinates
   const { gaussPoints, gaussWeights, nodesPerElement } = FEAData;
   const { nodesXCoordinates, nodesYCoordinates, meshDimension } = meshData;
+
+  // Extract coefficient functions (with safe defaults)
+  let thermalConductivity = 1;
+  let heatSource = 0;
+  if (coefficientFunctions) {
+    thermalConductivity = coefficientFunctions.thermalConductivity ?? 1;
+    heatSource = coefficientFunctions.heatSource ?? 0;
+  }
 
   // Initialize local Jacobian matrix and local residual vector
   const localJacobianMatrix = Array(nodesPerElement)
@@ -231,12 +288,27 @@ export function assembleHeatConductionFront({ elementIndex, nop, meshData, basis
         nodesPerElement,
       });
 
+      // Calculate the physical x coordinate at this Gauss point
+      let xCoord = 0;
+      for (let i = 0; i < nodesPerElement; i++) {
+        xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunction[i];
+      }
+
+      // Evaluate thermal conductivity and heat source at this Gauss point
+      const k = typeof thermalConductivity === "function" ? thermalConductivity(xCoord) : thermalConductivity;
+      const Q = typeof heatSource === "function" ? heatSource(xCoord) : heatSource;
+
       // Computation of Galerkin's residuals and local Jacobian matrix
       for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
+        // Heat source contribution to local residual vector
+        localResidualVector[localNodeIndex1] -=
+          gaussWeights[gaussPointIndex1] * detJacobian * Q * basisFunction[localNodeIndex1];
+
         for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
           localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
             gaussWeights[gaussPointIndex1] *
             detJacobian *
+            k *
             (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2]);
         }
       }
@@ -263,13 +335,37 @@ export function assembleHeatConductionFront({ elementIndex, nop, meshData, basis
           nodesPerElement,
         });
 
+        // Calculate the physical (x, y) coordinates at this Gauss point
+        let xCoord = 0;
+        let yCoord = 0;
+        for (let i = 0; i < nodesPerElement; i++) {
+          xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunction[i];
+          yCoord += nodesYCoordinates[localToGlobalMap[i]] * basisFunction[i];
+        }
+
+        // Evaluate thermal conductivity and heat source at this Gauss point
+        const k =
+          typeof thermalConductivity === "function"
+            ? thermalConductivity(xCoord, yCoord)
+            : thermalConductivity;
+        const Q = typeof heatSource === "function" ? heatSource(xCoord, yCoord) : heatSource;
+
         // Computation of Galerkin's residuals and local Jacobian matrix
         for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
+          // Heat source contribution to local residual vector
+          localResidualVector[localNodeIndex1] -=
+            gaussWeights[gaussPointIndex1] *
+            gaussWeights[gaussPointIndex2] *
+            detJacobian *
+            Q *
+            basisFunction[localNodeIndex1];
+
           for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
             localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
               gaussWeights[gaussPointIndex1] *
               gaussWeights[gaussPointIndex2] *
               detJacobian *
+              k *
               (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] +
                 basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
           }

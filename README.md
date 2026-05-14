@@ -20,6 +20,7 @@
 - <b>Physics models:</b> creeping (Stokes) flow, front propagation, heat conduction
 - <b>Meshing:</b> simple 1D/2D mesh generation, unstructured mesh import from Gmsh (`.msh`)
 - <b>Solvers:</b> frontal, Jacobi (CPU/WebGPU) and LU, Newton–Raphson for nonlinear systems
+- <b>Spatially varying coefficients:</b> `thermalConductivity(x, y)` and `heatSource(x, y)` can be scalars or functions, evaluated at each Gauss point
 - <b>Performance:</b> web worker support for multi-threaded computation
 - <b>Visualization:</b> interactive rendering with vtk.js and Plotly
 

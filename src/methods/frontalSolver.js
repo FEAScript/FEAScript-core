@@ -113,6 +113,7 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
   // Parameters for non-linear assemblers
   frontalState.currentSolutionVector = options.solutionVector;
   frontalState.eikonalActivationFlag = options.eikonalActivationFlag;
+  frontalState.coefficientFunctions = options.coefficientFunctions;
 
   // Pass assembleFront and dirichletBoundaryConditionsHandler to runFrontalAlgorithm
   runFrontalAlgorithm(meshData, FEAData, dirichletBoundaryConditionsHandler, assembleFront);
@@ -244,6 +245,7 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
     // These are ignored by linear assemblers
     solutionVector: frontalState.currentSolutionVector,
     eikonalActivationFlag: frontalState.eikonalActivationFlag,
+    coefficientFunctions: frontalState.coefficientFunctions,
   });
 
   // Handle Robin-type boundary conditions differently based on which solver is being used

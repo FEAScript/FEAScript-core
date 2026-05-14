@@ -28,6 +28,37 @@ Implementation using a Gmsh-generated mesh for a rhomboid domain (the mesh file,
 
 For detailed information on the model setup, refer to the corresponding [tutorial](https://feascript.com/tutorials/heat-conduction-2d-rhom-fin-gmsh.html) in the FEAScript website.
 
+#### 5. Heat Conduction in a 1D Bi-Material Wall with Spatially Varying k(x) (`heatConduction1DVaryingK.js`)
+
+Demonstrates passing `thermalConductivity` as a function of position `k(x)`. The wall consists of two layers with different conductivities separated at mid-length. This example exercises the `coefficientFunctions` API with the standard linear solver.
+
+#### 6. Heat Conduction in a 2D Fin with Spatially Varying k(x,y) and Q(x,y) (`heatConduction2DVaryingKQ.js`)
+
+Demonstrates both `thermalConductivity(x, y)` and `heatSource(x, y)` as functions of position on a 2D structured mesh. The domain is split into a high-conductivity metal half and a low-conductivity ceramic half, with a localised volumetric heat source in the upper strip.
+
+## Spatially Varying Coefficients
+
+Both `thermalConductivity` and `heatSource` can be provided either as constants (scalars) or as functions of the physical coordinates. They are evaluated at each Gauss point during the isoparametric mapping loop, so any piecewise or smooth spatial variation is fully supported.
+
+```javascript
+model.setModelConfig("heatConductionScript", {
+  coefficientFunctions: {
+    // Scalar (uniform)
+    thermalConductivity: 10,
+    // Function of x only (1D or 2D)
+    // thermalConductivity: (x) => x < 0.5 ? 10 : 1,
+    // Function of x and y (2D)
+    // thermalConductivity: (x, y) => x < 2.0 ? 10 : 1,
+    // Uniform heat source
+    // heatSource: 500,
+    // Localised heat source (active only in upper strip)
+    heatSource: (x, y) => (y > 1.5 ? 500 : 0),
+  },
+});
+```
+
+When `coefficientFunctions` is omitted or a coefficient is not provided, the defaults `thermalConductivity = 1` and `heatSource = 0` are used. Both the standard matrix assembler and the frontal solver assembler support this feature.
+
 ## Running the Node.js Examples
 
 #### 1. Create package.json with ES module support:

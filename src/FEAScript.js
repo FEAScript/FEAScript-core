@@ -139,11 +139,16 @@ export class FEAScriptModel {
           assembleHeatConductionFront,
           meshData,
           this.boundaryConditions,
+          { coefficientFunctions: this.coefficientFunctions },
         );
         solutionVector = frontalResult.solutionVector;
       } else {
         // Use regular linear solver methods
-        ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(meshData, this.boundaryConditions, this.coefficientFunctions));
+        ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(
+          meshData,
+          this.boundaryConditions,
+          this.coefficientFunctions,
+        ));
         const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector, {
           maxIterations: options.maxIterations ?? this.maxIterations,
           tolerance: options.tolerance ?? this.tolerance,
