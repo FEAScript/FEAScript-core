@@ -22,6 +22,36 @@
  */
 export function jacobiMethod(A, b, x0, maxIterations = 100, tolerance = 1e-7) {
   const n = A.length; // Size of the square matrix
+
+  // Sanity checks for input dimensions
+  if (!Array.isArray(A) || n === 0) {
+    throw new Error("Matrix A must be a non-empty array");
+  }
+
+  // Verify A is square
+  for (let i = 0; i < n; i++) {
+    if (!Array.isArray(A[i]) || A[i].length !== n) {
+      throw new Error(`Matrix A must be square. Row ${i} has length ${A[i].length}, expected ${n}`);
+    }
+  }
+
+  // Verify b is a vector of correct length
+  if (!Array.isArray(b) || b.length !== n) {
+    throw new Error(`Vector b must have length ${n}, got ${b.length}`);
+  }
+
+  // Verify x0 is a vector of correct length
+  if (!Array.isArray(x0) || x0.length !== n) {
+    throw new Error(`Initial guess x0 must have length ${n}, got ${x0.length}`);
+  }
+
+  // Verify no zero diagonal elements (required for Jacobi method)
+  for (let i = 0; i < n; i++) {
+    if (A[i][i] === 0) {
+      throw new Error(`Diagonal element A[${i}][${i}] is zero; Jacobi method requires non-zero diagonal elements`);
+    }
+  }
+
   let x = [...x0]; // Current solution (starts with initial guess)
   let xNew = new Array(n); // Next iteration's solution
 
