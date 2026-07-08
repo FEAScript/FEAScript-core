@@ -9,7 +9,7 @@
 //       Website: https://feascript.com/             \__|  //
 
 // Internal imports
-import { jacobiMethod } from "./methods/jacobiMethodScript.js";
+import { jacobiMethod } from "./methods/jacobiSolver.js";
 import { assembleSolidHeatTransferMat } from "./solvers/solidHeatTransferScript.js";
 import { basicLog, debugLog, errorLog } from "./utilities/loggingScript.js";
 

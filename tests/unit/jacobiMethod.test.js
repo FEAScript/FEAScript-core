@@ -11,7 +11,7 @@
  * Run: node tests/unit/jacobiMethod.test.js
  */
 
-import { jacobiMethod } from "../../src/methods/jacobiMethodScript.js";
+import { jacobiMethod } from "../../src/methods/jacobiSolver.js";
 
 let passed = 0;
 let failed = 0;
