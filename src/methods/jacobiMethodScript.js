@@ -21,12 +21,12 @@
  *  - converged: Boolean indicating whether the method converged
  */
 export function jacobiMethod(A, b, x0, maxIterations = 100, tolerance = 1e-7) {
-  const n = A.length; // Size of the square matrix
-
-  // Sanity checks for input dimensions
-  if (!Array.isArray(A) || n === 0) {
+  // Sanity checks — Array.isArray guard must precede .length access
+  if (!Array.isArray(A) || A.length === 0) {
     throw new Error("Matrix A must be a non-empty array");
   }
+
+  const n = A.length; // Size of the square matrix
 
   // Verify A is square
   for (let i = 0; i < n; i++) {
@@ -37,12 +37,12 @@ export function jacobiMethod(A, b, x0, maxIterations = 100, tolerance = 1e-7) {
 
   // Verify b is a vector of correct length
   if (!Array.isArray(b) || b.length !== n) {
-    throw new Error(`Vector b must have length ${n}, got ${b.length}`);
+    throw new Error(`Vector b must have length ${n}, got ${Array.isArray(b) ? b.length : "undefined"}`);
   }
 
   // Verify x0 is a vector of correct length
   if (!Array.isArray(x0) || x0.length !== n) {
-    throw new Error(`Initial guess x0 must have length ${n}, got ${x0.length}`);
+    throw new Error(`Initial guess x0 must have length ${n}, got ${Array.isArray(x0) ? x0.length : "undefined"}`);
   }
 
   // Verify no zero diagonal elements (required for Jacobi method)
