@@ -13,6 +13,11 @@
 
 import { jacobiMethod } from "../../src/methods/jacobiSolver.js";
 
+console.log("");
+console.log("================================");
+console.log("Unit tests: jacobiMethod");
+console.log("================================");
+
 let passed = 0;
 let failed = 0;
 
