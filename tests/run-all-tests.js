@@ -9,6 +9,7 @@ import { readdirSync, statSync } from "fs";
 import { join, relative } from "path";
 import { spawnSync } from "child_process";
 import { fileURLToPath } from "url";
+import { basicLog, errorLog, warnLog } from "../src/utilities/logging.js";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 
@@ -29,11 +30,12 @@ function collectTestFiles(dir) {
 const testFiles = collectTestFiles(__dirname);
 
 if (testFiles.length === 0) {
-  console.log("No test files found.");
+  warnLog("No test files found.");
   process.exit(0);
 }
 
-console.log(`Found ${testFiles.length} test file(s).\n`);
+basicLog(`Found ${testFiles.length} test file(s).`);
+basicLog("");
 
 let passed = 0;
 let failed = 0;
@@ -44,10 +46,15 @@ for (const file of testFiles) {
   if (result.status === 0) {
     passed++;
   } else {
-    console.error(`\nFAILED: ${label}\n`);
+    errorLog(`FAILED: ${label}`);
+    basicLog("");
     failed++;
   }
 }
 
-console.log(`\n${passed} passed, ${failed} failed.`);
+if (failed > 0) {
+  errorLog(`${passed} passed, ${failed} failed.`);
+} else {
+  basicLog(`${passed} passed, ${failed} failed.`);
+}
 process.exit(failed > 0 ? 1 : 0);

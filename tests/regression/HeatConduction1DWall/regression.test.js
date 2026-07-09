@@ -9,7 +9,7 @@
 
 import * as mathjs from "mathjs";
 import { FEAScriptModel } from "../../../src/FEAScript.js";
-import { basicLog } from "../../../src/utilities/loggingScript.js";
+import { basicLog, errorLog } from "../../../src/utilities/logging.js";
 
 // FEAScript.js references `math` as a global (loaded via CDN in browser).
 // Set it here before any solve() call.
@@ -21,11 +21,7 @@ const TOLERANCE = 1e-4;
 function runSimulation() {
   const model = new FEAScriptModel();
 
-  basicLog("")
-  basicLog("================================")
-  basicLog("Starting test in solid heat transfer 1D wall...")
-
-  model.setSolverConfig("solidHeatTransferScript");
+  model.setModelConfig("heatConductionScript");
   model.setMeshConfig({
     meshDimension: "1D",
     elementOrder: "linear",
@@ -42,11 +38,14 @@ function runSimulation() {
 
 function assert(condition, message) {
   if (!condition) {
-    console.error(`FAIL: ${message}`);
+    errorLog(`FAIL: ${message}`);
     process.exit(1);
   }
 }
 
+basicLog("");
+basicLog("================================");
+basicLog("Starting test in solid heat transfer 1D wall...");
 const { solutionVector } = runSimulation();
 
 // solutionVector from math.lusolve is a nested array: [[T0], [T1], ...]
@@ -54,8 +53,8 @@ const T0 = Array.isArray(solutionVector[0]) ? solutionVector[0][0] : solutionVec
 
 assert(
   Math.abs(T0 - EXPECTED_T0) < TOLERANCE,
-  `Temperature at node 0: expected ${EXPECTED_T0}, got ${T0} (tolerance ${TOLERANCE})`
+  `Temperature at node 0: expected ${EXPECTED_T0}, got ${T0} (tolerance ${TOLERANCE})`,
 );
 
-console.log(`PASS: T(x=0) = ${T0.toFixed(5)} (expected ${EXPECTED_T0})`);
-basicLog("================================")
+basicLog(`PASS: T(x=0) = ${T0.toFixed(5)} (expected ${EXPECTED_T0})`);
+basicLog("================================");

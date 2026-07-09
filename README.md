@@ -151,6 +151,14 @@ Here is a minimal browser-based example using the FEAScript API. Adapt paths, ph
 - "conditionType" should be replaced with an actual boundary condition type such as "constantTemp"
 - "boundaryIndex" should be replaced with a string identifying the boundary
 
+Furthermore, the scripts under `examples/` contain Node.js examples. You can run them from the `FEAScript-core/` directory as follows:
+
+```bash
+node examples/heatConductionScript/heatConduction1DWall/heatConduction1DWall.js
+```
+
+Each script prints its computed solution to the console.
+
 ## Support FEAScript
 
 > 💖 **If you find FEAScript useful, please consider supporting its development through a donation:**
