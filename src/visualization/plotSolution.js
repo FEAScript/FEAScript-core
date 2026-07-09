@@ -7,10 +7,13 @@
  * ════════════════════════════════════════════════════════════════
  */
 
-export { FEAScriptModel } from "./FEAScript.js";
-export { importGmshMesh } from "./readers/gmshReader.js";
-export { logSystem } from "./utilities/logging.js";
-export { plotSolution, plotInterpolatedSolution } from "./visualization/plotlyPlot.js";
+/**
+ * Plotly-based plotting functions are provided by plotlyPlot.js
+ * VTK.js-based plotting and data transformation functions are provided by vtkPlot.js
+ */
+
+export { plotSolution, plotInterpolatedSolution } from "./plotlyPlot.js";
+
 export {
   plotSolutionVtk,
   plotInterpolatedSolutionVtk,
@@ -19,6 +22,4 @@ export {
   transformSolverOutputToVtkData,
   transformSolverOutputToVTP,
   transformSolverOutputToMLBuffers,
-} from "./visualization/vtkPlot.js";
-export { FEAScriptWorker } from "./workers/worker.js";
-export const printVersion = "0.3.0 (RC)";
+} from "./vtkPlot.js";

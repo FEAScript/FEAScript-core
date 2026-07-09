@@ -1,0 +1,175 @@
+/**
+ * ════════════════════════════════════════════════════════════════
+ *  FEAScript Core Library
+ *  Lightweight Finite Element Simulation in JavaScript
+ *  Version: 0.3.0 (RC) | https://feascript.com
+ *  MIT License © 2023–2026 FEAScript
+ * ════════════════════════════════════════════════════════════════
+ */
+
+// External imports
+import * as Comlink from "../vendor/comlink.mjs";
+
+/**
+ * Class to facilitate communication with web workers for FEAScript operations
+ */
+export class FEAScriptWorker {
+  /**
+   * Constructor to initialize the FEAScriptWorker class
+   * Sets up the worker and initializes the workerWrapper.
+   */
+  constructor() {
+    this.worker = null;
+    this.feaWorker = null;
+    this.isReady = false;
+
+    this._initWorker();
+  }
+
+  /**
+   * Function to initialize the web worker and wrap it using Comlink
+   * @private
+   * @throws Will throw an error if the worker fails to initialize
+   */
+  async _initWorker() {
+    try {
+      // Determine the worker file based on how this module was loaded:
+      //   - Source mode (URL contains /src/workers/): use the pre-built bundle so that
+      //     all bare-specifier deps (mathjs, @stdlib/*) are inlined; Firefox module
+      //     workers do not inherit the page's import map so bare specifiers would fail.
+      //   - Bundle mode (feascript.esm.js in dist/): the worker bundle is a sibling file.
+      const base = import.meta.url;
+      const workerFile = base.includes("/src/workers/")
+        ? "../../dist/feascript-worker.esm.js"
+        : "./feascript-worker.esm.js";
+      const wrapperUrl = new URL(workerFile, base).href;
+      const workerCode = `import "${wrapperUrl}";`;
+      const blob = new Blob([workerCode], { type: "application/javascript" });
+      this.worker = new Worker(URL.createObjectURL(blob), {
+        type: "module",
+      });
+
+      this.worker.onerror = (event) => {
+        console.error("FEAScriptWorker: Worker error:", event);
+      };
+      const workerWrapper = Comlink.wrap(this.worker);
+
+      this.feaWorker = await new workerWrapper();
+
+      this.isReady = true;
+    } catch (error) {
+      console.error("Failed to initialize worker", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Function to ensure that the worker is ready before performing any operations
+   * @private
+   * @returns {Promise<void>} Resolves when the worker is ready
+   * @throws Will throw an error if the worker is not ready within the timeout period
+   */
+  async _ensureReady() {
+    if (this.isReady) return Promise.resolve();
+
+    return new Promise((resolve, reject) => {
+      let attempts = 0;
+      const maxAttempts = 50; // 5 seconds max
+
+      const checkReady = () => {
+        attempts++;
+        if (this.isReady) {
+          resolve();
+        } else if (attempts >= maxAttempts) {
+          reject(new Error("Timeout waiting for worker to be ready"));
+        } else {
+          setTimeout(checkReady, 1000);
+        }
+      };
+      checkReady();
+    });
+  }
+
+  /**
+   * Function to set the model configuration in the worker
+   * @param {string} modelConfig - The model configuration to set
+   * @returns {Promise<boolean>} Resolves when the configuration is set
+   */
+  async setModelConfig(modelConfig) {
+    await this._ensureReady();
+    return this.feaWorker.setModelConfig(modelConfig);
+  }
+
+  /**
+   * Function to set the mesh configuration in the worker
+   * @param {object} meshConfig - The mesh configuration to set
+   * @returns {Promise<boolean>} Resolves when the configuration is set
+   */
+  async setMeshConfig(meshConfig) {
+    await this._ensureReady();
+    return this.feaWorker.setMeshConfig(meshConfig);
+  }
+
+  /**
+   * Function to add a boundary condition to the worker
+   * @param {string} boundaryKey - The key identifying the boundary
+   * @param {array} condition - The boundary condition to add
+   * @returns {Promise<boolean>} Resolves when the boundary condition is added
+   */
+  async addBoundaryCondition(boundaryKey, condition) {
+    await this._ensureReady();
+    return this.feaWorker.addBoundaryCondition(boundaryKey, condition);
+  }
+
+  /**
+   * Function to set the solver method in the worker
+   * @param {string} solverMethod - The solver method to set
+   * @returns {Promise<boolean>} Resolves when the solver method is set
+   */
+  async setSolverMethod(solverMethod) {
+    await this._ensureReady();
+    return this.feaWorker.setSolverMethod(solverMethod);
+  }
+
+  /**
+   * Function to request the worker to solve the problem
+   * @returns {Promise<object>} Resolves with the solution result
+   */
+  async solve() {
+    await this._ensureReady();
+    const startTime = performance.now();
+    const result = await this.feaWorker.solve();
+    const endTime = performance.now();
+    return result;
+  }
+
+  /**
+   * Function to retrieve model information from the worker
+   * @returns {Promise<object>} Resolves with the model information
+   */
+  async getModelInfo() {
+    await this._ensureReady();
+    return this.feaWorker.getModelInfo();
+  }
+
+  /**
+   * Function to send a ping request to the worker to check its availability
+   * @returns {Promise<boolean>} Resolves if the worker responds
+   */
+  async ping() {
+    await this._ensureReady();
+    return this.feaWorker.ping();
+  }
+
+  /**
+   * Function to terminate the worker and clean up resources
+   */
+  terminate() {
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+      this.feaWorker = null;
+      this.isReady = false;
+    }
+  }
+}

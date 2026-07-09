@@ -1,7 +1,7 @@
 {
   "name": "feascript",
-  "version": "0.1.1",
-  "description": "A lightweight finite element simulation library built in JavaScript for browser-based physics and engineering simulations",
+  "version": "0.3.0-RC",
+  "description": "Lightweight finite element simulation library built in JavaScript",
   "main": "dist/feascript.cjs.js",
   "module": "dist/feascript.esm.js",
   "browser": "dist/feascript.umd.js",
@@ -13,12 +13,12 @@
     "dist",
     "src"
   ],
-  "types": "dist/types/index.d.ts",
   "directories": {
     "example": "examples"
   },
   "scripts": {
     "build": "rollup -c",
+    "prepare": "npm run build",
     "prepublishOnly": "npm run build",
     "test": "node tests/run-all-tests.js",
     "format": "prettier --write ."
@@ -31,7 +31,6 @@
     "finite element",
     "simulation",
     "javascript",
-    "web",
     "FEA",
     "FEM",
     "finite element analysis",
@@ -42,6 +41,18 @@
     {
       "name": "sridhar-mani",
       "url": "https://www.npmjs.com/~sridhar-mani"
+    },
+    {
+      "name": "Felipe Ferrari",
+      "url": "https://github.com/ferrari212"
+    },
+    {
+      "name": "Akhilesh Tiwari",
+      "url": "https://github.com/silky-x0"
+    },
+    {
+      "name": "Priyank Bansal",
+      "url": "https://github.com/Stu-ops"
     }
   ],
   "license": "MIT",
@@ -49,23 +60,39 @@
   "bugs": {
     "url": "https://github.com/FEAScript/FEAScript-core/issues"
   },
-  "homepage": "https://github.com/FEAScript/FEAScript-core#readme",
+  "homepage": "https://feascript.com/",
   "publishConfig": {
     "access": "public"
   },
+  "dependencies": {
+    "@stdlib/blas-base-daxpy": "^0.4.1",
+    "@stdlib/blas-base-dcopy": "^0.4.1",
+    "@stdlib/blas-base-ddot": "^0.4.1",
+    "@stdlib/blas-base-dnrm2": "^0.4.1",
+    "mathjs": "^11.12.0"
+  },
   "peerDependencies": {
-    "mathjs": "^11.12.0",
-    "plotly.js": "^2.27.0"
+    "@kitware/vtk.js": "^32.12.0",
+    "plotly.js": "^2.35.3"
+  },
+  "peerDependenciesMeta": {
+    "@kitware/vtk.js": {
+      "optional": true
+    },
+    "plotly.js": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^28.0.3",
-    "@rollup/plugin-node-resolve": "^16.0.1",
-    "@types/estree": "^1.0.7",
-    "mathjs": "^11.12.0",
+    "@kitware/vtk.js": "^32.12.0",
+    "@rollup/plugin-commonjs": "^29.0.2",
+    "@rollup/plugin-node-resolve": "^16.0.3",
     "rollup": "^2.79.2",
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.36.0",
     "typescript": "^5.8.3",
     "prettier": "^2.8.8"
+    "rollup-plugin-wasm": "^3.0.0",
+    "taichi.js": "^0.0.36"
   }
 }

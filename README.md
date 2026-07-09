@@ -1,103 +1,169 @@
-<img src="https://feascript.github.io/FEAScript-website/assets/FEAScriptLogo.png" width="80" alt="FEAScript Logo">
+<img src="https://feascript.github.io/FEAScript-website/assets/feascript-logo.png" width="80" alt="FEAScript Logo">
 
 # FEAScript-core
 
-[FEAScript](https://feascript.com/) is a lightweight finite element simulation library built in JavaScript. It empowers users to create and execute browser-based simulations for physics and engineering applications. This is the core library of FEAScript.
+[![GitHub release](https://img.shields.io/github/v/release/FEAScript/FEAScript-core?logo=github)](https://github.com/FEAScript/FEAScript-core/releases)
+[![npm version](https://img.shields.io/npm/v/feascript)](https://www.npmjs.com/package/feascript)
+[![Last Commit](https://img.shields.io/github/last-commit/FEAScript/FEAScript-core?logo=github)](https://github.com/FEAScript/FEAScript-core/commits/main)
+[![License](https://img.shields.io/github/license/FEAScript/FEAScript-core?logo=github)](https://github.com/FEAScript/FEAScript-core/blob/main/LICENSE)
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/FEAScript)
+[![Donate on Liberapay](https://img.shields.io/badge/Donate-Liberapay-F6C915?logo=liberapay&logoColor=black)](https://liberapay.com/FEAScript/donate)
 
-> 🚧 **FEAScript is currently under heavy development.** Functionality and interfaces may change rapidly as new features and enhancements are introduced. 🚧
+[FEAScript](https://feascript.com/) is a finite element simulation library developed in JavaScript. It enables engineering simulations across both browser-based and server-side environments without the overhead of traditional desktop software. 🎯 **Our goal is to provide the most powerful JavaScript API for FEM.** We are closing the gap between complex computational mechanics and the accessibility of the web, empowering developers to build professional-grade simulation tools that work on any device, anywhere. This is the core library of the FEAScript project.
 
-## Installation
+<img src="https://feascript.github.io/FEAScript-website/assets/cold-plate-logo-results-and-mesh.gif" width="300" alt="Results of heat conduction around the FEAScript logo"> <br/>
 
-FEAScript is entirely implemented in pure JavaScript and requires only a simple HTML page to operate. All simulations are executed locally in your browser, without the need for any cloud services. You can use FEAScript in your projects through one of the following methods:
+> 🚧 **FEAScript is currently under heavy development.** Its functionality and interfaces may change rapidly as new features and enhancements are introduced.
 
-### Option 1: NPM Installation
+## Features
+
+- <b>Physics models:</b> creeping (Stokes) flow, front propagation, heat conduction
+- <b>Meshing:</b> simple 1D/2D mesh generation, unstructured mesh import from Gmsh (`.msh`)
+- <b>Solvers:</b> frontal, Jacobi (CPU/WebGPU) and LU, Newton–Raphson for nonlinear systems
+- <b>Performance:</b> web worker support for multi-threaded computation
+- <b>Visualization:</b> interactive rendering with vtk.js and Plotly
+
+<!-- ## Contents
+
+- [How to Use FEAScript](#ways-to-use-feascript)
+- [Features](#features)
+- [Examples](#examples)
+- [Support FEAScript](#support-feascript)
+- [Contributing](#contributing)
+- [License](#license) -->
+
+## How to Use FEAScript
+
+You can run simulations with FEAScript by calling its functions from JavaScript (the FEAScript API). The API is the core programmatic interface for FEAScript and works across multiple environments, including the browser (simple HTML pages and online JavaScript playgrounds, e.g. [CodePen](https://codepen.io/) and [Scribbler](https://scribbler.live/)) and server-side runtimes such as Node.js. The most common ways to use FEAScript are outlined below:
+
+1. **[In the browser](#use-feascript-in-the-browser)** – Run FEAScript directly in a simple HTML page to perform simulations locally with no additional installations or cloud services required.
+2. **[In JavaScript playgrounds](#use-feascript-in-javascript-playgrounds)** – Try FEAScript in interactive JavaScript playgrounds such as [CodePen](https://codepen.io/FEAScript) or [Scribbler](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples).
+3. **[With Node.js](#use-feascript-with-nodejs)** – Use FEAScript in server-side JavaScript applications.
+
+#### Use FEAScript in the Browser
+
+You can use FEAScript in browser environments in three ways:
+
+- **Import from Hosted ESM Build:**
+
+  ```html
+  <script type="module">
+    import { FEAScriptModel } from "https://core.feascript.com/dist/feascript.esm.js";
+  </script>
+  ```
+
+- **Import from CDN:**
+
+  ```html
+  <script type="module">
+    import { FEAScriptModel } from "https://cdn.jsdelivr.net/gh/FEAScript/FEAScript-core/dist/feascript.esm.js";
+  </script>
+  ```
+
+- **Download and Use Locally:**
+
+  You can download the latest stable release from [GitHub Releases](https://github.com/FEAScript/FEAScript-core/releases).
+
+  ```html
+  <script type="module">
+    import { FEAScriptModel } from "./path/to/dist/feascript.esm.js";
+  </script>
+  ```
+
+👉 Explore browser-based tutorials on our [website](https://feascript.com/#tutorials).
+
+#### Use FEAScript in JavaScript Playgrounds
+
+FEAScript works well in interactive JavaScript playgrounds where you can write code, visualize results inline, and share your work.
+
+👉 Explore the following examples:
+
+- [CodePen (interactive pens)](https://codepen.io/FEAScript)
+- [Scribbler (notebooks)](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples)
+
+#### Use FEAScript with Node.js
+
+Install FEAScript and its peer dependencies from npm as follows:
 
 ```bash
-# Install FEAScript and its peer dependencies
-npm install feascript mathjs plotly.js
+npm install feascript
 ```
 
-Then import it in your JavaScript/TypeScript file:
+Then, import it in your JavaScript file:
 
 ```javascript
-// ES Modules
-import { FEAScriptModel, plotSolution } from "feascript";
-
-// CommonJS
-const { FEAScriptModel, plotSolution } = require("feascript");
+import { FEAScriptModel } from "feascript";
 ```
 
-**Important:** FEAScript is built as an ES module. If you're starting a new project, make sure to configure it to use ES modules by running:
+**Important:** FEAScript is built as an ES module. If you're starting a completely new project (outside this repository), make sure to configure it to use ES modules by:
 
 ```bash
 # Create package.json with type=module for ES modules support
 echo '{"type":"module"}' > package.json
 ```
 
-If you already have a package.json file, manually add `"type": "module"` to enable ES modules in your project.
+When running examples from within this repository, this step isn’t needed as the root package.json already has the proper configuration.
 
-### Option 2: Direct Import from CDN
+👉 Explore Node.js use cases on the [examples directory](https://github.com/FEAScript/FEAScript-core/tree/main/examples).
 
-Add this line to your HTML or JavaScript module:
+## Examples
 
-```javascript
-import { FEAScriptModel, plotSolution } from "https://core.feascript.com/dist/feascript.esm.js";
-```
-
-### Option 3: Download and Use Locally
-
-1. Download the latest release from [GitHub Releases](https://github.com/FEAScript/FEAScript-core/releases)
-2. Include it in your project:
+Here is a minimal browser-based example using the FEAScript API. Adapt paths, physics model, and boundary conditions as needed for your specific problem:
 
 ```html
-<script type="module">
-  import { FEAScriptModel, plotSolution } from "./path/to/dist/feascript.esm.js";
-  // Your code here
-</script>
+<body>
+  <!-- ...body region... -->
+  <script type="module">
+    // Import FEAScript library
+    import { FEAScriptModel } from "https://core.feascript.com/dist/feascript.esm.js";
+
+    window.addEventListener("DOMContentLoaded", () => {
+      // Create a new FEAScript model
+      const model = new FEAScriptModel();
+
+      // Select physics/PDE
+      model.setModelConfig("physicsModel"); // Example: "heatConductionScript"
+
+      // Configure the mesh
+      model.setMeshConfig({
+        meshDimension: "1D", // Choose either "1D" or "2D"
+        elementOrder: "linear", // Choose either "linear" or "quadratic"
+        numElementsX: 10, // Number of elements in x-direction
+        numElementsY: 6, // Number of elements in y-direction (for 2D only)
+        maxX: 1.0, // Domain length in x-direction
+        maxY: 0.5, // Domain length in y-direction (for 2D only)
+      });
+
+      // Add boundary conditions with appropriate parameters
+      model.addBoundaryCondition("boundaryIndex", ["conditionType" /* parameters */]); // Example boundary condition
+
+      // Solve the problem
+      const { solutionVector, nodesCoordinates } = model.solve();
+    });
+  </script>
+  <!-- ...rest of body region... -->
+</body>
 ```
 
-### Example Usage
+**Note:** The code above uses placeholder values that you should replace with appropriate options, e.g.:
 
-```javascript
-// Import FEAScript library
-import { FEAScriptModel, plotSolution } from "https://core.feascript.com/dist/feascript.esm.js";
+- "physicsModel" should be replaced with an actual solver type such as "heatConductionScript" for heat conduction problems
+- "conditionType" should be replaced with an actual boundary condition type such as "constantTemp"
+- "boundaryIndex" should be replaced with a string identifying the boundary
 
-// Create and configure model
-const model = new FEAScriptModel();
-model.setSolverConfig("solverType"); // e.g., "solidHeatTransfer" for a stationary solid heat transfer case
-model.setMeshConfig({
-  // Define mesh configuration (assuming a rectangular domain for 2D)
-  meshDimension: "1D" | "2D", // Mesh dimension
-  elementOrder: "linear" | "quadratic", // Element order
-  numElementsX: number, // Number of elements in x-direction
-  numElementsY: number, // Number of elements in y-direction (for 2D)
-  maxX: number, // Domain length in x-direction
-  maxY: number, // Domain length in y-direction (for 2D)
-});
+## Support FEAScript
 
-// Apply boundary conditions
-model.addBoundaryCondition("boundaryIndex", ["conditionType", /* parameters */]);
+> 💖 **If you find FEAScript useful, please consider supporting its development through a donation:**
 
-// Solve
-const { solutionVector, nodesCoordinates } = model.solve();
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/FEAScript)
+[![Donate on Liberapay](https://img.shields.io/badge/Donate-Liberapay-F6C915?logo=liberapay&logoColor=black)](https://liberapay.com/FEAScript/donate)
 
-// Plot results
-plotSolution(
-  solutionVector,
-  nodesCoordinates,
-  model.solverConfig,
-  model.meshConfig.meshDimension,
-  "plotType", // e.g., "contour"
-  "targetDivId" // HTML div ID for plot
-);
-```
+Your support helps ensure the continued development and maintenance of this project.
 
-Explore various examples and use cases of FEAScript [here](https://github.com/FEAScript/FEAScript-core/tree/main/examples).
-
-## Contribute
+## Contributing
 
 We warmly welcome contributors to help expand and refine FEAScript. Please see the [CONTRIBUTING.md](./CONTRIBUTING.md) file for detailed guidance on how to contribute.
 
 ## License
 
-The core library of FEAScript is released under the [MIT license](https://github.com/FEAScript/FEAScript-core/blob/main/LICENSE). &copy; 2023-2025 FEAScript.
+The core library of FEAScript is released under the [MIT license](https://github.com/FEAScript/FEAScript-core/blob/main/LICENSE). &copy; 2023-2026 FEAScript.

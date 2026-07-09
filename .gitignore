@@ -1,3 +1,9 @@
+# Dependencies
 /node_modules
 node_modules
 node_modules/
+
+# Example dependencies
+examples/**/package.json
+examples/**/package-lock.json
+examples/**/node_modules/

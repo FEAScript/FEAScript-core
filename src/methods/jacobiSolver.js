@@ -1,97 +1,55 @@
-//   ______ ______           _____           _       _     //
-//  |  ____|  ____|   /\    / ____|         (_)     | |    //
-//  | |__  | |__     /  \  | (___   ___ ____ _ ____ | |_   //
-//  |  __| |  __|   / /\ \  \___ \ / __|  __| |  _ \| __|  //
-//  | |    | |____ / ____ \ ____) | (__| |  | | |_) | |    //
-//  |_|    |______/_/    \_\_____/ \___|_|  |_|  __/| |    //
-//                                            | |   | |    //
-//                                            |_|   | |_   //
-//       Website: https://feascript.com/             \__|  //
+/**
+ * ════════════════════════════════════════════════════════════════
+ *  FEAScript Core Library
+ *  Lightweight Finite Element Simulation in JavaScript
+ *  Version: 0.3.0 (RC) | https://feascript.com
+ *  MIT License © 2023–2026 FEAScript
+ * ════════════════════════════════════════════════════════════════
+ */
+
+// Internal imports
+import { dotProduct, copyVector, euclideanNorm } from "./blasUtilities.js";
 
 /**
- * Function to solve a system of linear equations using the Jacobi iterative method
- * @param {array} A - The coefficient matrix (must be square)
+ * Function to solve a system of linear equations using the Jacobi iterative method (CPU synchronous version)
+ * @param {array} A - The system matrix
  * @param {array} b - The right-hand side vector
  * @param {array} x0 - Initial guess for solution vector
- * @param {number} [maxIterations=100] - Maximum number of iterations
- * @param {number} [tolerance=1e-7] - Convergence tolerance
+ * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance`
  * @returns {object} An object containing:
- *  - solution: The solution vector
+ *  - solutionVector: The solution vector
  *  - iterations: The number of iterations performed
  *  - converged: Boolean indicating whether the method converged
  */
-export function jacobiMethod(A, b, x0, maxIterations = 100, tolerance = 1e-7) {
-  // Sanity checks — Array.isArray guard must precede .length access
-  if (!Array.isArray(A) || A.length === 0) {
-    throw new Error("Matrix A must be a non-empty array");
-  }
+export function jacobiSolver(A, b, x0, options = {}) {
+  // Extract options
+  const { maxIterations, tolerance } = options;
 
-  const n = A.length; // Size of the square matrix
+  const n = A.length;
 
-  // Verify A is square
-  for (let i = 0; i < n; i++) {
-    if (!Array.isArray(A[i]) || A[i].length !== n) {
-      throw new Error(`Matrix A must be square. Row ${i} has length ${A[i].length}, expected ${n}`);
-    }
-  }
+  // Convert inputs to Float64Arrays for BLAS operations
+  const Arows = A.map((row) => new Float64Array(row));
+  const bVec = new Float64Array(b);
+  let x = new Float64Array(x0);
+  let xNew = new Float64Array(n);
+  const diff = new Float64Array(n);
 
-  // Verify b is a vector of correct length
-  if (!Array.isArray(b) || b.length !== n) {
-    throw new Error(`Vector b must have length ${n}, got ${Array.isArray(b) ? b.length : "undefined"}`);
-  }
-
-  // Verify x0 is a vector of correct length
-  if (!Array.isArray(x0) || x0.length !== n) {
-    throw new Error(`Initial guess x0 must have length ${n}, got ${Array.isArray(x0) ? x0.length : "undefined"}`);
-  }
-
-  // Verify no zero diagonal elements (required for Jacobi method)
-  for (let i = 0; i < n; i++) {
-    if (A[i][i] === 0) {
-      throw new Error(`Diagonal element A[${i}][${i}] is zero; Jacobi method requires non-zero diagonal elements`);
-    }
-  }
-
-  let x = [...x0]; // Current solution (starts with initial guess)
-  let xNew = new Array(n); // Next iteration's solution
-
-  for (let iteration = 0; iteration < maxIterations; iteration++) {
-    // Perform one iteration
+  // Jacobi update: xNew[i] = (b[i] - (A[i] · x) + A[i][i] * x[i]) / A[i][i]
+  for (let iter = 0; iter < maxIterations; iter++) {
     for (let i = 0; i < n; i++) {
-      let sum = 0;
-      // Calculate sum of A[i][j] * x[j] for j ≠ i
-      for (let j = 0; j < n; j++) {
-        if (j !== i) {
-          sum += A[i][j] * x[j];
-        }
-      }
-      // Update xNew[i] using the Jacobi formula
-      xNew[i] = (b[i] - sum) / A[i][i];
+      const rowDot = dotProduct(Arows[i], x);
+      xNew[i] = (bVec[i] - rowDot + Arows[i][i] * x[i]) / Arows[i][i];
     }
 
-    // Check convergence
-    let maxDiff = 0;
-    for (let i = 0; i < n; i++) {
-      maxDiff = Math.max(maxDiff, Math.abs(xNew[i] - x[i]));
-    }
+    // Compute diff and copy xNew into x
+    for (let i = 0; i < n; i++) diff[i] = xNew[i] - x[i];
+    const residual = euclideanNorm(diff);
+    copyVector(xNew, x);
 
-    // Update x for next iteration
-    x = [...xNew];
-
-    // Successfully converged if maxDiff is less than tolerance
-    if (maxDiff < tolerance) {
-      return {
-        solution: x,
-        iterations: iteration + 1,
-        converged: true,
-      };
+    if (residual < tolerance) {
+      return { solutionVector: x, iterations: iter + 1, converged: true };
     }
   }
 
-  // maxIterations were reached without convergence
-  return {
-    solution: x,
-    iterations: maxIterations,
-    converged: false,
-  };
+  return { solutionVector: x, iterations: maxIterations, converged: false };
 }
