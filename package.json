@@ -20,8 +20,8 @@
     "build": "rollup -c",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build",
-    "pretest": "npm run build",
-    "test": "for file in $(find examples -name '*.js' -type f | sort); do echo 'Running' \"$file\"; if node \"$file\" > /dev/null 2>&1; then echo 'Success'; else echo 'Failed'; fi; done"
+    "test": "node tests/run-all-tests.js",
+    "format": "prettier --write ."
   },
   "repository": {
     "type": "git",
@@ -90,6 +90,8 @@
     "rollup": "^2.79.2",
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^5.8.3",
+    "prettier": "^2.8.8",
     "rollup-plugin-wasm": "^3.0.0",
     "taichi.js": "^0.0.36"
   }

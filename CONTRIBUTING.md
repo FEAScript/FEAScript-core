@@ -10,6 +10,7 @@ Thank you for your interest in contributing! FEAScript is in early development, 
 - [Branching & Workflow](#branching--workflow)
 - [Local Testing](#local-testing)
 - [Running the Node.js Examples](#running-the-nodejs-examples)
+- [Verifying Your Changes](#verifying-your-changes)
 
 ## Development Environment & Coding Style
 
@@ -120,49 +121,10 @@ http://127.0.0.1:8000/FEAScript-website/tutorials/solidification-front-2d-worker
 
 Static file server npm packages like [serve](https://github.com/vercel/serve#readme) and [Vite](https://vite.dev/) can also be used.
 
-## Running the Node.js Examples
-
-All examples under `examples/` can be run directly with Node.js to verify the library works in a non-browser environment. Run them from the `FEAScript-core/` directory (so that the `feascript` package resolves via `node_modules`):
+Testing can be also performed at the Node.js environment. In this case you can also run predefined tests to make sure nothing is broken. This performed as follows:
 
 ```bash
-cd /path/to/FEAScript-workspace/FEAScript-core
-
-# Heat conduction — 1D wall
-node examples/heatConductionScript/heatConduction1DWall/heatConduction1DWall.js
-
-# Heat conduction — 2D fin (structured mesh)
-node examples/heatConductionScript/heatConduction2DFin/heatConduction2DFin.js
-
-# Heat conduction — 2D fin (rectangular Gmsh mesh)
-node examples/heatConductionScript/heatConduction2DFin/heatConduction2DFinGmsh.js
-
-# Heat conduction — 2D rhomboid fin (Gmsh mesh)
-node examples/heatConductionScript/heatConduction2DFin/heatConduction2DRhomFinGmsh.js
-
-# Advection-diffusion — 1D with Gaussian source
-node examples/generalFormPDEScript/advectionDiffusion1D/advectionDiffusion1D.js
-
-# Solidification front propagation — 2D
-node examples/frontPropagationScript/solidificationFront2D/solidificationFront2D.js
-
-# Lid-driven cavity — 2D creeping flow
-node examples/creepingFlowScript/lidDrivenCavity2DCreepingFlow/lidDrivenCavity2DCreepingFlow.js
+npm test
 ```
 
-Each script prints its computed solution array to the console. A successful run exits with code 0 and produces numerical output; any import or runtime error indicates a problem.
-
-To run all examples in one go and check for failures:
-
-```bash
-for f in \
-  examples/heatConductionScript/heatConduction1DWall/heatConduction1DWall.js \
-  examples/heatConductionScript/heatConduction2DFin/heatConduction2DFin.js \
-  examples/heatConductionScript/heatConduction2DFin/heatConduction2DFinGmsh.js \
-  examples/heatConductionScript/heatConduction2DFin/heatConduction2DRhomFinGmsh.js \
-  examples/generalFormPDEScript/advectionDiffusion1D/advectionDiffusion1D.js \
-  examples/frontPropagationScript/solidificationFront2D/solidificationFront2D.js \
-  examples/creepingFlowScript/lidDrivenCavity2DCreepingFlow/lidDrivenCavity2DCreepingFlow.js; do
-  echo -n "  $f ... "
-  node "$f" > /dev/null 2>&1 && echo "OK" || echo "FAILED"
-done
-```
+These tests compare the numerical results against stored reference solutions at selected points.
