@@ -26,17 +26,26 @@ export class BasisFunctions {
 
   /**
    * Function to calculate basis functions and their derivatives based on the dimension and order
-   * @param {number} ksi - Natural coordinate (for both 1D and 2D)
+   * @param {number} ksi - Natural coordinate (for both 1D and 2D), in [0, 1]
    * @param {number} [eta] - Second natural coordinate (only for 2D elements)
+   * @param {number} [elementLength] - Physical element length, only required for 1D 'hermiteCubic' elements
    * @returns {object} An object containing:
    *  - basisFunction: Array of evaluated basis functions
    *  - basisFunctionDerivKsi: Array of derivatives of basis functions with respect to ksi
    *  - basisFunctionDerivEta: Array of derivatives of basis functions with respect to eta (only for 2D elements)
+   *  - basisFunctionDerivKsi2: Array of second derivatives of basis functions with respect to ksi
+   *    (only for 1D 'hermiteCubic' elements)
+   *
+   * 'hermiteCubic' is a general-purpose interpolation type, not specific to beams: it makes both
+   * the value and the slope continuous across elements (unlike the C0 Lagrange types above), which
+   * any fourth-order problem needs (e.g. beam or plate bending). eulerBernoulliBeam.js is currently
+   * the only place in this codebase that uses it.
    */
-  getBasisFunctions(ksi, eta = null) {
+  getBasisFunctions(ksi, eta = null, elementLength = null) {
     let basisFunction = [];
     let basisFunctionDerivKsi = [];
     let basisFunctionDerivEta = [];
+    let basisFunctionDerivKsi2 = [];
 
     if (this.meshDimension === "1D") {
       if (this.elementOrder === "linear") {
@@ -57,6 +66,34 @@ export class BasisFunctions {
         basisFunctionDerivKsi[0] = -3 + 4 * ksi;
         basisFunctionDerivKsi[1] = 4 - 8 * ksi;
         basisFunctionDerivKsi[2] = -1 + 4 * ksi;
+      } else if (this.elementOrder === "hermiteCubic") {
+        // Cubic Hermite basis functions for 1D Euler-Bernoulli beam elements
+        // DOF order: [w1, theta1, w2, theta2], with w = transverse deflection and
+        // theta = dw/dx the (physical) slope. The h-scaling on the theta-associated
+        // functions converts the interpolated dw/dksi at the nodes into the actual
+        // rotation DOF, so no extra scaling is required when mapping derivatives to x
+        if (elementLength === null) {
+          errorLog("elementLength is required to evaluate 'hermiteCubic' basis functions");
+          return;
+        }
+        const h = elementLength;
+
+        basisFunction[0] = 2 * ksi ** 3 - 3 * ksi ** 2 + 1;
+        basisFunction[1] = h * (ksi ** 3 - 2 * ksi ** 2 + ksi);
+        basisFunction[2] = -2 * ksi ** 3 + 3 * ksi ** 2;
+        basisFunction[3] = h * (ksi ** 3 - ksi ** 2);
+
+        // First derivatives of basis functions with respect to ksi
+        basisFunctionDerivKsi[0] = 6 * ksi ** 2 - 6 * ksi;
+        basisFunctionDerivKsi[1] = h * (3 * ksi ** 2 - 4 * ksi + 1);
+        basisFunctionDerivKsi[2] = -6 * ksi ** 2 + 6 * ksi;
+        basisFunctionDerivKsi[3] = h * (3 * ksi ** 2 - 2 * ksi);
+
+        // Second derivatives of basis functions with respect to ksi
+        basisFunctionDerivKsi2[0] = 12 * ksi - 6;
+        basisFunctionDerivKsi2[1] = h * (6 * ksi - 4);
+        basisFunctionDerivKsi2[2] = -12 * ksi + 6;
+        basisFunctionDerivKsi2[3] = h * (6 * ksi - 2);
       }
     } else if (this.meshDimension === "2D") {
       if (eta === null) {
@@ -152,6 +189,6 @@ export class BasisFunctions {
       }
     }
 
-    return { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta };
+    return { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta, basisFunctionDerivKsi2 };
   }
 }
