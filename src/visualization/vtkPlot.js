@@ -492,7 +492,7 @@ function convertElementNodesToLinearCell(elementNodes) {
     return [indices[0], indices[6], indices[8], indices[2]];
   }
 
-  // Generic fallback for polygonal/high-order cells.
+  // Generic fallback for polygonal/high-order cells
   return indices.slice(0, Math.min(4, indices.length));
 }
 
@@ -546,15 +546,23 @@ function buildVTPString(vtkData) {
     '<?xml version="1.0"?>',
     '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">',
     "  <PolyData>",
-    `    <Piece NumberOfPoints="${numberOfPoints}" NumberOfVerts="0" NumberOfLines="${isLine ? offsets.length : 0}" NumberOfStrips="0" NumberOfPolys="${isLine ? 0 : offsets.length}">`,
+    `    <Piece NumberOfPoints="${numberOfPoints}" NumberOfVerts="0" NumberOfLines="${
+      isLine ? offsets.length : 0
+    }" NumberOfStrips="0" NumberOfPolys="${isLine ? 0 : offsets.length}">`,
     '      <PointData Scalars="solution">',
-    `        <DataArray type="Float32" Name="solution" NumberOfComponents="1" format="ascii">${Array.from(vtkData.scalars).join(" ")}</DataArray>`,
+    `        <DataArray type="Float32" Name="solution" NumberOfComponents="1" format="ascii">${Array.from(
+      vtkData.scalars,
+    ).join(" ")}</DataArray>`,
     "      </PointData>",
     "      <Points>",
-    `        <DataArray type="Float32" NumberOfComponents="3" format="ascii">${Array.from(vtkData.points).join(" ")}</DataArray>`,
+    `        <DataArray type="Float32" NumberOfComponents="3" format="ascii">${Array.from(
+      vtkData.points,
+    ).join(" ")}</DataArray>`,
     "      </Points>",
     `      <${topologyTag}>`,
-    `        <DataArray type="Int32" Name="connectivity" format="ascii">${connectivity.join(" ")}</DataArray>`,
+    `        <DataArray type="Int32" Name="connectivity" format="ascii">${connectivity.join(
+      " ",
+    )}</DataArray>`,
     `        <DataArray type="Int32" Name="offsets" format="ascii">${offsets.join(" ")}</DataArray>`,
     `      </${topologyTag}>`,
     "    </Piece>",

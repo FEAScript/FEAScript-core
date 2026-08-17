@@ -238,7 +238,7 @@ export function performIsoparametricMapping2D(params) {
 
 /**
  * Function to test if a point is inside a triangle using barycentric coordinates,
- * also returning the natural coordinates (ksi, eta).
+ * also returning the natural coordinates (ksi, eta)
  * @param {number} x - X-coordinate of the point
  * @param {number} y - Y-coordinate of the point
  * @param {array} vertices - Triangle vertices [[x0,y0],[x1,y1],[x2,y2]]

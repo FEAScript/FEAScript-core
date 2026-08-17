@@ -1,19 +1,24 @@
 /**
+ * ════════════════════════════════════════════════════════════════
+ *  FEAScript Core Library
+ *  Lightweight Finite Element Simulation in JavaScript
+ *  Version: 0.3.0 (RC) | https://feascript.com
+ *  MIT License © 2023–2026 FEAScript
+ * ════════════════════════════════════════════════════════════════
+ */
+
+/**
  * Regression test for HeatConduction2DFin
  *
- * Replicates the exact setup from HeatConduction2DFin.html and asserts
- * that the temperature at (x=0, y=2) remains 81.31873.
+ * Replicates the physical setup from heatConduction2DFin.js using lusolve and
+ * asserts that the temperature at (x=0, y=2) remains 81.31873
  *
- * Run: node tests/regression/HeatConduction2DFin/regression.test.js
+ * Run: node tests/regression/HeatConduction2DFin/regression.test.js (or npm test)
  */
 
 import * as mathjs from "mathjs";
 import { FEAScriptModel } from "../../../src/FEAScript.js";
 import { basicLog, errorLog } from "../../../src/utilities/logging.js";
-
-basicLog("");
-basicLog("================================");
-basicLog("Starting test in solid heat transfer 2D fin...");
 
 // FEAScript.js references `math` as a global (loaded via CDN in browser).
 // Set it here before any solve() call.
@@ -49,9 +54,19 @@ function runSimulation() {
 function assert(condition, message) {
   if (!condition) {
     errorLog(`FAIL: ${message}`);
-    process.exit(1);
+    failed++;
+  } else {
+    basicLog(`PASS: ${message}`);
+    passed++;
   }
 }
+
+let passed = 0;
+let failed = 0;
+
+basicLog("");
+basicLog("================================");
+basicLog("Starting regression test for solid heat transfer in a 2D fin...");
 
 const { solutionVector, nodesCoordinates } = runSimulation();
 const { nodesXCoordinates, nodesYCoordinates } = nodesCoordinates;
@@ -62,7 +77,7 @@ const nodeIndex = nodesXCoordinates.findIndex(
   (x, i) => Math.abs(x - EXPECTED_X) < 1e-10 && Math.abs(nodesYCoordinates[i] - EXPECTED_Y) < 1e-10,
 );
 
-assert(nodeIndex !== -1, `No node found at (x=${EXPECTED_X}, y=${EXPECTED_Y})`);
+assert(nodeIndex !== -1, `Found node at (x=${EXPECTED_X}, y=${EXPECTED_Y})`);
 
 // solutionVector from math.lusolve is a nested array: [[T0], [T1], ...]
 const T = Array.isArray(solutionVector[nodeIndex]) ? solutionVector[nodeIndex][0] : solutionVector[nodeIndex];
@@ -72,6 +87,11 @@ assert(
   `Temperature at (x=${EXPECTED_X}, y=${EXPECTED_Y}): expected ${EXPECTED_T}, got ${T} (tolerance ${TOLERANCE})`,
 );
 
-basicLog(`PASS: T(x=${EXPECTED_X}, y=${EXPECTED_Y}) = ${T.toFixed(5)} (expected ${EXPECTED_T})`);
-
+basicLog("");
+if (failed > 0) {
+  errorLog(`${passed} passed, ${failed} failed.`);
+} else {
+  basicLog(`${passed} passed, ${failed} failed.`);
+}
 basicLog("================================");
+if (failed > 0) process.exit(1);

@@ -121,11 +121,7 @@ export class BeamBoundaryConditions {
         } else if (conditionType === "rotationFixed" || conditionType === "rotation") {
           applyDirichlet(rotationDOF, value ?? 0);
           debugLog(`Node ${nodeKey}: Applied rotation theta=${value ?? 0} (essential BC)`);
-        } else if (
-          conditionType !== "force" &&
-          conditionType !== "moment" &&
-          conditionType !== "spring"
-        ) {
+        } else if (conditionType !== "force" && conditionType !== "moment" && conditionType !== "spring") {
           errorLog(`Unknown beam boundary condition type: "${conditionType}"`);
         }
       });

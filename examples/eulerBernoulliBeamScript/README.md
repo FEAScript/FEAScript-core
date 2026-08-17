@@ -1,4 +1,4 @@
-<img src="https://feascript.github.io/FEAScript-website/assets/feascript-structural-mechanics.png" width="80" alt="FEAScript Beam1DFEM Logo">
+<img src="https://feascript.github.io/FEAScript-website/assets/feascript-structural-mechanics.png" width="80" alt="FEAScript Euler-Bernoulli beam logo">
 
 # 1D Euler-Bernoulli Beam Examples
 
@@ -7,7 +7,7 @@ This directory contains Node.js examples demonstrating how to use the FEAScript 
 
 ## Examples
 
-#### 1. Clamped and Spring-Supported Beam (`Beam1DEuler_Bernoulli.js`)
+#### 1. Clamped and Spring-Supported Beam (`clampedSpringSupportedBeam1D.js`)
 
 Reproduces the "Bending of a Beam" example from J.N. Reddy, _An Introduction to the Finite Element
 Method_, 3rd ed., McGraw-Hill, 2006 (FEM1D example problems, Chapter 7). A 10 m beam is clamped at
@@ -69,17 +69,20 @@ plus a point load):
 ```javascript
 model.addBoundaryCondition("1", [["fixed"]]); // w=0, theta=0 (clamped)
 model.addBoundaryCondition("2", [["pinned"], ["moment", 1250]]); // w=0, plus an applied moment
-model.addBoundaryCondition("3", [["spring", 200], ["force", -2500]]); // elastic support, plus a point load
+model.addBoundaryCondition("3", [
+  ["spring", 200],
+  ["force", -2500],
+]); // elastic support, plus a point load
 ```
 
-| Condition type                      | Kind             | Effect                                                    |
-| ------------------------------------ | ---------------- | ----------------------------------------------------------- |
-| `["fixed"]`                          | Essential         | `w = 0` and `theta = 0` (clamped support)                   |
-| `["pinned"]` / `["deflection", v]`   | Essential         | `w = v` (default `v = 0`; roller/pin support)                |
-| `["rotationFixed"]` / `["rotation", v]` | Essential      | `theta = v` (default `v = 0`)                                |
-| `["force", v]`                       | Natural           | Applies a concentrated transverse force `v` at the node       |
-| `["moment", v]`                      | Natural           | Applies a concentrated moment `v` at the node                 |
-| `["spring", k, uRef]`                | Mixed (Robin)     | Transverse elastic support of stiffness `k` about `uRef` (default `uRef = 0`) |
+| Condition type                          | Kind          | Effect                                                                        |
+| --------------------------------------- | ------------- | ----------------------------------------------------------------------------- |
+| `["fixed"]`                             | Essential     | `w = 0` and `theta = 0` (clamped support)                                     |
+| `["pinned"]` / `["deflection", v]`      | Essential     | `w = v` (default `v = 0`; roller/pin support)                                 |
+| `["rotationFixed"]` / `["rotation", v]` | Essential     | `theta = v` (default `v = 0`)                                                 |
+| `["force", v]`                          | Natural       | Applies a concentrated transverse force `v` at the node                       |
+| `["moment", v]`                         | Natural       | Applies a concentrated moment `v` at the node                                 |
+| `["spring", k, uRef]`                   | Mixed (Robin) | Transverse elastic support of stiffness `k` about `uRef` (default `uRef = 0`) |
 
 ## Running the Node.js Examples
 
@@ -98,5 +101,5 @@ npm install feascript
 #### 3. Run the example:
 
 ```bash
-node Beam1DEuler_Bernoulli.js
+node clampedSpringSupportedBeam1D/clampedSpringSupportedBeam1D.js
 ```

@@ -16,7 +16,7 @@ import * as Comlink from "../vendor/comlink.mjs";
 export class FEAScriptWorker {
   /**
    * Constructor to initialize the FEAScriptWorker class
-   * Sets up the worker and initializes the workerWrapper.
+   * Sets up the worker and initializes the workerWrapper
    */
   constructor() {
     this.worker = null;

@@ -81,7 +81,10 @@ export function assembleEulerBernoulliBeamMat(meshData, boundaryConditions, coef
 
   // Cubic Hermite basis functions for the field, with a 4-point Gauss quadrature rule
   const basisFunctions = new BasisFunctions({ meshDimension: "1D", elementOrder: "hermiteCubic" });
-  const numericalIntegration = new NumericalIntegration({ meshDimension: "1D", elementOrder: "hermiteCubic" });
+  const numericalIntegration = new NumericalIntegration({
+    meshDimension: "1D",
+    elementOrder: "hermiteCubic",
+  });
   const { gaussPoints, gaussWeights } = numericalIntegration.getGaussPointsAndWeights();
 
   // Matrix assembly

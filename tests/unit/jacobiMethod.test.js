@@ -1,11 +1,20 @@
 /**
+ * ════════════════════════════════════════════════════════════════
+ *  FEAScript Core Library
+ *  Lightweight Finite Element Simulation in JavaScript
+ *  Version: 0.3.0 (RC) | https://feascript.com
+ *  MIT License © 2023–2026 FEAScript
+ * ════════════════════════════════════════════════════════════════
+ */
+
+/**
  * Unit tests for jacobiSolver
  *
  * Covers:
  *  - Success case on a diagonally dominant 2x2 system
  *  - Non-convergence when maxIterations is too small
  *
- * Run: node tests/unit/jacobiMethod.test.js
+ * Run: node tests/unit/jacobiMethod.test.js (or npm test)
  */
 
 import { jacobiSolver } from "../../src/methods/jacobiSolver.js";
@@ -28,12 +37,9 @@ function assert(condition, message) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// 1. SUCCESS CASE — diagonally dominant 2x2 system
-//
+// Diagonally dominant system with exact solution x = 1, y = 1
 //   10x + 2y = 12      exact solution: x = 1, y = 1
 //    1x + 5y = 6
-// ---------------------------------------------------------------------------
 basicLog("");
 basicLog("[1] Success case");
 
@@ -54,12 +60,15 @@ assert(result.iterations > 0, "At least one iteration was performed");
 assert(result.iterations <= 500, "Converges within configured iteration limit");
 
 const tolerance = 1e-6;
-assert(Math.abs(result.solutionVector[0] - 1) < tolerance, `x ~= 1 (got ${result.solutionVector[0]})`);
-assert(Math.abs(result.solutionVector[1] - 1) < tolerance, `y ~= 1 (got ${result.solutionVector[1]})`);
+assert(
+  Math.abs(result.solutionVector[0] - 1) < tolerance,
+  `x ~= 1 (got ${result.solutionVector[0]})`
+);
+assert(
+  Math.abs(result.solutionVector[1] - 1) < tolerance,
+  `y ~= 1 (got ${result.solutionVector[1]})`
+);
 
-// ---------------------------------------------------------------------------
-// 2. NON-CONVERGENCE CASE — force early stop
-// ---------------------------------------------------------------------------
 basicLog("");
 basicLog("[2] Non-convergence case");
 
@@ -68,17 +77,24 @@ const hardResult = jacobiSolver(A, b, x0, {
   tolerance: 1e-20,
 });
 
-assert(hardResult.converged === false, "Method reports non-convergence with too few iterations");
-assert(hardResult.iterations === 1, "Method reports the configured iteration cap");
-assert(hardResult.solutionVector.length === 2, "Returns a solution vector of expected size");
+assert(
+  hardResult.converged === false,
+  "Method reports non-convergence with too few iterations"
+);
+assert(
+  hardResult.iterations === 1,
+  "Method reports the configured iteration cap"
+);
+assert(
+  hardResult.solutionVector.length === 2,
+  "Returns a solution vector of expected size"
+);
 
-// ---------------------------------------------------------------------------
-// Summary
-// ---------------------------------------------------------------------------
+basicLog("");
 if (failed > 0) {
-  errorLog(`${passed + failed} assertions — ${passed} passed, ${failed} failed.`);
+  errorLog(`${passed} passed, ${failed} failed.`);
 } else {
-  basicLog(`${passed + failed} assertions — ${passed} passed, ${failed} failed.`);
+  basicLog(`${passed} passed, ${failed} failed.`);
 }
 basicLog("================================");
 if (failed > 0) process.exit(1);

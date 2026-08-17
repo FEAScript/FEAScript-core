@@ -1,15 +1,26 @@
 /**
+ * ════════════════════════════════════════════════════════════════
+ *  FEAScript Core Library
+ *  Lightweight Finite Element Simulation in JavaScript
+ *  Version: 0.3.0 (RC) | https://feascript.com
+ *  MIT License © 2023–2026 FEAScript
+ * ════════════════════════════════════════════════════════════════
+ */
+
+/**
  * Regression test for the 1D Euler-Bernoulli beam model (EulerBernoulliBeam)
  *
- * Replicates the exact setup from Beam1DEuler_Bernoulli.js — the "Bending of a
- * Beam" example from J.N. Reddy, "An Introduction to the Finite Element Method",
- * 3rd ed., McGraw-Hill, 2006 (FEM1D example problems, Chapter 7) — and asserts:
+ * Replicates the exact setup from
+ * examples/eulerBernoulliBeamScript/clampedSpringSupportedBeam1D/
+ * clampedSpringSupportedBeam1D.js — the "Bending of a Beam" example from J.N.
+ * Reddy, "An Introduction to the Finite Element Method", 3rd ed., McGraw-Hill,
+ * 2006 (FEM1D example problems, Chapter 7) — and asserts:
  *   1) the deflection/rotation solution vector against known-good baseline values
  *   2) global force and moment equilibrium of the resulting FE solution, which
  *      holds regardless of the specific numeric baseline and independently
  *      confirms the assembled system is physically consistent
  *
- * Run: node tests/regression/EulerBernoulliBeam/regression.test.js
+ * Run: node tests/regression/EulerBernoulliBeam/regression.test.js (or npm test)
  */
 
 import * as mathjs from "mathjs";
@@ -57,18 +68,26 @@ function runSimulation() {
 
   model.addBoundaryCondition("1", [["fixed"]]);
   model.addBoundaryCondition("2", [["pinned"], ["moment", appliedMoment]]);
-  model.addBoundaryCondition("3", [["spring", springConstant], ["force", appliedForce]]);
+  model.addBoundaryCondition("3", [
+    ["spring", springConstant],
+    ["force", appliedForce],
+  ]);
   model.setSolverMethod("lusolve");
 
   return model.solve();
 }
 
+let passed = 0;
+let failed = 0;
+
 function assert(condition, message) {
   if (!condition) {
     errorLog(`FAIL: ${message}`);
-    process.exit(1);
+    failed++;
+  } else {
+    basicLog(`PASS: ${message}`);
+    passed++;
   }
-  basicLog(`PASS: ${message}`);
 }
 
 basicLog("");
@@ -80,29 +99,20 @@ const { solutionVector } = runSimulation();
 const flatSolution = solutionVector.map((entry) => (Array.isArray(entry) ? entry[0] : entry));
 const [w1, theta1, w2, theta2, w3, theta3] = flatSolution;
 
-// ---------------------------------------------------------------------------
-// 1) Baseline values
-// ---------------------------------------------------------------------------
+basicLog("");
+basicLog("[1] Baseline deflection/rotation values");
+
 assert(Math.abs(w1 - EXPECTED.w1) < TOLERANCE, `w1: expected ~${EXPECTED.w1}, got ${w1}`);
 assert(Math.abs(theta1 - EXPECTED.theta1) < TOLERANCE, `theta1: expected ~${EXPECTED.theta1}, got ${theta1}`);
 assert(Math.abs(w2 - EXPECTED.w2) < TOLERANCE, `w2: expected ~${EXPECTED.w2}, got ${w2}`);
-assert(
-  Math.abs(theta2 - EXPECTED.theta2) < TOLERANCE,
-  `theta2: expected ${EXPECTED.theta2}, got ${theta2}`,
-);
+assert(Math.abs(theta2 - EXPECTED.theta2) < TOLERANCE, `theta2: expected ${EXPECTED.theta2}, got ${theta2}`);
 assert(Math.abs(w3 - EXPECTED.w3) < TOLERANCE, `w3: expected ${EXPECTED.w3}, got ${w3}`);
-assert(
-  Math.abs(theta3 - EXPECTED.theta3) < TOLERANCE,
-  `theta3: expected ${EXPECTED.theta3}, got ${theta3}`,
-);
+assert(Math.abs(theta3 - EXPECTED.theta3) < TOLERANCE, `theta3: expected ${EXPECTED.theta3}, got ${theta3}`);
 
-// ---------------------------------------------------------------------------
-// 2) Global equilibrium check, independent of the specific baseline values above.
-//    Recompute the raw (no boundary conditions applied) element assembly and use
-//    it to recover support reactions: at any DOF, K_raw.u - F_raw equals whatever
-//    external generalized force (reaction, spring force, or applied load) is
-//    required to balance that row.
-// ---------------------------------------------------------------------------
+// Reassemble without boundary conditions to recover reactions for the equilibrium checks
+basicLog("");
+basicLog("[2] Global force and moment equilibrium");
+
 const meshDataForCheck = {
   nodesXCoordinates: [0, 5, 10],
   nop: [
@@ -156,4 +166,11 @@ assert(
   `Global moment equilibrium about x=0 holds (sum=${sumMomentsAboutOrigin})`,
 );
 
+basicLog("");
+if (failed > 0) {
+  errorLog(`${passed} passed, ${failed} failed.`);
+} else {
+  basicLog(`${passed} passed, ${failed} failed.`);
+}
 basicLog("================================");
+if (failed > 0) process.exit(1);
