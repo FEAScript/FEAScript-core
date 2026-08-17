@@ -20,7 +20,7 @@
     "build": "rollup -c",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build",
-    "test": "node tests/run-all-tests.js",
+    "test": "node --test tests",
     "format": "prettier --write ."
   },
   "repository": {

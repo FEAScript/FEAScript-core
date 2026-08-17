@@ -6,7 +6,7 @@ This test guards the numerical output of the 1D Euler-Bernoulli beam example aga
 unintended changes to the beam solver, assembler, or mesh-generation logic.
 
 It replicates exactly the problem set up in
-[`Beam1DEuler_Bernoulli.js`](../../../examples/Beam1DFEM/Beam1DEuler_Bernoulli.js) — the
+[`clampedSpringSupportedBeam1D.js`](../../../examples/eulerBernoulliBeamScript/clampedSpringSupportedBeam1D/clampedSpringSupportedBeam1D.js) — the
 "Bending of a Beam" example from J.N. Reddy, _An Introduction to the Finite Element Method_,
 3rd ed., McGraw-Hill, 2006 (FEM1D example problems, Chapter 7) — and asserts both a set of
 known-good baseline values and, independently of those baseline numbers, that the resulting
@@ -14,27 +14,27 @@ finite element solution satisfies global static equilibrium.
 
 ## Problem setup
 
-| Parameter                    | Value                                                   |
-| ----------------------------- | -------------------------------------------------------- |
-| Domain                        | 1D beam, 0 – 10 m                                        |
-| Mesh                          | 2 cubic Hermite beam elements of 5 m each (3 nodes)      |
-| Bending stiffness EI          | 2.0 × 10⁶ N·m² (constant)                                |
-| Distributed load              | −1,000 N/m over 0 ≤ x ≤ 5 m only                          |
-| Node 1 (x = 0)                | Fixed (clamped): w = 0, theta = 0                        |
-| Node 2 (x = 5)                | Pinned (roller): w = 0, plus an applied moment M = 1,250 N·m |
-| Node 3 (x = 10)               | Transverse spring k = 200 N/m, plus a point load P = −2,500 N |
-| Solver                        | LU decomposition (`lusolve`)                              |
+| Parameter            | Value                                                         |
+| -------------------- | ------------------------------------------------------------- |
+| Domain               | 1D beam, 0 – 10 m                                             |
+| Mesh                 | 2 cubic Hermite beam elements of 5 m each (3 nodes)           |
+| Bending stiffness EI | 2.0 × 10⁶ N·m² (constant)                                     |
+| Distributed load     | −1,000 N/m over 0 ≤ x ≤ 5 m only                              |
+| Node 1 (x = 0)       | Fixed (clamped): w = 0, theta = 0                             |
+| Node 2 (x = 5)       | Pinned (roller): w = 0, plus an applied moment M = 1,250 N·m  |
+| Node 3 (x = 10)      | Transverse spring k = 200 N/m, plus a point load P = −2,500 N |
+| Solver               | LU decomposition (`lusolve`)                                  |
 
 ## Expected values
 
-| Quantity                | Value                     |
-| ------------------------ | ------------------------- |
-| w₁ (deflection, node 1)  | 0 m                        |
-| θ₁ (rotation, node 1)    | 0 rad                      |
-| w₂ (deflection, node 2)  | 0 m                        |
-| θ₂ (rotation, node 2)    | −5.6790761806 × 10⁻³ rad   |
-| w₃ (deflection, node 3)  | −8.0144777663 × 10⁻² m     |
-| θ₃ (rotation, node 3)    | −2.1203895209 × 10⁻² rad   |
+| Quantity                | Value                    |
+| ----------------------- | ------------------------ |
+| w₁ (deflection, node 1) | 0 m                      |
+| θ₁ (rotation, node 1)   | 0 rad                    |
+| w₂ (deflection, node 2) | 0 m                      |
+| θ₂ (rotation, node 2)   | −5.6790761806 × 10⁻³ rad |
+| w₃ (deflection, node 3) | −8.0144777663 × 10⁻² m   |
+| θ₃ (rotation, node 3)   | −2.1203895209 × 10⁻² rad |
 
 Tolerance used in the baseline assertions: `1e-8`.
 
@@ -77,16 +77,24 @@ node tests/regression/EulerBernoulliBeam/regression.test.js
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.
 
+A passing run prints a `PASS:` line for each check, followed by a summary line:
+
+```
+8 passed, 0 failed.
+```
+
+A failing run prints one or more `FAIL:` lines, ends with the same summary line format, and exits with code 1.
+
 ## After modifying the code
 
-| Situation                                                                    | Action                                                                                                    |
-| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| Bug fix that should not change results                                       | Run the test — it must still pass.                                                                        |
-| Intentional algorithm change (new integration rule, new element type, etc.)  | Re-derive the expected values, update `EXPECTED` in `regression.test.js`, and document the reason here.  |
-| New boundary condition type                                                  | Update both the test and `Beam1DEuler_Bernoulli.js` together.                                             |
+| Situation                                                                   | Action                                                                                                  |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Bug fix that should not change results                                      | Run the test — it must still pass.                                                                      |
+| Intentional algorithm change (new integration rule, new element type, etc.) | Re-derive the expected values, update `EXPECTED` in `regression.test.js`, and document the reason here. |
+| New boundary condition type                                                 | Update both the test and `clampedSpringSupportedBeam1D.js` together.                                    |
 
 ## Change log
 
 | Date       | Change                      | New expected values |
-| ---------- | ---------------------------- | -------------------- |
-| 2026-07-17 | Initial regression baseline | See table above      |
+| ---------- | --------------------------- | ------------------- |
+| 2026-07-17 | Initial regression baseline | See table above     |

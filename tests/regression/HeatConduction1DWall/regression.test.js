@@ -1,10 +1,19 @@
 /**
+ * ════════════════════════════════════════════════════════════════
+ *  FEAScript Core Library
+ *  Lightweight Finite Element Simulation in JavaScript
+ *  Version: 0.3.0 (RC) | https://feascript.com
+ *  MIT License © 2023–2026 FEAScript
+ * ════════════════════════════════════════════════════════════════
+ */
+
+/**
  * Regression test for HeatConduction1DWall
  *
- * Replicates the exact setup from HeatConduction1DWall.html and asserts
- * that the temperature at node 0 (convection boundary) remains 10.29412.
+ * Replicates the physical setup from heatConduction1DWall.js using lusolve and
+ * asserts that the temperature at node 0 (convection boundary) remains 10.29412
  *
- * Run: node tests/regression/HeatConduction1DWall/regression.test.js
+ * Run: node tests/regression/HeatConduction1DWall/regression.test.js (or npm test)
  */
 
 import * as mathjs from "mathjs";
@@ -36,16 +45,22 @@ function runSimulation() {
   return model.solve();
 }
 
+let passed = 0;
+let failed = 0;
+
 function assert(condition, message) {
   if (!condition) {
     errorLog(`FAIL: ${message}`);
-    process.exit(1);
+    failed++;
+  } else {
+    basicLog(`PASS: ${message}`);
+    passed++;
   }
 }
 
 basicLog("");
 basicLog("================================");
-basicLog("Starting test in solid heat transfer 1D wall...");
+basicLog("Starting regression test for solid heat transfer in a 1D wall...");
 const { solutionVector } = runSimulation();
 
 // solutionVector from math.lusolve is a nested array: [[T0], [T1], ...]
@@ -56,5 +71,11 @@ assert(
   `Temperature at node 0: expected ${EXPECTED_T0}, got ${T0} (tolerance ${TOLERANCE})`,
 );
 
-basicLog(`PASS: T(x=0) = ${T0.toFixed(5)} (expected ${EXPECTED_T0})`);
+basicLog("");
+if (failed > 0) {
+  errorLog(`${passed} passed, ${failed} failed.`);
+} else {
+  basicLog(`${passed} passed, ${failed} failed.`);
+}
 basicLog("================================");
+if (failed > 0) process.exit(1);
