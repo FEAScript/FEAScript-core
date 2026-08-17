@@ -16,6 +16,7 @@ import { assembleFrontPropagationMat } from "./models/frontPropagation.js";
 import { assembleGeneralFormPDEMat, assembleGeneralFormPDEFront } from "./models/generalFormPDE.js";
 import { assembleHeatConductionMat, assembleHeatConductionFront } from "./models/heatConduction.js";
 import { assembleCreepingFlowMatrix } from "./models/creepingFlow.js";
+import { assembleEulerBernoulliBeamMat } from "./models/eulerBernoulliBeam.js";
 import { runFrontalSolver } from "./methods/frontalSolver.js";
 import { basicLog, debugLog, warnLog, errorLog } from "./utilities/logging.js";
 
@@ -212,7 +213,29 @@ export class FEAScriptModel {
         totalNodesPressure: creepingFlowResult.totalNodesPressure,
         pressureNodeIndices: creepingFlowResult.pressureNodeIndices,
       };
+    } else if (this.solverConfig === "eulerBernoulliBeamScript") {
+      // Use regular linear solver methods for the 1D Euler-Bernoulli beam model
+      const beamResult = assembleEulerBernoulliBeamMat(
+        meshData,
+        this.boundaryConditions,
+        this.coefficientFunctions,
+      );
+      jacobianMatrix = beamResult.jacobianMatrix;
+      residualVector = beamResult.residualVector;
+
+      const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector, {
+        maxIterations: options.maxIterations ?? this.maxIterations,
+        tolerance: options.tolerance ?? this.tolerance,
+      });
+      solutionVector = linearSystemResult.solutionVector;
+
+      // Store beam-specific metadata for solution extraction (2 DOFs per node: deflection, rotation)
+      this._eulerBernoulliBeamMetadata = {
+        dofsPerNode: beamResult.dofsPerNode,
+        totalNodesX: meshData.totalNodesX,
+      };
     }
+
     console.timeEnd("totalSolvingTime");
     basicLog("Solving process completed");
 

@@ -43,6 +43,20 @@ export class NumericalIntegration {
       gaussWeights[0] = 5 / 18;
       gaussWeights[1] = 8 / 18;
       gaussWeights[2] = 5 / 18;
+    } else if (this.elementOrder === "hermiteCubic") {
+      // For cubic Hermite elements, use 6-point Gauss quadrature (exact up to degree 11)
+      gaussPoints[0] = 0.03376524289842399;
+      gaussPoints[1] = 0.16939530676686775;
+      gaussPoints[2] = 0.38069040695840155;
+      gaussPoints[3] = 0.61930959304159845;
+      gaussPoints[4] = 0.8306046932331322;
+      gaussPoints[5] = 0.966234757101576;
+      gaussWeights[0] = 0.08566224618958517;
+      gaussWeights[1] = 0.1803807865240693;
+      gaussWeights[2] = 0.23395696728634552;
+      gaussWeights[3] = 0.23395696728634552;
+      gaussWeights[4] = 0.1803807865240693;
+      gaussWeights[5] = 0.08566224618958517;
     }
 
     return { gaussPoints, gaussWeights };
