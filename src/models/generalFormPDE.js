@@ -13,40 +13,13 @@ import { GenericBoundaryConditions } from "./genericBoundaryConditions.js";
 import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 
 /**
- * Assembles the discrete weak form of a general 1D scalar linear PDE of the form
- *
- *   -d/dx (A(x) du/dx) + B(x) du/dx + C(x) u = D(x)
- *
- * where:
- *   - u(x) is the scalar unknown field being solved for,
- *   - A(x) is the diffusion or stiffness coefficient,
- *   - B(x) is the advection or transport coefficient,
- *   - C(x) is the reaction or damping coefficient,
- *   - D(x) is the source or forcing term.
- *
- * This is a general-purpose finite-element model rather than a fluid-only
- * formulation. In practice, the same structure can represent diffusion,
- * transport, reaction, damping, or stiffness-dominated scalar field problems.
- *
- * In the finite-element implementation, the residual and Jacobian are assembled
- * from the Galerkin weak form at each Gauss point. The code evaluates the
- * coefficient functions A(x), B(x), C(x), and D(x) at the mapped physical
- * coordinate x and accumulates the corresponding diffusion, advection,
- * reaction, and source terms into the global system.
- *
- * The resulting algebraic system is:
- *
- *   K(u) = F
- *
- * where K is the assembled Jacobian matrix and F is the residual forcing term.
- *
- * @param {object} meshData - Prepared mesh data containing nodal coordinates,
- *                           element connectivity, element order, and dimension.
- * @param {object} boundaryConditions - Boundary condition definition object.
- * @param {object} coefficientFunctions - Functions A(x), B(x), C(x), D(x)
- *                                        describing the PDE coefficients.
- * @returns {{ jacobianMatrix: number[][], residualVector: number[] }}
- *          The assembled global Jacobian matrix and residual vector.
+ * Function to assemble the Jacobian matrix and residuals vector for the general form PDE model
+ * @param {object} meshData - Object containing prepared mesh data
+ * @param {object} boundaryConditions - Object containing boundary conditions
+ * @param {object} coefficientFunctions - Functions A(x), B(x), C(x), D(x) for the PDE
+ * @returns {object} An object containing:
+ *  - jacobianMatrix: The assembled Jacobian matrix
+ *  - residualVector: The assembled residual vector
  */
 export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coefficientFunctions) {
   basicLog("Starting general form PDE matrix assembly...");
@@ -180,25 +153,9 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
 }
 
 /**
- * Assembles the local element contribution for the same general 1D PDE model
- * used by the frontal solver. The element residual and local Jacobian are
- * formed by evaluating the same diffusion, advection, and reaction terms at
- * each Gauss point, but only for the current element rather than the full mesh.
- *
- * The returned local operators are later assembled into the global system by
- * the frontal solver. This allows the same PDE structure to be used in both
- * the full global assembly path and the element-by-element frontal assembly path.
- *
- * @param {object} data - Element assembly input for the frontal solver, containing:
- *   - elementIndex: index of the current element in the mesh,
- *   - nop: element connectivity array,
- *   - meshData: mesh coordinates and dimensionality metadata,
- *   - basisFunctions: interpolation and derivative providers for the element,
- *   - FEAData: numerical integration data such as Gauss points, weights,
- *              and nodes-per-element,
- *   - coefficientFunctions: callback functions A(x), B(x), C(x), and D(x).
- * @returns {{ localJacobianMatrix: number[][], localResidualVector: number[], ngl: number[] }}
- *          Local Jacobian matrix, local residual vector, and global node list.
+ * Function to assemble the frontal solver matrix for the general form PDE model
+ * @param {object} data - Object containing element data for the frontal solver
+ * @returns {object} An object containing local Jacobian matrix and residual vector
  */
 export function assembleGeneralFormPDEFront({
   elementIndex,
