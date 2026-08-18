@@ -8,8 +8,7 @@
  */
 
 /**
- * Plotly-based plotting functions are provided by plotlyPlot.js
- * VTK.js-based plotting and data transformation functions are provided by vtkPlot.js
+ * Function to re-export plotting functions in order to visualize solution fields
  */
 
 export { plotSolution, plotInterpolatedSolution } from "./plotlyPlot.js";

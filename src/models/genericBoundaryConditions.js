@@ -34,6 +34,8 @@ export class GenericBoundaryConditions {
    * Function to impose Dirichlet boundary conditions
    * @param {array} residualVector - The residual vector to be modified
    * @param {array} jacobianMatrix - The Jacobian matrix to be modified
+   * @param {array} [solutionVector] - Current solution (Newton-Raphson iterate); when provided, the
+   *  residual is set to the increment needed to reach the prescribed value instead of the value itself
    *
    * For consistency across both linear and nonlinear formulations,
    * this project always refers to the assembled right-hand side vector
@@ -43,7 +45,7 @@ export class GenericBoundaryConditions {
    * classic stiffness/conductivity matrix and `residualVector`
    * corresponds to the traditional load (RHS) vector.
    */
-  imposeDirichletBoundaryConditions(residualVector, jacobianMatrix) {
+  imposeDirichletBoundaryConditions(residualVector, jacobianMatrix, solutionVector) {
     if (this.meshDimension === "1D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
         if (this.boundaryConditions[boundaryKey][0] === "constantValue") {
@@ -62,8 +64,10 @@ export class GenericBoundaryConditions {
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`,
                 );
-                // Set the residual vector to the value
-                residualVector[globalNodeIndex] = value;
+                // Set the residual vector to the value, or the increment needed to reach it for Newton-Raphson
+                residualVector[globalNodeIndex] = solutionVector
+                  ? value - solutionVector[globalNodeIndex]
+                  : value;
                 // Set the Jacobian matrix row to zero
                 for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
                   jacobianMatrix[globalNodeIndex][colIndex] = 0;
@@ -83,8 +87,10 @@ export class GenericBoundaryConditions {
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`,
                 );
-                // Set the residual vector to the value
-                residualVector[globalNodeIndex] = value;
+                // Set the residual vector to the value, or the increment needed to reach it for Newton-Raphson
+                residualVector[globalNodeIndex] = solutionVector
+                  ? value - solutionVector[globalNodeIndex]
+                  : value;
                 // Set the Jacobian matrix row to zero
                 for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
                   jacobianMatrix[globalNodeIndex][colIndex] = 0;
@@ -116,8 +122,10 @@ export class GenericBoundaryConditions {
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`,
                 );
-                // Set the residual vector to the value
-                residualVector[globalNodeIndex] = value;
+                // Set the residual vector to the value, or the increment needed to reach it for Newton-Raphson
+                residualVector[globalNodeIndex] = solutionVector
+                  ? value - solutionVector[globalNodeIndex]
+                  : value;
                 // Set the Jacobian matrix row to zero
                 for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
                   jacobianMatrix[globalNodeIndex][colIndex] = 0;
@@ -139,8 +147,10 @@ export class GenericBoundaryConditions {
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`,
                 );
-                // Set the residual vector to the value
-                residualVector[globalNodeIndex] = value;
+                // Set the residual vector to the value, or the increment needed to reach it for Newton-Raphson
+                residualVector[globalNodeIndex] = solutionVector
+                  ? value - solutionVector[globalNodeIndex]
+                  : value;
                 // Set the Jacobian matrix row to zero
                 for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
                   jacobianMatrix[globalNodeIndex][colIndex] = 0;
