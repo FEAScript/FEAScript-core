@@ -288,7 +288,11 @@ export class FEAScriptModel {
 
     basicLog(`Using solver: ${this.solverConfig}`);
     if (this.solverConfig === "heatConductionScript") {
-      ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(meshData, this.boundaryConditions));
+      ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(
+        meshData,
+        this.boundaryConditions,
+        this.coefficientFunctions,
+      ));
 
       if (this.solverMethod === "jacobi-gpu") {
         const { solutionVector: x } = await solveLinearSystemAsync(
