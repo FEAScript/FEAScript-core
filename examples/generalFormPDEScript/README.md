@@ -10,6 +10,10 @@ This directory contains Node.js examples demonstrating how to use the FEAScript 
 
 This example demonstrates solving a one-dimensional advection-diffusion problem with a Gaussian source term. The problem models the transport of a substance under the effects of both diffusion and advection. For detailed information on the model setup, refer to the corresponding [tutorial](https://feascript.com/tutorials/advection-diffusion-1d.html) in the FEAScript website.
 
+#### 2. Nonlinear Reaction-Diffusion (`nonlinearReactionDiffusion1D.js`)
+
+This example demonstrates solving a one-dimensional nonlinear reaction-diffusion problem with a quadratic reaction term, using the Newton-Raphson method (`nonlinear: true`).
+
 ## Running the Node.js Examples
 
 #### 1. Create package.json with ES module support:
