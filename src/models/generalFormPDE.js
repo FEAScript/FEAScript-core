@@ -259,3 +259,146 @@ export function assembleGeneralFormPDEFront({
     ngl,
   };
 }
+
+/**
+ * Function to assemble the Jacobian matrix and residual vector for the nonlinear general form PDE model,
+ * to be used with the Newton-Raphson solver
+ * @param {object} meshData - Object containing prepared mesh data
+ * @param {object} boundaryConditions - Object containing boundary conditions
+ * @param {object} coefficientFunctions - Functions A(x), B(x), C(x) for the linear terms, plus D(x, u) and
+ *  dDdu(x, u) for the nonlinear reaction/source term and its derivative with respect to u
+ * @param {array} solutionVector - The current solution vector (Newton-Raphson iterate)
+ * @returns {object} An object containing:
+ *  - jacobianMatrix: The assembled Jacobian matrix (negative of dResidual/du)
+ *  - residualVector: The assembled residual vector
+ */
+export function assembleGeneralFormPDENonlinearMat(
+  meshData,
+  boundaryConditions,
+  coefficientFunctions,
+  solutionVector,
+) {
+  basicLog("Starting nonlinear general form PDE matrix assembly...");
+
+  // Extract mesh data
+  const {
+    nodesXCoordinates,
+    nodesYCoordinates,
+    nop,
+    boundaryElements,
+    totalElements,
+    meshDimension,
+    elementOrder,
+  } = meshData;
+
+  // Extract coefficient functions
+  const { A, B, C, D, dDdu } = coefficientFunctions;
+
+  // Initialize FEA components
+  const FEAData = initializeFEA(meshData);
+  const {
+    residualVector,
+    jacobianMatrix,
+    localToGlobalMap,
+    basisFunctions,
+    gaussPoints,
+    gaussWeights,
+    nodesPerElement,
+  } = FEAData;
+
+  if (meshDimension === "1D") {
+    // 1D nonlinear general form PDE
+
+    // Matrix assembly
+    for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {
+      // Map local element nodes to global mesh nodes
+      for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
+        // Convert to 0-based indexing
+        localToGlobalMap[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]) - 1;
+      }
+
+      // Loop over Gauss points
+      for (let gaussPointIndex = 0; gaussPointIndex < gaussPoints.length; gaussPointIndex++) {
+        // Get basis functions for the current Gauss point
+        const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(
+          gaussPoints[gaussPointIndex],
+        );
+
+        // Perform isoparametric mapping
+        const { detJacobian, basisFunctionDerivX } = performIsoparametricMapping1D({
+          basisFunction,
+          basisFunctionDerivKsi,
+          nodesXCoordinates,
+          localToGlobalMap,
+          nodesPerElement,
+        });
+
+        // Calculate the physical coordinate, solution value and solution derivative at this Gauss point
+        let xCoord = 0;
+        let uValue = 0;
+        let uDerivX = 0;
+        for (let i = 0; i < nodesPerElement; i++) {
+          xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunction[i];
+          uValue += solutionVector[localToGlobalMap[i]] * basisFunction[i];
+          uDerivX += solutionVector[localToGlobalMap[i]] * basisFunctionDerivX[i];
+        }
+
+        // Evaluate coefficient functions at this physical coordinate and solution state
+        const a = A(xCoord);
+        const b = B(xCoord);
+        const c = C(xCoord);
+        const d = D(xCoord, uValue);
+        const dDduVal = dDdu(xCoord, uValue);
+
+        // Computation of the residual vector and the Newton-Raphson Jacobian matrix
+        for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
+          const globalNodeIndex1 = localToGlobalMap[localNodeIndex1];
+
+          // Residual contribution (diffusion, advection, reaction and nonlinear source terms)
+          residualVector[globalNodeIndex1] +=
+            gaussWeights[gaussPointIndex] *
+            detJacobian *
+            (a * uDerivX * basisFunctionDerivX[localNodeIndex1] -
+              b * uDerivX * basisFunction[localNodeIndex1] -
+              c * uValue * basisFunction[localNodeIndex1] +
+              d * basisFunction[localNodeIndex1]);
+
+          for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
+            const globalNodeIndex2 = localToGlobalMap[localNodeIndex2];
+
+            // Jacobian is the negative of the residual derivative, matching the Newton-Raphson solver convention
+            jacobianMatrix[globalNodeIndex1][globalNodeIndex2] +=
+              -gaussWeights[gaussPointIndex] *
+              detJacobian *
+              (a * basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] -
+                b * basisFunctionDerivX[localNodeIndex2] * basisFunction[localNodeIndex1] -
+                c * basisFunction[localNodeIndex1] * basisFunction[localNodeIndex2] +
+                dDduVal * basisFunction[localNodeIndex1] * basisFunction[localNodeIndex2]);
+          }
+        }
+      }
+    }
+  } else if (meshDimension === "2D") {
+    errorLog("2D nonlinear general form PDE is not yet supported in assembleGeneralFormPDENonlinearMat.");
+    // 2D nonlinear general form PDE - empty for now
+  }
+
+  // Apply boundary conditions
+  const genericBoundaryConditions = new GenericBoundaryConditions(
+    boundaryConditions,
+    boundaryElements,
+    nop,
+    meshDimension,
+    elementOrder,
+  );
+
+  // Apply Dirichlet boundary conditions only (as a Newton-Raphson increment, since solutionVector is passed)
+  genericBoundaryConditions.imposeDirichletBoundaryConditions(residualVector, jacobianMatrix, solutionVector);
+
+  basicLog("Nonlinear general form PDE matrix assembly completed");
+
+  return {
+    jacobianMatrix,
+    residualVector,
+  };
+}

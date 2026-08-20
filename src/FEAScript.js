@@ -13,7 +13,11 @@ import { solveLinearSystem } from "./methods/linearSystemSolver.js";
 import { solveLinearSystemAsync } from "./methods/linearSystemSolver.js";
 import { prepareMesh } from "./mesh/meshUtils.js";
 import { assembleFrontPropagationMat } from "./models/frontPropagation.js";
-import { assembleGeneralFormPDEMat, assembleGeneralFormPDEFront } from "./models/generalFormPDE.js";
+import {
+  assembleGeneralFormPDEMat,
+  assembleGeneralFormPDEFront,
+  assembleGeneralFormPDENonlinearMat,
+} from "./models/generalFormPDE.js";
 import { assembleHeatConductionMat, assembleHeatConductionFront } from "./models/heatConduction.js";
 import { assembleCreepingFlowMatrix } from "./models/creepingFlow.js";
 import { assembleEulerBernoulliBeamMat } from "./models/eulerBernoulliBeam.js";
@@ -52,6 +56,11 @@ export class FEAScriptModel {
     if (options?.coefficientFunctions !== undefined) {
       this.coefficientFunctions = options.coefficientFunctions;
       debugLog("coefficientFunctions set");
+    }
+    // Flag to solve the PDE with the Newton-Raphson method instead of a direct linear solve
+    if (options?.nonlinear !== undefined) {
+      this.nonlinear = options.nonlinear;
+      debugLog(`nonlinear set to ${this.nonlinear}`);
     }
     // Only update if a value is provided
     if (options?.maxIterations !== undefined) {
@@ -199,6 +208,30 @@ export class FEAScriptModel {
         errorLog(
           "Frontal solver is not yet supported for generalFormPDEScript. Please use 'lusolve' or 'jacobi'.",
         );
+      } else if (this.nonlinear) {
+        // Solve the nonlinear PDE with the Newton-Raphson method
+        const context = {
+          meshData,
+          boundaryConditions: this.boundaryConditions,
+          solverMethod: this.solverMethod,
+          maxIterations: options.maxIterations ?? this.maxIterations,
+          tolerance: options.tolerance ?? this.tolerance,
+        };
+
+        const newtonRaphsonResult = newtonRaphson(
+          (meshDataArg, boundaryConditionsArg, solutionVectorArg) =>
+            assembleGeneralFormPDENonlinearMat(
+              meshDataArg,
+              boundaryConditionsArg,
+              this.coefficientFunctions,
+              solutionVectorArg,
+            ),
+          context,
+        );
+
+        jacobianMatrix = newtonRaphsonResult.jacobianMatrix;
+        residualVector = newtonRaphsonResult.residualVector;
+        solutionVector = newtonRaphsonResult.solutionVector;
       } else {
         // Use regular linear solver methods
         ({ jacobianMatrix, residualVector } = assembleGeneralFormPDEMat(
