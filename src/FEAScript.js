@@ -81,6 +81,19 @@ export class FEAScriptModel {
   }
 
   addBoundaryCondition(boundaryKey, condition) {
+    // Normalize deprecated boundary condition type strings and emit deprecation warnings
+    const deprecatedBoundaryConditionTypes = {
+      constantTemp: "constantTemperature",
+    };
+    const originalType = condition[0];
+    if (Object.prototype.hasOwnProperty.call(deprecatedBoundaryConditionTypes, originalType)) {
+      const normalizedType = deprecatedBoundaryConditionTypes[originalType];
+      warnLog(
+        `Boundary condition type "${originalType}" is deprecated and will be removed in a future version. ` +
+          `Use "${normalizedType}" instead.`,
+      );
+      condition = [normalizedType, ...condition.slice(1)];
+    }
     this.boundaryConditions[boundaryKey] = condition;
     debugLog(`boundaryConditions added for boundary: ${boundaryKey}, type: ${condition[0]}`);
   }
@@ -136,11 +149,16 @@ export class FEAScriptModel {
           assembleHeatConductionFront,
           meshData,
           this.boundaryConditions,
+          { coefficientFunctions: this.coefficientFunctions },
         );
         solutionVector = frontalResult.solutionVector;
       } else {
         // Use regular linear solver methods
-        ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(meshData, this.boundaryConditions));
+        ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(
+          meshData,
+          this.boundaryConditions,
+          this.coefficientFunctions,
+        ));
         const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector, {
           maxIterations: options.maxIterations ?? this.maxIterations,
           tolerance: options.tolerance ?? this.tolerance,
@@ -303,7 +321,11 @@ export class FEAScriptModel {
 
     basicLog(`Using solver: ${this.solverConfig}`);
     if (this.solverConfig === "heatConductionScript") {
-      ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(meshData, this.boundaryConditions));
+      ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(
+        meshData,
+        this.boundaryConditions,
+        this.coefficientFunctions,
+      ));
 
       if (this.solverMethod === "jacobi-gpu") {
         const { solutionVector: x } = await solveLinearSystemAsync(

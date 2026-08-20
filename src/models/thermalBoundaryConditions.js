@@ -46,10 +46,10 @@ export class ThermalBoundaryConditions {
   imposeConstantTempBoundaryConditions(residualVector, jacobianMatrix) {
     if (this.meshDimension === "1D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
-        if (this.boundaryConditions[boundaryKey][0] === "constantTemp") {
-          const tempValue = this.boundaryConditions[boundaryKey][1];
+        if (this.boundaryConditions[boundaryKey][0] === "constantTemperature") {
+          const constantTemperatureValue = this.boundaryConditions[boundaryKey][1];
           debugLog(
-            `Boundary ${boundaryKey}: Applying constant temperature of ${tempValue} K (Dirichlet condition)`,
+            `Boundary ${boundaryKey}: Applying constant temperature of ${constantTemperatureValue} K (Dirichlet condition)`,
           );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
             if (this.elementOrder === "linear") {
@@ -65,7 +65,7 @@ export class ThermalBoundaryConditions {
                   }, local node ${nodeIndex + 1})`,
                 );
                 // Set the residual vector to the ConstantTemp value
-                residualVector[globalNodeIndex] = tempValue;
+                residualVector[globalNodeIndex] = constantTemperatureValue;
                 // Set the Jacobian matrix row to zero
                 for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
                   jacobianMatrix[globalNodeIndex][colIndex] = 0;
@@ -86,7 +86,7 @@ export class ThermalBoundaryConditions {
                   }, local node ${nodeIndex + 1})`,
                 );
                 // Set the residual vector to the ConstantTemp value
-                residualVector[globalNodeIndex] = tempValue;
+                residualVector[globalNodeIndex] = constantTemperatureValue;
                 // Set the Jacobian matrix row to zero
                 for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
                   jacobianMatrix[globalNodeIndex][colIndex] = 0;
@@ -100,10 +100,10 @@ export class ThermalBoundaryConditions {
       });
     } else if (this.meshDimension === "2D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
-        if (this.boundaryConditions[boundaryKey][0] === "constantTemp") {
-          const tempValue = this.boundaryConditions[boundaryKey][1];
+        if (this.boundaryConditions[boundaryKey][0] === "constantTemperature") {
+          const constantTemperatureValue = this.boundaryConditions[boundaryKey][1];
           debugLog(
-            `Boundary ${boundaryKey}: Applying constant temperature of ${tempValue} K (Dirichlet condition)`,
+            `Boundary ${boundaryKey}: Applying constant temperature of ${constantTemperatureValue} K (Dirichlet condition)`,
           );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
             if (this.elementOrder === "linear") {
@@ -121,7 +121,7 @@ export class ThermalBoundaryConditions {
                   }, local node ${nodeIndex + 1})`,
                 );
                 // Set the residual vector to the ConstantTemp value
-                residualVector[globalNodeIndex] = tempValue;
+                residualVector[globalNodeIndex] = constantTemperatureValue;
                 // Set the Jacobian matrix row to zero
                 for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
                   jacobianMatrix[globalNodeIndex][colIndex] = 0;
@@ -144,7 +144,7 @@ export class ThermalBoundaryConditions {
                   }, local node ${nodeIndex + 1})`,
                 );
                 // Set the residual vector to the ConstantTemp value
-                residualVector[globalNodeIndex] = tempValue;
+                residualVector[globalNodeIndex] = constantTemperatureValue;
                 // Set the Jacobian matrix row to zero
                 for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
                   jacobianMatrix[globalNodeIndex][colIndex] = 0;
@@ -167,10 +167,10 @@ export class ThermalBoundaryConditions {
   imposeConstantTempBoundaryConditionsFront(nodeConstraintCode, boundaryValues) {
     if (this.meshDimension === "1D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
-        if (this.boundaryConditions[boundaryKey][0] === "constantTemp") {
-          const tempValue = this.boundaryConditions[boundaryKey][1];
+        if (this.boundaryConditions[boundaryKey][0] === "constantTemperature") {
+          const constantTemperatureValue = this.boundaryConditions[boundaryKey][1];
           debugLog(
-            `Boundary ${boundaryKey}: Applying constant temperature of ${tempValue} K (Dirichlet condition)`,
+            `Boundary ${boundaryKey}: Applying constant temperature of ${constantTemperatureValue} K (Dirichlet condition)`,
           );
 
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
@@ -190,7 +190,7 @@ export class ThermalBoundaryConditions {
 
                 // Set boundary condition code and value
                 nodeConstraintCode[globalNodeIndex] = 1;
-                boundaryValues[globalNodeIndex] = tempValue;
+                boundaryValues[globalNodeIndex] = constantTemperatureValue;
               });
             } else if (this.elementOrder === "quadratic") {
               const boundarySides = {
@@ -208,7 +208,7 @@ export class ThermalBoundaryConditions {
 
                 // Set boundary condition code and value
                 nodeConstraintCode[globalNodeIndex] = 1;
-                boundaryValues[globalNodeIndex] = tempValue;
+                boundaryValues[globalNodeIndex] = constantTemperatureValue;
               });
             }
           });
@@ -216,10 +216,10 @@ export class ThermalBoundaryConditions {
       });
     } else if (this.meshDimension === "2D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
-        if (this.boundaryConditions[boundaryKey][0] === "constantTemp") {
-          const tempValue = this.boundaryConditions[boundaryKey][1];
+        if (this.boundaryConditions[boundaryKey][0] === "constantTemperature") {
+          const constantTemperatureValue = this.boundaryConditions[boundaryKey][1];
           debugLog(
-            `Boundary ${boundaryKey}: Applying constant temperature of ${tempValue} K (Dirichlet condition)`,
+            `Boundary ${boundaryKey}: Applying constant temperature of ${constantTemperatureValue} K (Dirichlet condition)`,
           );
 
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
@@ -241,7 +241,7 @@ export class ThermalBoundaryConditions {
 
                 // Set boundary condition code and value
                 nodeConstraintCode[globalNodeIndex] = 1;
-                boundaryValues[globalNodeIndex] = tempValue;
+                boundaryValues[globalNodeIndex] = constantTemperatureValue;
               });
             } else if (this.elementOrder === "quadratic") {
               const boundarySides = {
@@ -261,7 +261,7 @@ export class ThermalBoundaryConditions {
 
                 // Set boundary condition code and value
                 nodeConstraintCode[globalNodeIndex] = 1;
-                boundaryValues[globalNodeIndex] = tempValue;
+                boundaryValues[globalNodeIndex] = constantTemperatureValue;
               });
             }
           });
@@ -290,23 +290,23 @@ export class ThermalBoundaryConditions {
     basisFunctions,
   ) {
     // Extract convection parameters from boundary conditions
-    let convectionHeatTranfCoeff = [];
-    let convectionExtTemp = [];
+    let convectionHeatTransferCoefficients = [];
+    let convectionExternalTemperatures = [];
     Object.keys(this.boundaryConditions).forEach((key) => {
       const boundaryCondition = this.boundaryConditions[key];
       if (boundaryCondition[0] === "convection") {
-        convectionHeatTranfCoeff[key] = boundaryCondition[1];
-        convectionExtTemp[key] = boundaryCondition[2];
+        convectionHeatTransferCoefficients[key] = boundaryCondition[1];
+        convectionExternalTemperatures[key] = boundaryCondition[2];
       }
     });
 
     if (this.meshDimension === "1D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
         if (this.boundaryConditions[boundaryKey][0] === "convection") {
-          const convectionCoeff = convectionHeatTranfCoeff[boundaryKey];
-          const extTemp = convectionExtTemp[boundaryKey];
+          const convectionHeatTransferCoefficient = convectionHeatTransferCoefficients[boundaryKey];
+          const externalTemperature = convectionExternalTemperatures[boundaryKey];
           debugLog(
-            `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionCoeff} W/(m²·K) and external temperature T∞=${extTemp} K`,
+            `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionHeatTransferCoefficient} W/(m²·K) and external temperature T∞=${externalTemperature} K`,
           );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
             let nodeIndex;
@@ -334,18 +334,18 @@ export class ThermalBoundaryConditions {
                 elementIndex + 1
               }, local node ${nodeIndex + 1})`,
             );
-            residualVector[globalNodeIndex] += -convectionCoeff * extTemp;
-            jacobianMatrix[globalNodeIndex][globalNodeIndex] += convectionCoeff;
+            residualVector[globalNodeIndex] += -convectionHeatTransferCoefficient * externalTemperature;
+            jacobianMatrix[globalNodeIndex][globalNodeIndex] += convectionHeatTransferCoefficient;
           });
         }
       });
     } else if (this.meshDimension === "2D") {
       Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
         if (this.boundaryConditions[boundaryKey][0] === "convection") {
-          const convectionCoeff = convectionHeatTranfCoeff[boundaryKey];
-          const extTemp = convectionExtTemp[boundaryKey];
+          const convectionHeatTransferCoefficient = convectionHeatTransferCoefficients[boundaryKey];
+          const externalTemperature = convectionExternalTemperatures[boundaryKey];
           debugLog(
-            `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionCoeff} W/(m²·K) and external temperature T∞=${extTemp} K`,
+            `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionHeatTransferCoefficient} W/(m²·K) and external temperature T∞=${externalTemperature} K`,
           );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
             if (this.elementOrder === "linear") {
@@ -430,8 +430,8 @@ export class ThermalBoundaryConditions {
                   -gaussWeights[0] *
                   tangentVectorLength *
                   basisFunction[localNodeIndex] *
-                  convectionCoeff *
-                  extTemp;
+                  convectionHeatTransferCoefficient *
+                  externalTemperature;
 
                 for (
                   let localNodeIndex2 = firstNodeIndex;
@@ -444,7 +444,7 @@ export class ThermalBoundaryConditions {
                     tangentVectorLength *
                     basisFunction[localNodeIndex] *
                     basisFunction[localNodeIndex2] *
-                    convectionCoeff;
+                    convectionHeatTransferCoefficient;
                 }
               }
             } else if (this.elementOrder === "quadratic") {
@@ -529,8 +529,8 @@ export class ThermalBoundaryConditions {
                     -gaussWeights[gaussPointIndex] *
                     tangentVectorLength *
                     basisFunction[localNodeIndex] *
-                    convectionCoeff *
-                    extTemp;
+                    convectionHeatTransferCoefficient *
+                    externalTemperature;
 
                   for (
                     let localNodeIndex2 = firstNodeIndex;
@@ -543,7 +543,7 @@ export class ThermalBoundaryConditions {
                       tangentVectorLength *
                       basisFunction[localNodeIndex] *
                       basisFunction[localNodeIndex2] *
-                      convectionCoeff;
+                      convectionHeatTransferCoefficient;
                   }
                 }
               }
@@ -575,13 +575,13 @@ export class ThermalBoundaryConditions {
     basisFunctions,
   ) {
     // Extract convection parameters from boundary conditions
-    let convectionHeatTranfCoeff = [];
-    let convectionExtTemp = [];
+    let convectionHeatTransferCoefficients = [];
+    let convectionExternalTemperatures = [];
     Object.keys(this.boundaryConditions).forEach((key) => {
       const boundaryCondition = this.boundaryConditions[key];
       if (boundaryCondition[0] === "convection") {
-        convectionHeatTranfCoeff[key] = boundaryCondition[1];
-        convectionExtTemp[key] = boundaryCondition[2];
+        convectionHeatTransferCoefficients[key] = boundaryCondition[1];
+        convectionExternalTemperatures[key] = boundaryCondition[2];
       }
     });
 
@@ -595,10 +595,10 @@ export class ThermalBoundaryConditions {
     // Check if this element is on a convection boundary
     for (const boundaryKey in this.boundaryElements) {
       if (this.boundaryConditions[boundaryKey]?.[0] === "convection") {
-        const convectionCoeff = convectionHeatTranfCoeff[boundaryKey];
-        const extTemp = convectionExtTemp[boundaryKey];
+        const convectionHeatTransferCoefficient = convectionHeatTransferCoefficients[boundaryKey];
+        const externalTemperature = convectionExternalTemperatures[boundaryKey];
         debugLog(
-          `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionCoeff} W/(m²·K) and external temperature T∞=${extTemp} K`,
+          `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionHeatTransferCoefficient} W/(m²·K) and external temperature T∞=${externalTemperature} K`,
         );
 
         // Find if this element is on this boundary and which side
@@ -624,8 +624,8 @@ export class ThermalBoundaryConditions {
                 elementIndex + 1
               }, local node ${nodeIndex + 1})`,
             );
-            localResidualVector[nodeIndex] += -convectionCoeff * extTemp;
-            localJacobianMatrix[nodeIndex][nodeIndex] += convectionCoeff;
+            localResidualVector[nodeIndex] += -convectionHeatTransferCoefficient * externalTemperature;
+            localJacobianMatrix[nodeIndex][nodeIndex] += convectionHeatTransferCoefficient;
           } else if (this.meshDimension === "2D") {
             // Handle 2D case
             if (this.elementOrder === "linear") {
@@ -702,8 +702,8 @@ export class ThermalBoundaryConditions {
                   -gaussWeights[0] *
                   tangentVectorLength *
                   basisFunction[localNodeIndex] *
-                  convectionCoeff *
-                  extTemp;
+                  convectionHeatTransferCoefficient *
+                  externalTemperature;
 
                 for (
                   let localNodeIndex2 = firstNodeIndex;
@@ -715,7 +715,7 @@ export class ThermalBoundaryConditions {
                     tangentVectorLength *
                     basisFunction[localNodeIndex] *
                     basisFunction[localNodeIndex2] *
-                    convectionCoeff;
+                    convectionHeatTransferCoefficient;
                 }
               }
             } else if (this.elementOrder === "quadratic") {
@@ -795,8 +795,8 @@ export class ThermalBoundaryConditions {
                     -gaussWeights[gaussPointIndex] *
                     tangentVectorLength *
                     basisFunction[localNodeIndex] *
-                    convectionCoeff *
-                    extTemp;
+                    convectionHeatTransferCoefficient *
+                    externalTemperature;
 
                   for (
                     let localNodeIndex2 = firstNodeIndex;
@@ -808,7 +808,7 @@ export class ThermalBoundaryConditions {
                       tangentVectorLength *
                       basisFunction[localNodeIndex] *
                       basisFunction[localNodeIndex2] *
-                      convectionCoeff;
+                      convectionHeatTransferCoefficient;
                   }
                 }
               }

@@ -183,13 +183,13 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions) {
         // Assemble viscous stiffness terms (K block)
         for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerVelocityElement; localNodeIndex1++) {
           let globalNode1 = velLocalToGlobalMap[localNodeIndex1];
-          let uDOF1 = globalNode1; // u-velocity DOF
-          let vDOF1 = totalNodesVelocity + globalNode1; // v-velocity DOF
+          let xVelocityDegreeOfFreedom1 = globalNode1; // u-velocity DOF
+          let yVelocityDegreeOfFreedom1 = totalNodesVelocity + globalNode1; // v-velocity DOF
 
           for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerVelocityElement; localNodeIndex2++) {
             let globalNode2 = velLocalToGlobalMap[localNodeIndex2];
-            let uDOF2 = globalNode2; // u-velocity DOF
-            let vDOF2 = totalNodesVelocity + globalNode2; // v-velocity DOF
+            let xVelocityDegreeOfFreedom2 = globalNode2; // u-velocity DOF
+            let yVelocityDegreeOfFreedom2 = totalNodesVelocity + globalNode2; // v-velocity DOF
 
             // Viscous stiffness
             let viscousContribution =
@@ -199,13 +199,13 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions) {
                 basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
 
             // K appears in both u-u and v-v blocks
-            jacobianMatrix[uDOF1][uDOF2] += viscousContribution;
-            jacobianMatrix[vDOF1][vDOF2] += viscousContribution;
+            jacobianMatrix[xVelocityDegreeOfFreedom1][xVelocityDegreeOfFreedom2] += viscousContribution;
+            jacobianMatrix[yVelocityDegreeOfFreedom1][yVelocityDegreeOfFreedom2] += viscousContribution;
           }
 
           // Assemble pressure-velocity coupling terms
           for (let localPresIndex = 0; localPresIndex < nodesPerPressureElement; localPresIndex++) {
-            let pDOF = 2 * totalNodesVelocity + presLocalToGlobalMap[localPresIndex];
+            let pressureDegreeOfFreedom = 2 * totalNodesVelocity + presLocalToGlobalMap[localPresIndex];
 
             let bxContribution =
               weightFactor *
@@ -218,14 +218,14 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions) {
               basisFunctionDerivY[localNodeIndex1];
 
             // Pressure gradient in x-momentum
-            jacobianMatrix[uDOF1][pDOF] += bxContribution;
+            jacobianMatrix[xVelocityDegreeOfFreedom1][pressureDegreeOfFreedom] += bxContribution;
 
             // Pressure gradient in y-momentum
-            jacobianMatrix[vDOF1][pDOF] += byContribution;
+            jacobianMatrix[yVelocityDegreeOfFreedom1][pressureDegreeOfFreedom] += byContribution;
 
             // Continuity equation
-            jacobianMatrix[pDOF][uDOF1] += -bxContribution;
-            jacobianMatrix[pDOF][vDOF1] += -byContribution;
+            jacobianMatrix[pressureDegreeOfFreedom][xVelocityDegreeOfFreedom1] += -bxContribution;
+            jacobianMatrix[pressureDegreeOfFreedom][yVelocityDegreeOfFreedom1] += -byContribution;
           }
         }
       }
