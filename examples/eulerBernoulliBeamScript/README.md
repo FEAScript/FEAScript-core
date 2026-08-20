@@ -1,4 +1,9 @@
-<img src="https://feascript.github.io/FEAScript-website/assets/feascript-structural-mechanics.png" width="80" alt="FEAScript Euler-Bernoulli beam logo">
+<img
+src="https://feascript.github.io/FEAScript-website/assets/feascript-structural-mechanics.png"
+width="80"
+alt="FEAScript Euler-Bernoulli beam logo"
+
+>
 
 # 1D Euler-Bernoulli Beam Examples
 
@@ -7,7 +12,7 @@ This directory contains Node.js examples demonstrating how to use the FEAScript 
 
 ## Examples
 
-#### 1. Clamped and Spring-Supported Beam (`clampedSpringSupportedBeam1D.js`)
+### 1. Clamped and Spring-Supported Beam (`clampedSpringSupportedBeam1D.js`)
 
 Reproduces the "Bending of a Beam" example from J.N. Reddy, _An Introduction to the Finite Element
 Method_, 3rd ed., McGraw-Hill, 2006 (FEM1D example problems, Chapter 7). A 10 m beam is clamped at
@@ -84,21 +89,21 @@ model.addBoundaryCondition("3", [
 | `["moment", v]`                         | Natural       | Applies a concentrated moment `v` at the node                                 |
 | `["spring", k, uRef]`                   | Mixed (Robin) | Transverse elastic support of stiffness `k` about `uRef` (default `uRef = 0`) |
 
-## Running the Node.js Examples
+## Running the Node.js examples
 
-#### 1. Create package.json with ES module support:
+### 1. Create `package.json` with ES module support
 
 ```bash
 echo '{"type":"module"}' > package.json
 ```
 
-#### 2. Install dependencies:
+### 2. Install dependencies
 
 ```bash
 npm install feascript
 ```
 
-#### 3. Run the example:
+### 3. Run the example
 
 ```bash
 node clampedSpringSupportedBeam1D/clampedSpringSupportedBeam1D.js

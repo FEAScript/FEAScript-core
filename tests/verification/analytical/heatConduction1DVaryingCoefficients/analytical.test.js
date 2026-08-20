@@ -8,22 +8,22 @@
  */
 
 /**
- * Regression test for HeatConduction1DVaryingCoefficients
+ * Analytical test for HeatConduction1DVaryingCoefficients
  *
  * Guards the spatially varying `thermalConductivity` and `heatSource` coefficients of
  * heatConductionScript in 1D
  *
- * Unlike the other regression tests the expected values are not stored reference numbers
+ * Unlike the tests under tests/regression the expected values are not stored reference numbers
  * but closed-form solutions of the underlying PDE. Each case is chosen so the finite
  * element solution is exact at the nodes, which allows a tolerance of 1e-10 rather than
  * the 1e-4 used where a stored value is compared.
  *
- * Run: node tests/regression/HeatConduction1DVaryingCoefficients/regression.test.js (or npm test)
+ * Run: node tests/verification/analytical/heatConduction1DVaryingCoefficients/analytical.test.js (or npm test)
  */
 
 import * as mathjs from "mathjs";
-import { FEAScriptModel } from "../../../src/FEAScript.js";
-import { basicLog, errorLog } from "../../../src/utilities/logging.js";
+import { FEAScriptModel } from "../../../../src/FEAScript.js";
+import { basicLog, errorLog } from "../../../../src/utilities/logging.js";
 
 // FEAScript.js references `math` as a global (loaded via CDN in browser).
 // Set it here before any solve() call.
@@ -97,7 +97,7 @@ function assertMatchesAnalyticalSolution(label, result, analyticalSolution) {
 
 basicLog("");
 basicLog("================================");
-basicLog("Starting regression test for solid heat transfer in 1D with varying coefficients...");
+basicLog("Starting analytical test for solid heat transfer in 1D with varying coefficients...");
 
 /**
  * Case 1 - uniform heat source

@@ -1,8 +1,9 @@
 # Unit Tests
 
-This folder contains unit tests for individual FEAScript modules (solvers, assemblers, utilities, etc.).
+This folder contains unit tests for individual FEAScript modules, including solvers, assemblers,
+and utilities.
 
-Run all unit and regression tests from the repository root with:
+Run all unit, regression, and verification tests from the repository root with:
 
 ```bash
 npm test

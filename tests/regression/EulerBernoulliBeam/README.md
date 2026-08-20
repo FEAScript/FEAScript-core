@@ -1,4 +1,4 @@
-# Regression Test — EulerBernoulliBeam
+# Regression Test — Euler-Bernoulli Beam
 
 ## Purpose
 
@@ -92,9 +92,3 @@ A failing run prints one or more `FAIL:` lines, ends with the same summary line 
 | Bug fix that should not change results                                      | Run the test — it must still pass.                                                                      |
 | Intentional algorithm change (new integration rule, new element type, etc.) | Re-derive the expected values, update `EXPECTED` in `regression.test.js`, and document the reason here. |
 | New boundary condition type                                                 | Update both the test and `clampedSpringSupportedBeam1D.js` together.                                    |
-
-## Change log
-
-| Date       | Change                      | New expected values |
-| ---------- | --------------------------- | ------------------- |
-| 2026-07-17 | Initial regression baseline | See table above     |

@@ -8,7 +8,7 @@
  */
 
 /**
- * Regression test for HeatConduction2DVaryingCoefficients
+ * Analytical test for HeatConduction2DVaryingCoefficients
  *
  * Guards the spatially varying `thermalConductivity` and `heatSource` coefficients of
  * heatConductionScript in 2D, where the coefficients are evaluated at the physical
@@ -18,12 +18,12 @@
  * reference numbers, with the cases chosen so the finite element solution is exact at the
  * nodes and the tolerance can be 1e-10.
  *
- * Run: node tests/regression/HeatConduction2DVaryingCoefficients/regression.test.js (or npm test)
+ * Run: node tests/verification/analytical/heatConduction2DVaryingCoefficients/analytical.test.js (or npm test)
  */
 
 import * as mathjs from "mathjs";
-import { FEAScriptModel } from "../../../src/FEAScript.js";
-import { basicLog, errorLog } from "../../../src/utilities/logging.js";
+import { FEAScriptModel } from "../../../../src/FEAScript.js";
+import { basicLog, errorLog } from "../../../../src/utilities/logging.js";
 
 // FEAScript.js references `math` as a global (loaded via CDN in browser).
 // Set it here before any solve() call.
@@ -104,7 +104,7 @@ function assertMatchesAnalyticalSolution(label, result, analyticalSolution) {
 
 basicLog("");
 basicLog("================================");
-basicLog("Starting regression test for solid heat transfer in 2D with varying coefficients...");
+basicLog("Starting analytical test for solid heat transfer in 2D with varying coefficients...");
 
 /**
  * Case 1 - conductivity varying along x, with a matching heat source

@@ -1,4 +1,4 @@
-# Regression Test — HeatConduction1DWall
+# Regression Test — Heat Conduction in a 1D Wall
 
 ## Purpose
 
@@ -54,9 +54,3 @@ A failing run prints one or more `FAIL:` lines, ends with the same summary line 
 | Intentional algorithm change (new element type, new integration rule, etc.) | Re-derive the expected value, update `EXPECTED_T0` in `regression.test.js`, and document the reason here. |
 | New boundary condition API                                                  | Update both the test and the reference JavaScript example together.                                       |
 | Adding a new solver method                                                  | Add a separate assertion block for the new method; keep the `lusolve` block untouched as the baseline.    |
-
-## Change log
-
-| Date       | Change                      | New expected value |
-| ---------- | --------------------------- | ------------------ |
-| 2026-06-14 | Initial regression baseline | 10.29412           |

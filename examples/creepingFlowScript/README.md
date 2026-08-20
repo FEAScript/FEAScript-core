@@ -1,31 +1,39 @@
-<img src="https://feascript.github.io/FEAScript-website/assets/feascript-creeping-flow.png" width="80" 
-alt="FEAScript creepingFlow Logo">
+<img
+src="https://feascript.github.io/FEAScript-website/assets/feascript-creeping-flow.png"
+width="80"
+alt="FEAScript creeping flow logo"
+
+>
 
 # Creeping Flow Examples
 
-This directory contains Node.js examples demonstrating how to use the FEAScript library to solve steady creeping flow (Stokes) problems.
+This directory contains Node.js examples demonstrating how to use the FEAScript library to solve
+steady creeping flow (Stokes) problems.
 
 ## Examples
 
-#### 1. Creeping Flow on a Lid-Driven 2D Cavity (`lidDrivenCavity2DCreepingFlow.js`)
+### 1. Creeping Flow on a Lid-Driven 2D Cavity (`lidDrivenCavity2DCreepingFlow.js`)
 
-This example solves a 2D lid-driven cavity flow using the creeping flow solver with Taylor-Hood (Q2-Q1) elements. For detailed information on the model setup, refer to the corresponding [tutorial](https://feascript.com/tutorials/lid-driven-cavity-2d-creeping-flow.html) on the FEAScript website.
+This example solves a 2D lid-driven cavity flow using the creeping flow solver with Taylor-Hood
+(Q2-Q1) elements. For detailed information on the model setup, refer to the corresponding
+[tutorial](https://feascript.com/tutorials/lid-driven-cavity-2d-creeping-flow.html) on the
+FEAScript website.
 
-## Running the Node.js Examples
+## Running the Node.js examples
 
-#### 1. Create package.json with ES module support:
+### 1. Create `package.json` with ES module support
 
 ```bash
 echo '{"type":"module"}' > package.json
 ```
 
-#### 2. Install dependencies:
+### 2. Install dependencies
 
 ```bash
 npm install feascript
 ```
 
-#### 3. Run the example:
+### 3. Run the example
 
 ```bash
 node lidDrivenCavity2DCreepingFlow.js

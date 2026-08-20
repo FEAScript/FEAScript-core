@@ -32,7 +32,7 @@ import { basicLog, errorLog } from "../../../src/utilities/logging.js";
 // Set it here before any solve() call.
 globalThis.math = mathjs;
 
-// Baseline values (see REGRESSION.md for derivation and verification)
+// Baseline values (see README.md for derivation and verification)
 const EXPECTED = {
   w1: 0,
   theta1: 0,

@@ -1,4 +1,4 @@
-# Regression Test — HeatConduction2DFin
+# Regression Test — Heat Conduction in a 2D Fin
 
 ## Purpose
 
@@ -61,9 +61,3 @@ A failing run prints one or more `FAIL:` lines, ends with the same summary line 
 | Intentional algorithm change (new element type, new integration rule, etc.) | Re-derive the expected value, update `EXPECTED_T` in `regression.test.js`, and document the reason here. |
 | New boundary condition API                                                  | Update both the test and the reference JavaScript example together.                                      |
 | Mesh refinement study                                                       | Add a separate assertion block for the refined mesh; keep the current block as the coarse-mesh baseline. |
-
-## Change log
-
-| Date       | Change                      | New expected value |
-| ---------- | --------------------------- | ------------------ |
-| 2026-06-14 | Initial regression baseline | 81.31873           |
