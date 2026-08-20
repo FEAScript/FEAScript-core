@@ -20,7 +20,7 @@
     "build": "rollup -c",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build",
-    "test": "node --test tests",
+    "test": "node --test",
     "format": "prettier --write ."
   },
   "repository": {
@@ -53,6 +53,10 @@
     {
       "name": "Priyank Bansal",
       "url": "https://github.com/Stu-ops"
+    },
+    {
+      "name": "Edoardo R",
+      "url": "https://github.com/Ed6003"
     }
   ],
   "license": "MIT",
