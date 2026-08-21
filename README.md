@@ -9,11 +9,15 @@
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/FEAScript)
 [![Donate on Liberapay](https://img.shields.io/badge/Donate-Liberapay-F6C915?logo=liberapay&logoColor=black)](https://liberapay.com/FEAScript/donate)
 
-[FEAScript](https://feascript.com/) is a finite element simulation library developed in JavaScript. It enables engineering simulations across both browser-based and server-side environments without the overhead of traditional desktop software. 🎯 **Our goal is to provide the most powerful JavaScript API for FEM.** We are closing the gap between complex computational mechanics and the accessibility of the web, empowering developers to build professional-grade simulation tools that work on any device, anywhere. This is the core library of the FEAScript project.
+<img
+src="https://feascript.com/assets/favicon.ico"
+alt="FEAScript Icon"
+style="vertical-align: middle; margin-right: 5px; height: 1em; width: auto"
+/> **[FEAScript](https://feascript.com/) is a finite element simulation library developed in JavaScript**. It enables engineering simulations across both browser-based and server-side environments without the overhead of traditional desktop software. <br>🎯 **Our goal is to provide the most powerful JavaScript API for FEM**. We are closing the gap between complex computational mechanics and the accessibility of the web, empowering developers to build professional-grade simulation tools that work on any device, anywhere. This is the core library of the FEAScript project.
 
 <img src="https://feascript.github.io/FEAScript-website/assets/cold-plate-logo-results-and-mesh.gif" width="300" alt="Results of heat conduction around the FEAScript logo"> <br/>
 
-> 🚧 **FEAScript is currently under heavy development.** Its functionality and interfaces may change rapidly as new features and enhancements are introduced.
+> 🚧 **FEAScript is currently under heavy development.** Its functionality and interfaces may change rapidly as new features and enhancements are introduced. <a href="https://github.com/sponsors/FEAScript">Donations</a> help accelerate the next generation of FEAScript's solvers, performance, documentation and tutorials.
 
 ## Features
 
@@ -160,14 +164,14 @@ node examples/heatConductionScript/heatConduction1DWall/heatConduction1DWall.js
 
 Each script prints its computed solution to the console.
 
-## Support FEAScript
+## Help FEAScript Grow
 
-> 💖 **If you find FEAScript useful, please consider supporting its development through a donation:**
+> 💖 **If you find FEAScript useful, please consider supporting its development through a donation**. Your support helps fund new features, performance improvements, documentation and tutorials:
 
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/FEAScript)
 [![Donate on Liberapay](https://img.shields.io/badge/Donate-Liberapay-F6C915?logo=liberapay&logoColor=black)](https://liberapay.com/FEAScript/donate)
 
-Your support helps ensure the continued development and maintenance of this project.
+> 📨 You can also join the <b>FEAScript mailing list</b> to receive project updates and news: <a href="https://mailchi.mp/e29600955ffe/join-the-mailing-list">Subscribe here</a>
 
 ## Contributing
 
