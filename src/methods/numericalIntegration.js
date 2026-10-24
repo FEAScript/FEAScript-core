@@ -14,10 +14,10 @@ export class NumericalIntegration {
   /**
    * Constructor to initialize the NumericalIntegration class
    * @param {string} meshDimension - The dimension of the mesh
-   * @param {string} elementOrder - The order of elements
+   * @param {string} [elementOrder='linear'] - The order of elements
    * @param {string} [elementShape='quad'] - The 2D element shape, either 'quad' or 'triangle'
    */
-  constructor({ meshDimension, elementOrder, elementShape = "quad" }) {
+  constructor({ meshDimension, elementOrder = "linear", elementShape = "quad" }) {
     this.meshDimension = meshDimension;
     this.elementOrder = elementOrder;
     this.elementShape = elementShape;
