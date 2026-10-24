@@ -18,10 +18,12 @@ export class BasisFunctions {
    * Constructor to initialize the BasisFunctions class
    * @param {string} meshDimension - The dimension of the mesh
    * @param {string} elementOrder - The order of elements
+   * @param {string} [elementShape='quad'] - The 2D element shape, either 'quad' or 'triangle'
    */
-  constructor({ meshDimension, elementOrder }) {
+  constructor({ meshDimension, elementOrder, elementShape = "quad" }) {
     this.meshDimension = meshDimension;
     this.elementOrder = elementOrder;
+    this.elementShape = elementShape;
   }
 
   /**
@@ -101,7 +103,47 @@ export class BasisFunctions {
         return;
       }
 
-      if (this.elementOrder === "linear") {
+      if (this.elementShape === "triangle") {
+        // Reference triangle with vertices (0,0), (1,0), (0,1); L1 = 1 - ksi - eta, L2 = ksi, L3 = eta
+        const l1 = 1 - ksi - eta;
+
+        if (this.elementOrder === "linear") {
+          // Node order: vertices 0, 1, 2 (counterclockwise)
+          basisFunction[0] = l1;
+          basisFunction[1] = ksi;
+          basisFunction[2] = eta;
+
+          basisFunctionDerivKsi[0] = -1;
+          basisFunctionDerivKsi[1] = 1;
+          basisFunctionDerivKsi[2] = 0;
+
+          basisFunctionDerivEta[0] = -1;
+          basisFunctionDerivEta[1] = 0;
+          basisFunctionDerivEta[2] = 1;
+        } else if (this.elementOrder === "quadratic") {
+          // Node order (same as Gmsh): vertices 0, 1, 2, then midside nodes 3 (0-1), 4 (1-2), 5 (2-0)
+          basisFunction[0] = l1 * (2 * l1 - 1);
+          basisFunction[1] = ksi * (2 * ksi - 1);
+          basisFunction[2] = eta * (2 * eta - 1);
+          basisFunction[3] = 4 * l1 * ksi;
+          basisFunction[4] = 4 * ksi * eta;
+          basisFunction[5] = 4 * eta * l1;
+
+          basisFunctionDerivKsi[0] = 1 - 4 * l1;
+          basisFunctionDerivKsi[1] = 4 * ksi - 1;
+          basisFunctionDerivKsi[2] = 0;
+          basisFunctionDerivKsi[3] = 4 * (l1 - ksi);
+          basisFunctionDerivKsi[4] = 4 * eta;
+          basisFunctionDerivKsi[5] = -4 * eta;
+
+          basisFunctionDerivEta[0] = 1 - 4 * l1;
+          basisFunctionDerivEta[1] = 0;
+          basisFunctionDerivEta[2] = 4 * eta - 1;
+          basisFunctionDerivEta[3] = -4 * ksi;
+          basisFunctionDerivEta[4] = 4 * ksi;
+          basisFunctionDerivEta[5] = 4 * (l1 - eta);
+        }
+      } else if (this.elementOrder === "linear") {
         // Linear basis functions for 2D elements
         function l1(c) {
           return 1 - c;
