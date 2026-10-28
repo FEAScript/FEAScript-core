@@ -1,14 +1,32 @@
 /**
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
- *  Lightweight Finite Element Simulation in JavaScript
+ *  Finite Element Simulation in JavaScript
  *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
 
 // Internal imports
-import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
+import { errorLog } from "../utilities/logging.js";
+
+/**
+ * Local node indices on each side of the reference triangle, following the quad side numbering
+ * (side 0: bottom, eta = 0; side 1: left, ksi = 0; side 2: hypotenuse, ksi + eta = 1)
+ * Nodes are listed in order along each side
+ */
+export const triangleBoundarySides = {
+  linear: {
+    0: [0, 2], // Nodes at the bottom side of the reference triangle
+    1: [0, 1], // Nodes at the left side of the reference triangle
+    2: [1, 2], // Nodes at the hypotenuse of the reference triangle
+  },
+  quadratic: {
+    0: [0, 3, 5], // Nodes at the bottom side of the reference triangle
+    1: [0, 1, 2], // Nodes at the left side of the reference triangle
+    2: [2, 4, 5], // Nodes at the hypotenuse of the reference triangle
+  },
+};
 
 /**
  * Class to handle basis functions and their derivatives based on element configuration
@@ -17,11 +35,13 @@ export class BasisFunctions {
   /**
    * Constructor to initialize the BasisFunctions class
    * @param {string} meshDimension - The dimension of the mesh
-   * @param {string} elementOrder - The order of elements
+   * @param {string} [elementOrder='linear'] - The order of elements
+   * @param {string} [elementShape='quad'] - The 2D element shape, either 'quad' or 'triangle'
    */
-  constructor({ meshDimension, elementOrder }) {
+  constructor({ meshDimension, elementOrder = "linear", elementShape = "quad" }) {
     this.meshDimension = meshDimension;
     this.elementOrder = elementOrder;
+    this.elementShape = elementShape;
   }
 
   /**
@@ -101,7 +121,56 @@ export class BasisFunctions {
         return;
       }
 
-      if (this.elementOrder === "linear") {
+      if (this.elementShape === "triangle") {
+        // Reference triangle with vertices (0,0), (0,1), (1,0); area coordinate l1 = 1 - ksi - eta
+        const l1 = 1 - ksi - eta;
+
+        if (this.elementOrder === "linear") {
+          // Nodes numbered from bottom to top, then left to right (same rule as the quads):
+          // 1
+          // | \
+          // |   \
+          // 0 --- 2
+          basisFunction[0] = l1;
+          basisFunction[1] = eta;
+          basisFunction[2] = ksi;
+
+          basisFunctionDerivKsi[0] = -1;
+          basisFunctionDerivKsi[1] = 0;
+          basisFunctionDerivKsi[2] = 1;
+
+          basisFunctionDerivEta[0] = -1;
+          basisFunctionDerivEta[1] = 1;
+          basisFunctionDerivEta[2] = 0;
+        } else if (this.elementOrder === "quadratic") {
+          // Nodes numbered from bottom to top, then left to right (same rule as the quads):
+          // 2
+          // | \
+          // 1   4
+          // |     \
+          // 0--3--5
+          basisFunction[0] = l1 * (2 * l1 - 1);
+          basisFunction[1] = 4 * l1 * eta;
+          basisFunction[2] = eta * (2 * eta - 1);
+          basisFunction[3] = 4 * l1 * ksi;
+          basisFunction[4] = 4 * ksi * eta;
+          basisFunction[5] = ksi * (2 * ksi - 1);
+
+          basisFunctionDerivKsi[0] = 1 - 4 * l1;
+          basisFunctionDerivKsi[1] = -4 * eta;
+          basisFunctionDerivKsi[2] = 0;
+          basisFunctionDerivKsi[3] = 4 * (l1 - ksi);
+          basisFunctionDerivKsi[4] = 4 * eta;
+          basisFunctionDerivKsi[5] = 4 * ksi - 1;
+
+          basisFunctionDerivEta[0] = 1 - 4 * l1;
+          basisFunctionDerivEta[1] = 4 * (l1 - eta);
+          basisFunctionDerivEta[2] = 4 * eta - 1;
+          basisFunctionDerivEta[3] = -4 * ksi;
+          basisFunctionDerivEta[4] = 4 * ksi;
+          basisFunctionDerivEta[5] = 0;
+        }
+      } else if (this.elementOrder === "linear") {
         // Linear basis functions for 2D elements
         function l1(c) {
           return 1 - c;

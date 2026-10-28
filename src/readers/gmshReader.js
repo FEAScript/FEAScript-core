@@ -1,14 +1,14 @@
 /**
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
- *  Lightweight Finite Element Simulation in JavaScript
+ *  Finite Element Simulation in JavaScript
  *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
 
 // Internal imports
-import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
+import { debugLog } from "../utilities/logging.js";
 
 /**
  * Function to import mesh data from Gmsh (.msh v4.1) containing quadrilateral and triangular elements
@@ -58,7 +58,6 @@ const importGmshMesh = async (file) => {
 
   // Elements
   let elementEntityBlocks = 0;
-  let totalElements = 0;
   let elementBlocksProcessed = 0;
   let currentElementBlock = { numElements: 0 };
   let elementsProcessedInBlock = 0;
@@ -71,7 +70,6 @@ const importGmshMesh = async (file) => {
   let processedPoints = 0;
   let processedCurves = 0;
   let processedSurfaces = 0;
-  let processedVolumes = 0;
 
   while (lineIndex < lines.length) {
     const line = lines[lineIndex];
@@ -172,8 +170,6 @@ const importGmshMesh = async (file) => {
       } else if (entitiesPhase === "surfaces") {
         processedSurfaces++;
         if (processedSurfaces === entityCounts.surfaces) entitiesPhase = "volumes";
-      } else if (entitiesPhase === "volumes") {
-        processedVolumes++;
       }
     }
 
@@ -218,7 +214,6 @@ const importGmshMesh = async (file) => {
     else if (section === "elements") {
       if (elementEntityBlocks === 0) {
         elementEntityBlocks = parseInt(parts[0], 10);
-        totalElements = parseInt(parts[1], 10);
       } else if (elementBlocksProcessed < elementEntityBlocks && currentElementBlock.numElements === 0) {
         currentElementBlock = {
           dim: parseInt(parts[0], 10),
@@ -247,7 +242,7 @@ const importGmshMesh = async (file) => {
 
           if (!result.boundaryNodePairs[physicalTag]) result.boundaryNodePairs[physicalTag] = [];
           result.boundaryNodePairs[physicalTag].push(nodeIndices);
-        } else if (currentElementBlock.elementType === 2) {
+        } else if (currentElementBlock.elementType === 2 || currentElementBlock.elementType === 9) {
           result.nodalNumbering.triangleElements.push(nodeIndices);
         } else if (currentElementBlock.elementType === 3 || currentElementBlock.elementType === 10) {
           result.nodalNumbering.quadElements.push(nodeIndices);

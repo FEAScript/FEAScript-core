@@ -1,7 +1,7 @@
 /**
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
- *  Lightweight Finite Element Simulation in JavaScript
+ *  Finite Element Simulation in JavaScript
  *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
@@ -10,7 +10,7 @@
 // Internal imports
 import { euclideanNorm, axpy } from "../base/linalg/index.js";
 import { solveLinearSystem } from "./linearSystemSolver.js";
-import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
+import { basicLog, errorLog } from "../utilities/logging.js";
 import { runFrontalSolver } from "./frontalSolver.js";
 import { assembleFrontPropagationFront } from "../models/frontPropagation.js";
 

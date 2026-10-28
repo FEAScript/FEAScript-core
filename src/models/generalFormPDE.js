@@ -1,7 +1,7 @@
 /**
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
- *  Lightweight Finite Element Simulation in JavaScript
+ *  Finite Element Simulation in JavaScript
  *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
@@ -10,7 +10,7 @@
 // Internal imports
 import { initializeFEA, performIsoparametricMapping1D } from "../mesh/meshUtils.js";
 import { GenericBoundaryConditions } from "./genericBoundaryConditions.js";
-import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
+import { basicLog, errorLog } from "../utilities/logging.js";
 
 /**
  * Function to assemble the Jacobian matrix and residuals vector for the general form PDE model
@@ -27,12 +27,12 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
   // Extract mesh data
   const {
     nodesXCoordinates,
-    nodesYCoordinates,
     nop,
     boundaryElements,
     totalElements,
     meshDimension,
     elementOrder,
+    elementShape,
   } = meshData;
 
   // Extract coefficient functions
@@ -139,6 +139,7 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
     nop,
     meshDimension,
     elementOrder,
+    elementShape,
   );
 
   // Apply Dirichlet boundary conditions only
@@ -167,7 +168,7 @@ export function assembleGeneralFormPDEFront({
 }) {
   // Extract numerical integration parameters and mesh coordinates
   const { gaussPoints, gaussWeights, nodesPerElement } = FEAData;
-  const { nodesXCoordinates, nodesYCoordinates, meshDimension } = meshData;
+  const { nodesXCoordinates, meshDimension } = meshData;
   const { A, B, C, D } = coefficientFunctions;
 
   // Initialize local Jacobian matrix and local residual vector
@@ -283,12 +284,12 @@ export function assembleGeneralFormPDENonlinearMat(
   // Extract mesh data
   const {
     nodesXCoordinates,
-    nodesYCoordinates,
     nop,
     boundaryElements,
     totalElements,
     meshDimension,
     elementOrder,
+    elementShape,
   } = meshData;
 
   // Extract coefficient functions
@@ -390,6 +391,7 @@ export function assembleGeneralFormPDENonlinearMat(
     nop,
     meshDimension,
     elementOrder,
+    elementShape,
   );
 
   // Apply Dirichlet boundary conditions only (as a Newton-Raphson increment, since solutionVector is passed)

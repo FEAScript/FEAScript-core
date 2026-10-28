@@ -1,17 +1,17 @@
 /**
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
- *  Lightweight Finite Element Simulation in JavaScript
+ *  Finite Element Simulation in JavaScript
  *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
 
 // Internal imports
-import { BasisFunctions } from "./basisFunctions.js";
+import { BasisFunctions, triangleBoundarySides } from "./basisFunctions.js";
 import { Mesh1D, Mesh2D } from "./meshGeneration.js";
 import { NumericalIntegration } from "../methods/numericalIntegration.js";
-import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
+import { debugLog, errorLog } from "../utilities/logging.js";
 
 /**
  * Function to prepare the mesh for finite element analysis
@@ -60,6 +60,8 @@ export function prepareMesh(meshConfig) {
   let totalNodesY = nodesCoordinatesAndNumbering.totalNodesY;
   let nop = nodesCoordinatesAndNumbering.nodalNumbering;
   let boundaryElements = nodesCoordinatesAndNumbering.boundaryElements;
+  // Element shape for 2D meshes ('quad' or 'triangle'); meshes generated from geometry are always quads
+  const elementShape = nodesCoordinatesAndNumbering.elementShape ?? "quad";
 
   // Check the mesh type
   const isParsedMesh = parsedMesh !== undefined && parsedMesh !== null;
@@ -89,6 +91,7 @@ export function prepareMesh(meshConfig) {
     totalNodes,
     meshDimension,
     elementOrder,
+    elementShape,
   };
 }
 
@@ -98,7 +101,7 @@ export function prepareMesh(meshConfig) {
  * @returns {object} An object containing initialized matrices and numerical tools
  */
 export function initializeFEA(meshData) {
-  const { totalNodes, nop, meshDimension, elementOrder } = meshData;
+  const { totalNodes, nop, meshDimension, elementOrder, elementShape } = meshData;
 
   // Initialize variables for matrix assembly
   let residualVector = [];
@@ -118,12 +121,14 @@ export function initializeFEA(meshData) {
   const basisFunctions = new BasisFunctions({
     meshDimension,
     elementOrder,
+    elementShape,
   });
 
   // Initialize the NumericalIntegration class
   const numericalIntegration = new NumericalIntegration({
     meshDimension,
     elementOrder,
+    elementShape,
   });
 
   // Calculate Gauss points and weights
@@ -143,6 +148,38 @@ export function initializeFEA(meshData) {
     gaussWeights,
     nodesPerElement,
   };
+}
+
+/**
+ * Function to build the list of 2D integration points with their combined weights
+ * @param {array} gaussPoints - Gauss points from NumericalIntegration
+ * @param {array} gaussWeights - Gauss weights from NumericalIntegration
+ * @param {string} [elementShape='quad'] - The 2D element shape, either 'quad' or 'triangle'
+ * @returns {array} Array of [ksi, eta, weight] entries
+ */
+export function getIntegrationPoints2D(gaussPoints, gaussWeights, elementShape = "quad") {
+  const integrationPoints = [];
+
+  if (elementShape === "triangle") {
+    // Triangle rules already provide (ksi, eta) pairs with their weights
+    for (let gaussPointIndex = 0; gaussPointIndex < gaussPoints.length; gaussPointIndex++) {
+      const [ksi, eta] = gaussPoints[gaussPointIndex];
+      integrationPoints.push([ksi, eta, gaussWeights[gaussPointIndex]]);
+    }
+  } else {
+    // Quadrilaterals use the tensor product of the 1D Gauss rule
+    for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
+      for (let gaussPointIndex2 = 0; gaussPointIndex2 < gaussPoints.length; gaussPointIndex2++) {
+        integrationPoints.push([
+          gaussPoints[gaussPointIndex1],
+          gaussPoints[gaussPointIndex2],
+          gaussWeights[gaussPointIndex1] * gaussWeights[gaussPointIndex2],
+        ]);
+      }
+    }
+  }
+
+  return integrationPoints;
 }
 
 /**
@@ -259,6 +296,25 @@ export function pointInsideTriangle(x, y, vertices) {
 }
 
 /**
+ * Function to test if a point is inside a triangular element, also returning the natural coordinates
+ * (ksi, eta) of the FEAScript reference triangle
+ * @param {number} x - X-coordinate of the point
+ * @param {number} y - Y-coordinate of the point
+ * @param {array} vertices - Triangle vertices in FEAScript order [[x0,y0],[x1,y1],[x2,y2]]
+ * @returns {object} Object containing inside boolean and natural coordinates {inside, ksi, eta}
+ */
+export function pointInsideTriangularElement(x, y, vertices) {
+  // Vertices order (reference coordinates):
+  //   1 (0,1)
+  //   | \
+  //   |   \
+  //   0 --- 2 (1,0)
+  // The barycentric weights of vertices 2 and 1 are the natural coordinates ksi and eta
+  const { inside, ksi: weight0, eta: weight1 } = pointInsideTriangle(x, y, vertices);
+  return { inside, ksi: 1 - weight0 - weight1, eta: weight1 };
+}
+
+/**
  * Function to test if a point is inside a quadrilateral by spliting it into triangles and using barycentric coordinates
  * @param {number} x - X-coordinate of the point
  * @param {number} y - Y-coordinate of the point
@@ -296,6 +352,27 @@ export function pointInsideQuadrilateral(x, y, vertices) {
 
     ksi = distLeft / (distLeft + distRight);
     eta = distBottom / (distBottom + distTop);
+
+    // The distance ratios are exact only for parallelograms, so refine them with Newton iterations
+    // on the bilinear mapping x(ksi, eta) = v0 (1-ksi)(1-eta) + v1 (1-ksi) eta + v2 ksi (1-eta) + v3 ksi eta
+    for (let iteration = 0; iteration < 20; iteration++) {
+      const mappedX =
+        v0[0] * (1 - ksi) * (1 - eta) + v1[0] * (1 - ksi) * eta + v2[0] * ksi * (1 - eta) + v3[0] * ksi * eta;
+      const mappedY =
+        v0[1] * (1 - ksi) * (1 - eta) + v1[1] * (1 - ksi) * eta + v2[1] * ksi * (1 - eta) + v3[1] * ksi * eta;
+      const ksiDerivX = (v2[0] - v0[0]) * (1 - eta) + (v3[0] - v1[0]) * eta;
+      const ksiDerivY = (v2[1] - v0[1]) * (1 - eta) + (v3[1] - v1[1]) * eta;
+      const etaDerivX = (v1[0] - v0[0]) * (1 - ksi) + (v3[0] - v2[0]) * ksi;
+      const etaDerivY = (v1[1] - v0[1]) * (1 - ksi) + (v3[1] - v2[1]) * ksi;
+      const detJacobian = ksiDerivX * etaDerivY - etaDerivX * ksiDerivY;
+      const residualX = x - mappedX;
+      const residualY = y - mappedY;
+      const deltaKsi = (etaDerivY * residualX - etaDerivX * residualY) / detJacobian;
+      const deltaEta = (ksiDerivX * residualY - ksiDerivY * residualX) / detJacobian;
+      ksi += deltaKsi;
+      eta += deltaEta;
+      if (Math.abs(deltaKsi) + Math.abs(deltaEta) < 1e-14) break;
+    }
   }
 
   return { inside, ksi, eta };
@@ -360,8 +437,15 @@ export function getBoundarySegments(meshData) {
   let boundaryNodesSegments = [];
   let boundaryGlobalElementIndex = 0;
   let boundarySides;
-  const { nodesXCoordinates, nodesYCoordinates, nop, boundaryElements, meshDimension, elementOrder } =
-    meshData;
+  const {
+    nodesXCoordinates,
+    nodesYCoordinates,
+    nop,
+    boundaryElements,
+    meshDimension,
+    elementOrder,
+    elementShape,
+  } = meshData;
 
   if (meshDimension === "1D") {
     if (elementOrder === "linear") {
@@ -375,6 +459,9 @@ export function getBoundarySegments(meshData) {
         1: [1], // Node at the right side of the reference element
       };
     }
+  } else if (meshDimension === "2D" && elementShape === "triangle") {
+    // Nodes at the bottom (0), left (1) and hypotenuse (2) sides of the reference triangle
+    boundarySides = triangleBoundarySides[elementOrder];
   } else if (meshDimension === "2D") {
     if (elementOrder === "linear") {
       boundarySides = {

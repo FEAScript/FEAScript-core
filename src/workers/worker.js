@@ -1,7 +1,7 @@
 /**
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
- *  Lightweight Finite Element Simulation in JavaScript
+ *  Finite Element Simulation in JavaScript
  *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
@@ -137,10 +137,7 @@ export class FEAScriptWorker {
    */
   async solve() {
     await this._ensureReady();
-    const startTime = performance.now();
-    const result = await this.feaWorker.solve();
-    const endTime = performance.now();
-    return result;
+    return this.feaWorker.solve();
   }
 
   /**

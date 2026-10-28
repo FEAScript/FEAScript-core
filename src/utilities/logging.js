@@ -1,7 +1,7 @@
 /**
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
- *  Lightweight Finite Element Simulation in JavaScript
+ *  Finite Element Simulation in JavaScript
  *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
@@ -61,21 +61,4 @@ export function errorLog(message) {
  */
 export function warnLog(message) {
   console.log("%c[WARN] " + message, "color: #FF9800; font-weight: bold;");
-}
-
-/**
- * Function to handle version information and fetch the latest update date and release from GitHub
- */
-export async function printVersionInformation() {
-  basicLog("Fetching latest FEAScript version information...");
-  try {
-    const commitResponse = await fetch("https://api.github.com/repos/FEAScript/FEAScript/commits/main");
-    const commitData = await commitResponse.json();
-    const latestCommitDate = new Date(commitData.commit.committer.date).toLocaleString();
-    basicLog(`Latest FEAScript update: ${latestCommitDate}`);
-    return latestCommitDate;
-  } catch (error) {
-    errorLog("Failed to fetch version information: " + error);
-    return "Version information unavailable";
-  }
 }

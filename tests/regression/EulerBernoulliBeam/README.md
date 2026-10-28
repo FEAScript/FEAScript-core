@@ -1,3 +1,10 @@
+<img
+src="https://feascript.github.io/FEAScript-website/assets/feascript-structural-mechanics.png"
+width="80"
+alt="FEAScript Euler-Bernoulli beam logo"
+
+>
+
 # Regression Test — Euler-Bernoulli Beam
 
 ## Purpose

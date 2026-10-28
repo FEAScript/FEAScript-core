@@ -1,7 +1,7 @@
 /**
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
- *  Lightweight Finite Element Simulation in JavaScript
+ *  Finite Element Simulation in JavaScript
  *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
@@ -141,12 +141,7 @@ class workerWrapper {
    * @returns {boolean} Returns true to indicate the worker is available
    */
   ping() {
-    try {
-      return true;
-    } catch (error) {
-      console.error("FEA Worker: Error in ping", error);
-      throw error;
-    }
+    return true;
   }
 }
 

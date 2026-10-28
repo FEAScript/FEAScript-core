@@ -1,7 +1,7 @@
 /**
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
- *  Lightweight Finite Element Simulation in JavaScript
+ *  Finite Element Simulation in JavaScript
  *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
@@ -10,8 +10,9 @@
 /**
  * Regression test for HeatConduction1DWall
  *
- * Replicates the physical setup from heatConduction1DWall.js using lusolve and
- * asserts that the temperature at node 0 (convection boundary) remains 10.29412
+ * Replicates the physical setup from heatConduction1DWall.js for linear and quadratic elements
+ * and every applicable solver method (lusolve, frontal, jacobi), and asserts that the temperature
+ * at x=0 remains 10.29412 and at x=0.075 remains 7.64706
  *
  * Run: node tests/regression/HeatConduction1DWall/regression.test.js (or npm test)
  */
@@ -19,25 +20,39 @@
 import { FEAScriptModel } from "../../../src/FEAScript.js";
 import { basicLog, errorLog } from "../../../src/utilities/logging.js";
 
-const EXPECTED_T0 = 10.29412;
 const TOLERANCE = 1e-4;
 
-function runSimulation() {
+// The exact solution is linear, so both element orders give the same nodal values
+const EXPECTED = [
+  { x: 0, T: 10.29412 },
+  { x: 0.075, T: 7.64706 },
+];
+
+// The Jacobi method requires diagonally dominant matrices, so it is used with linear elements only
+const cases = [
+  { elementOrder: "linear", solverMethod: "lusolve" },
+  { elementOrder: "linear", solverMethod: "frontal" },
+  { elementOrder: "linear", solverMethod: "jacobi" },
+  { elementOrder: "quadratic", solverMethod: "lusolve" },
+  { elementOrder: "quadratic", solverMethod: "frontal" },
+];
+
+function runSimulation({ elementOrder, solverMethod }) {
   const model = new FEAScriptModel();
 
   model.setModelConfig("heatConductionScript");
   model.setMeshConfig({
     meshDimension: "1D",
-    elementOrder: "linear",
+    elementOrder,
     numElementsX: 10,
     maxX: 0.15,
   });
 
   model.addBoundaryCondition("0", ["convection", 1, 25]);
-  model.addBoundaryCondition("1", ["constantTemp", 5]);
-  model.setSolverMethod("lusolve");
+  model.addBoundaryCondition("1", ["constantTemperature", 5]);
+  model.setSolverMethod(solverMethod);
 
-  return model.solve();
+  return model.solve({ maxIterations: 200000, tolerance: 1e-8 });
 }
 
 let passed = 0;
@@ -56,15 +71,24 @@ function assert(condition, message) {
 basicLog("");
 basicLog("================================");
 basicLog("Starting regression test for solid heat transfer in a 1D wall...");
-const { solutionVector } = runSimulation();
 
-// solutionVector from math.lusolve is a nested array: [[T0], [T1], ...]
-const T0 = Array.isArray(solutionVector[0]) ? solutionVector[0][0] : solutionVector[0];
+for (const testCase of cases) {
+  const label = `${testCase.elementOrder} elements, ${testCase.solverMethod}`;
+  const { solutionVector, nodesCoordinates } = runSimulation(testCase);
 
-assert(
-  Math.abs(T0 - EXPECTED_T0) < TOLERANCE,
-  `Temperature at node 0: expected ${EXPECTED_T0}, got ${T0} (tolerance ${TOLERANCE})`,
-);
+  for (const { x, T: expectedT } of EXPECTED) {
+    const nodeIndex = nodesCoordinates.nodesXCoordinates.findIndex((nodeX) => Math.abs(nodeX - x) < 1e-10);
+
+    // solutionVector from math.lusolve is a nested array: [[T0], [T1], ...]
+    const value = solutionVector[nodeIndex];
+    const T = Array.isArray(value) ? value[0] : value;
+
+    assert(
+      Math.abs(T - expectedT) < TOLERANCE,
+      `${label}: temperature at x=${x}: expected ${expectedT}, got ${T} (tolerance ${TOLERANCE})`,
+    );
+  }
+}
 
 basicLog("");
 if (failed > 0) {

@@ -1,7 +1,7 @@
 /**
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
- *  Lightweight Finite Element Simulation in JavaScript
+ *  Finite Element Simulation in JavaScript
  *  Version: 0.3.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
@@ -11,11 +11,11 @@
 import {
   prepareMesh,
   pointInsideQuadrilateral,
+  pointInsideTriangularElement,
   computeNodeNeighbors,
   getBoundarySegments,
 } from "../mesh/meshUtils.js";
 import { BasisFunctions } from "../mesh/basisFunctions.js";
-import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 
 /**
  * Function to create plots of the solution vector
@@ -30,7 +30,6 @@ export function plotSolution(model, result, plotType, plotDivId) {
   const solutionVector = result.solutionVector;
   const solverConfig = model.solverConfig;
   const meshDimension = model.meshConfig.meshDimension;
-  const meshData = prepareMesh(model.meshConfig); // Retrieve mesh connectivity details (used in splitQuadrilateral)
 
   if (meshDimension === "1D" && plotType === "line") {
     // Check if solutionVector is a nested array
@@ -40,7 +39,6 @@ export function plotSolution(model, result, plotType, plotDivId) {
     } else {
       yData = solutionVector;
     }
-    let xData = Array.from(nodesXCoordinates);
 
     let lineData = {
       x: nodesXCoordinates,
@@ -144,6 +142,7 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
   const basisFunctions = new BasisFunctions({
     meshDimension: model.meshConfig.meshDimension,
     elementOrder: model.meshConfig.elementOrder,
+    elementShape: meshData.elementShape,
   });
 
   if (meshDimension === "1D" && plotType === "line") {
@@ -178,8 +177,6 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
         visNodeYCoordinates[nnode + visNodeIndexY] = visNodeYCoordinates[nnode] + visNodeIndexY * deltavisY;
       }
     }
-
-    const visNodeCoordinates = { visNodeXCoordinates, visNodeYCoordinates };
 
     // Initialize visSolution with null for all visualization nodes
     visSolution = new Array(visNodesX * visNodesY).fill(null);
@@ -328,7 +325,35 @@ function pointSearch(
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const nodesPerElement = meshData.nop[currentElement].length;
 
-  if (nodesPerElement === 4) {
+  if (meshData.elementShape === "triangle") {
+    // Linear (3 nodes) or quadratic (6 nodes) triangular element, located through its vertex nodes
+    // Linear:       Quadratic:
+    // 1             2
+    // | \           | \
+    // |   \         1   4
+    // |     \       |     \
+    // 0 --- 2       0--3--5
+    const vertexLocalIndices = nodesPerElement === 6 ? [0, 2, 5] : [0, 1, 2];
+    const vertices = vertexLocalIndices.map((localNodeIndex) => [
+      nodesXCoordinates[meshData.nop[currentElement][localNodeIndex] - 1],
+      nodesYCoordinates[meshData.nop[currentElement][localNodeIndex] - 1],
+    ]);
+    const pointCheck = pointInsideTriangularElement(visNodeXCoordinate, visNodeYCoordinate, vertices);
+    if (pointCheck.inside) {
+      return {
+        inside: true,
+        value: solutionInterpolation(
+          model,
+          meshData,
+          result,
+          currentElement,
+          pointCheck.ksi,
+          pointCheck.eta,
+          basisFunctions,
+        ),
+      };
+    }
+  } else if (nodesPerElement === 4) {
     // Linear quadrilateral element
     let vertices = [
       [
@@ -398,7 +423,7 @@ function pointSearch(
         ),
       };
     }
-  } // TODO: Add also triangular element cases
+  }
   return { inside: false, value: null };
 }
 
