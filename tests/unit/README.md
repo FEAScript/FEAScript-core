@@ -17,6 +17,7 @@ and utilities.
 | `elements2D.test.js`         | Basis functions and quadrature rules of linear and quadratic quadrilaterals and triangles           |
 | `plotInterpolation.test.js`  | Point location and solution interpolation of the contour plot, for all 2D element types             |
 | `solutionFormat.test.js`     | Solution vector is a Float64Array for every model and solver method, with the same values and plots |
+| `gmshReader.test.js`         | Gmsh reader, including meshes with non-contiguous node tags (same nodes, connectivity, solution)    |
 
 Run all unit, regression, and verification tests from the repository root with:
 

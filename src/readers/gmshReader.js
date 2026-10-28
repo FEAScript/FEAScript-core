@@ -56,6 +56,9 @@ const importGmshMesh = async (file) => {
   let nodeTagsCollected = 0;
   let nodeCoordinatesCollected = 0;
 
+  // Node tags with gaps are mapped to compact 1-based indices (null when tags are contiguous)
+  let nodeTagToIndex = null;
+
   // Elements
   let elementEntityBlocks = 0;
   let elementBlocksProcessed = 0;
@@ -178,6 +181,13 @@ const importGmshMesh = async (file) => {
       if (nodeEntityBlocks === 0) {
         nodeEntityBlocks = parseInt(parts[0], 10);
         totalNodes = parseInt(parts[1], 10);
+        const maxNodeTag = parseInt(parts[3], 10);
+        if (maxNodeTag !== totalNodes) {
+          nodeTagToIndex = new Map();
+          debugLog(
+            `Gmsh node tags are not contiguous (max tag ${maxNodeTag}, ${totalNodes} nodes); renumbering`,
+          );
+        }
         result.nodesXCoordinates = new Array(totalNodes).fill(0);
         result.nodesYCoordinates = new Array(totalNodes).fill(0);
       } else if (nodeBlocksProcessed < nodeEntityBlocks && currentNodeBlock.numNodes === 0) {
@@ -197,9 +207,13 @@ const importGmshMesh = async (file) => {
           if (nodeTagsCollected === currentNodeBlock.numNodes) break;
         }
       } else if (nodeCoordinatesCollected < currentNodeBlock.numNodes) {
-        const nodeTag = nodeTags[nodeCoordinatesCollected] - 1;
-        result.nodesXCoordinates[nodeTag] = parseFloat(parts[0]);
-        result.nodesYCoordinates[nodeTag] = parseFloat(parts[1]);
+        let nodeIndex = nodeTags[nodeCoordinatesCollected] - 1;
+        if (nodeTagToIndex) {
+          nodeIndex = nodeTagToIndex.size;
+          nodeTagToIndex.set(nodeTags[nodeCoordinatesCollected], nodeIndex + 1);
+        }
+        result.nodesXCoordinates[nodeIndex] = parseFloat(parts[0]);
+        result.nodesYCoordinates[nodeIndex] = parseFloat(parts[1]);
         result.totalNodesX++;
         result.totalNodesY++;
         nodeCoordinatesCollected++;
@@ -227,7 +241,8 @@ const importGmshMesh = async (file) => {
 
         elementsProcessedInBlock = 0;
       } else if (elementsProcessedInBlock < currentElementBlock.numElements) {
-        const nodeIndices = parts.slice(1).map((n) => parseInt(n, 10));
+        let nodeIndices = parts.slice(1).map((n) => parseInt(n, 10));
+        if (nodeTagToIndex) nodeIndices = nodeIndices.map((tag) => nodeTagToIndex.get(tag));
 
         // Resolve physical tag via entity → physical map
         let physicalTag = currentElementBlock.tag;
