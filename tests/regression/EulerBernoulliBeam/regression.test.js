@@ -130,7 +130,7 @@ const { jacobianMatrix: Kraw, residualVector: Fraw } = assembleEulerBernoulliBea
 function matVec(matrix, vector) {
   return matrix.map((row) => row.reduce((sum, value, colIndex) => sum + value * vector[colIndex], 0));
 }
-const residualAtEachDOF = matVec(Kraw, flatSolution).map((value, i) => value - Fraw[i]);
+const residualAtEachDOF = matVec(Kraw.toDense(), flatSolution).map((value, i) => value - Fraw[i]);
 
 const reactionForceNode1 = residualAtEachDOF[0];
 const reactionMomentNode1 = residualAtEachDOF[1];

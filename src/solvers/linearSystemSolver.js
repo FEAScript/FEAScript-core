@@ -9,13 +9,14 @@
 
 // Internal imports
 import { jacobiSolver, mathjsLUSolver } from "./index.js";
+import { SparseMatrix } from "../numerics/sparseMatrix.js";
 import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 import * as Comlink from "../vendor/comlink.mjs";
 
 /**
  * Function to solve a system of linear equations using different solver methods
  * @param {string} solverMethod - The solver method to use ("lusolve" or "jacobi")
- * @param {Array} jacobianMatrix - The coefficient matrix
+ * @param {SparseMatrix} jacobianMatrix - The coefficient matrix
  * @param {Array} residualVector - The right-hand side vector
  * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance`
  * @returns {object} An object containing:
@@ -83,7 +84,7 @@ async function createDefaultComputeEngine() {
 /**
  * Function to solve asynchronously a system of linear equations using different solver methods
  * @param {string} solverMethod - The solver method to use (e.g., "jacobi-gpu")
- * @param {array} jacobianMatrix - The coefficient matrix
+ * @param {SparseMatrix|array} jacobianMatrix - The coefficient matrix
  * @param {array} residualVector - The right-hand side vector
  * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance`
  * @returns {Promise<object>} A promise that resolves to an object containing:
@@ -98,10 +99,13 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
   basicLog(`Solving system using ${solverMethod}...`);
   console.time("systemSolving");
 
-  // Normalize inputs
-  const systemMatrix = Array.isArray(jacobianMatrix)
-    ? jacobianMatrix
-    : jacobianMatrix?.toArray?.() ?? jacobianMatrix;
+  // Normalize inputs (the WebGPU Jacobi kernel works on a dense matrix)
+  const systemMatrix =
+    jacobianMatrix instanceof SparseMatrix
+      ? jacobianMatrix.toDense()
+      : Array.isArray(jacobianMatrix)
+      ? jacobianMatrix
+      : jacobianMatrix?.toArray?.() ?? jacobianMatrix;
   const rightHandSideVector = Array.isArray(residualVector)
     ? residualVector
     : residualVector?.toArray?.() ?? residualVector;

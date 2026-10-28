@@ -8,3 +8,4 @@
  */
 
 export { euclideanNorm, dotProduct, copyVector, axpy } from "./blasUtilities.js";
+export { SparseMatrix } from "./sparseMatrix.js";

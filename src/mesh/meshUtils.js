@@ -11,6 +11,7 @@
 import { BasisFunctions, triangleBoundarySides } from "./basisFunctions.js";
 import { Mesh1D, Mesh2D } from "./meshGeneration.js";
 import { NumericalIntegration } from "../numerics/numericalIntegration.js";
+import { SparseMatrix } from "../numerics/sparseMatrix.js";
 import { debugLog, errorLog } from "../utilities/logging.js";
 
 /**
@@ -104,18 +105,9 @@ export function initializeFEA(meshData) {
   const { totalNodes, nop, meshDimension, elementOrder, elementShape } = meshData;
 
   // Initialize variables for matrix assembly
-  let residualVector = [];
-  let jacobianMatrix = [];
+  let residualVector = new Array(totalNodes).fill(0);
+  let jacobianMatrix = new SparseMatrix(totalNodes);
   let localToGlobalMap = [];
-
-  // Initialize jacobianMatrix and residualVector arrays
-  for (let nodeIndex = 0; nodeIndex < totalNodes; nodeIndex++) {
-    residualVector[nodeIndex] = 0;
-    jacobianMatrix.push([]);
-    for (let colIndex = 0; colIndex < totalNodes; colIndex++) {
-      jacobianMatrix[nodeIndex][colIndex] = 0;
-    }
-  }
 
   // Initialize the BasisFunctions class
   const basisFunctions = new BasisFunctions({
@@ -136,6 +128,16 @@ export function initializeFEA(meshData) {
   let gaussPoints = gaussPointsAndWeights.gaussPoints;
   let gaussWeights = gaussPointsAndWeights.gaussWeights;
 
+  // Integration points for 2D elements (tensor product for quads, collapsed rule for triangles)
+  const integrationPoints2D =
+    meshDimension === "2D" ? getIntegrationPoints2D(gaussPoints, gaussWeights, elementShape) : [];
+
+  // Basis functions on the reference element at each integration point (the same for every element)
+  const referenceBasisFunctions =
+    meshDimension === "1D"
+      ? gaussPoints.map((gaussPoint) => basisFunctions.getBasisFunctions(gaussPoint))
+      : integrationPoints2D.map(([ksi, eta]) => basisFunctions.getBasisFunctions(ksi, eta));
+
   // Determine the number of nodes in the reference element based on the first element in the nop array
   const nodesPerElement = nop[0].length;
 
@@ -146,6 +148,8 @@ export function initializeFEA(meshData) {
     basisFunctions,
     gaussPoints,
     gaussWeights,
+    integrationPoints2D,
+    referenceBasisFunctions,
     nodesPerElement,
   };
 }
@@ -184,12 +188,19 @@ export function getIntegrationPoints2D(gaussPoints, gaussWeights, elementShape =
 
 /**
  * Function to perform isoparametric mapping for 1D elements
- * @param {object} params - Parameters for the mapping
+ * @param {object} params - Parameters for the mapping. An optional `basisFunctionDerivX` array can be
+ *  passed to be filled in place, to avoid allocating a new array at every integration point
  * @returns {object} An object containing the mapped data
  */
 export function performIsoparametricMapping1D(params) {
-  const { basisFunction, basisFunctionDerivKsi, nodesXCoordinates, localToGlobalMap, nodesPerElement } =
-    params;
+  const {
+    basisFunction,
+    basisFunctionDerivKsi,
+    nodesXCoordinates,
+    localToGlobalMap,
+    nodesPerElement,
+    basisFunctionDerivX = [],
+  } = params;
 
   let xCoordinates = 0;
   let ksiDerivX = 0;
@@ -202,7 +213,6 @@ export function performIsoparametricMapping1D(params) {
   let detJacobian = ksiDerivX;
 
   // Compute x-derivative of basis functions
-  let basisFunctionDerivX = [];
   for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
     basisFunctionDerivX[localNodeIndex] = basisFunctionDerivKsi[localNodeIndex] / detJacobian;
   }
@@ -216,7 +226,9 @@ export function performIsoparametricMapping1D(params) {
 
 /**
  * Function to perform isoparametric mapping for 2D elements
- * @param {object} params - Parameters for the mapping
+ * @param {object} params - Parameters for the mapping. Optional `basisFunctionDerivX` and
+ *  `basisFunctionDerivY` arrays can be passed to be filled in place, to avoid allocating new arrays at
+ *  every integration point
  * @returns {object} An object containing the mapped data
  */
 export function performIsoparametricMapping2D(params) {
@@ -228,6 +240,8 @@ export function performIsoparametricMapping2D(params) {
     nodesYCoordinates,
     localToGlobalMap,
     nodesPerElement,
+    basisFunctionDerivX = [],
+    basisFunctionDerivY = [],
   } = params;
 
   let xCoordinates = 0;
@@ -249,8 +263,6 @@ export function performIsoparametricMapping2D(params) {
   let detJacobian = ksiDerivX * etaDerivY - etaDerivX * ksiDerivY;
 
   // Compute x-derivative and y-derivative of basis functions
-  let basisFunctionDerivX = [];
-  let basisFunctionDerivY = [];
   for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
     // The x-derivative of the n basis function
     basisFunctionDerivX[localNodeIndex] =

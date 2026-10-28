@@ -56,7 +56,7 @@ export class BeamBoundaryConditions {
    * override (zero out) the equation row at a constrained DOF, which must take precedence over
    * any natural/spring contribution assembled at the same DOF
    * @param {array} residualVector - The residual (load) vector to be modified
-   * @param {array} jacobianMatrix - The Jacobian (stiffness) matrix to be modified
+   * @param {SparseMatrix} jacobianMatrix - The Jacobian (stiffness) matrix to be modified
    */
   imposeNaturalAndSpringBoundaryConditions(residualVector, jacobianMatrix) {
     Object.keys(this.boundaryConditions).forEach((nodeKey) => {
@@ -76,7 +76,7 @@ export class BeamBoundaryConditions {
         } else if (conditionType === "spring") {
           const springConstant = value1;
           const referenceDeflection = value2 ?? 0;
-          jacobianMatrix[deflectionDOF][deflectionDOF] += springConstant;
+          jacobianMatrix.addValue(deflectionDOF, deflectionDOF, springConstant);
           residualVector[deflectionDOF] += springConstant * referenceDeflection;
           debugLog(
             `Node ${nodeKey}: Applied transverse elastic spring, k=${springConstant} (mixed/Robin BC)`,
@@ -90,17 +90,13 @@ export class BeamBoundaryConditions {
    * Function to impose essential (deflection/rotation) boundary conditions (Dirichlet-type)
    * This must be called AFTER imposeNaturalAndSpringBoundaryConditions()
    * @param {array} residualVector - The residual vector to be modified
-   * @param {array} jacobianMatrix - The Jacobian matrix to be modified
+   * @param {SparseMatrix} jacobianMatrix - The Jacobian matrix to be modified
    */
   imposeEssentialBoundaryConditions(residualVector, jacobianMatrix) {
-    const totalDOFs = residualVector.length;
-
     const applyDirichlet = (dofIndex, prescribedValue) => {
       residualVector[dofIndex] = prescribedValue;
-      for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
-        jacobianMatrix[dofIndex][colIndex] = 0;
-      }
-      jacobianMatrix[dofIndex][dofIndex] = 1;
+      jacobianMatrix.clearRow(dofIndex);
+      jacobianMatrix.setValue(dofIndex, dofIndex, 1);
     };
 
     Object.keys(this.boundaryConditions).forEach((nodeKey) => {

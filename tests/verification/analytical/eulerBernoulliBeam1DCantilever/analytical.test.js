@@ -8,7 +8,11 @@
  */
 
 /**
- * Unit tests for the 1D Euler-Bernoulli beam model (assembleEulerBernoulliBeamMat)
+ * Analytical test for EulerBernoulliBeam1DCantilever
+ *
+ * Guards the 1D Euler-Bernoulli beam model (assembleEulerBernoulliBeamMat) against closed-form
+ * results. Unlike the tests under tests/regression the expected values are not stored reference
+ * numbers, so a tight tolerance is used.
  *
  * Covers:
  *  - Single-element bending stiffness matrix vs. the closed-form textbook
@@ -16,17 +20,17 @@
  *  - Cantilever beam under a tip point load vs. the classical closed-form
  *    solution (w_tip = P*L^3/(3EI), theta_tip = P*L^2/(2EI))
  *
- * Run: node tests/unit/eulerBernoulliBeam.test.js (or npm test)
+ * Run: node tests/verification/analytical/eulerBernoulliBeam1DCantilever/analytical.test.js (or npm test)
  */
 
-import { assembleEulerBernoulliBeamMat } from "../../src/models/eulerBernoulliBeam.js";
-import { prepareMesh } from "../../src/mesh/meshUtils.js";
-import { solveLinearSystem } from "../../src/solvers/linearSystemSolver.js";
-import { basicLog, errorLog } from "../../src/utilities/logging.js";
+import { assembleEulerBernoulliBeamMat } from "../../../../src/models/eulerBernoulliBeam.js";
+import { prepareMesh } from "../../../../src/mesh/meshUtils.js";
+import { solveLinearSystem } from "../../../../src/solvers/linearSystemSolver.js";
+import { basicLog, errorLog } from "../../../../src/utilities/logging.js";
 
 basicLog("");
 basicLog("================================");
-basicLog("Unit tests: assembleEulerBernoulliBeamMat");
+basicLog("Starting analytical test for the Euler-Bernoulli beam in 1D (cantilever)...");
 
 let passed = 0;
 let failed = 0;
@@ -79,7 +83,7 @@ for (const [EI, L] of [
     maxX: L,
   });
   const { jacobianMatrix } = assembleEulerBernoulliBeamMat(meshData, {}, { EI: () => EI });
-  const diff = maxAbsDiff(jacobianMatrix, closedFormBeamStiffness(EI, L));
+  const diff = maxAbsDiff(jacobianMatrix.toDense(), closedFormBeamStiffness(EI, L));
   assert(diff < 1e-6, `Element stiffness matches closed-form matrix for EI=${EI}, L=${L} (diff=${diff})`);
 }
 

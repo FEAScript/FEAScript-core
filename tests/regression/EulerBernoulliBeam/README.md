@@ -52,10 +52,10 @@ regression baseline:
 
 1. The single-element bending stiffness matrix (for constant EI) was verified against the
    closed-form Hermite beam element stiffness matrix found in any FEM textbook — see
-   `tests/unit/eulerBernoulliBeam.test.js`.
+   `tests/verification/analytical/eulerBernoulliBeam1DCantilever/analytical.test.js`.
 2. A simple cantilever case (fixed-free beam under a tip point load) was verified against the
    classical closed-form solution `w_tip = P·L³/(3EI)`, `theta_tip = P·L²/(2EI)` — also in
-   `tests/unit/eulerBernoulliBeam.test.js`.
+   `tests/verification/analytical/eulerBernoulliBeam1DCantilever/analytical.test.js`.
 3. The full statically-indeterminate solution above was checked against global force and
    moment equilibrium (see below) — this check is also asserted every run, independently of
    the baseline numbers.
