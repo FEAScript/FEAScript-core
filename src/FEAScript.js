@@ -8,16 +8,16 @@
  */
 
 // Internal imports
-import { newtonRaphson } from "./methods/newtonRaphson.js";
-import { solveLinearSystem } from "./methods/linearSystemSolver.js";
-import { solveLinearSystemAsync } from "./methods/linearSystemSolver.js";
+import { newtonRaphson } from "./solvers/newtonRaphson.js";
+import { solveLinearSystem } from "./solvers/linearSystemSolver.js";
+import { solveLinearSystemAsync } from "./solvers/linearSystemSolver.js";
 import { prepareMesh } from "./mesh/meshUtils.js";
 import { assembleFrontPropagationMat } from "./models/frontPropagation.js";
 import { assembleGeneralFormPDEMat, assembleGeneralFormPDENonlinearMat } from "./models/generalFormPDE.js";
 import { assembleHeatConductionMat, assembleHeatConductionFront } from "./models/heatConduction.js";
 import { assembleCreepingFlowMatrix } from "./models/creepingFlow.js";
 import { assembleEulerBernoulliBeamMat } from "./models/eulerBernoulliBeam.js";
-import { runFrontalSolver } from "./methods/frontalSolver.js";
+import { runFrontalSolver } from "./solvers/frontalSolver.js";
 import { basicLog, debugLog, warnLog, errorLog } from "./utilities/logging.js";
 
 /**

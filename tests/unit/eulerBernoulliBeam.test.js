@@ -21,7 +21,7 @@
 
 import { assembleEulerBernoulliBeamMat } from "../../src/models/eulerBernoulliBeam.js";
 import { prepareMesh } from "../../src/mesh/meshUtils.js";
-import { solveLinearSystem } from "../../src/methods/linearSystemSolver.js";
+import { solveLinearSystem } from "../../src/solvers/linearSystemSolver.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
 
 basicLog("");

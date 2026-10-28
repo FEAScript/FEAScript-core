@@ -9,7 +9,7 @@
 
 // Internal imports
 import { triangleBoundarySides } from "../mesh/basisFunctions.js";
-import { NumericalIntegration } from "../methods/numericalIntegration.js";
+import { NumericalIntegration } from "../numerics/numericalIntegration.js";
 import { debugLog } from "../utilities/logging.js";
 
 /**

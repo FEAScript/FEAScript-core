@@ -21,7 +21,7 @@
 
 import { BasisFunctions } from "../../src/mesh/basisFunctions.js";
 import { getIntegrationPoints2D } from "../../src/mesh/meshUtils.js";
-import { NumericalIntegration } from "../../src/methods/numericalIntegration.js";
+import { NumericalIntegration } from "../../src/numerics/numericalIntegration.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
 
 basicLog("");

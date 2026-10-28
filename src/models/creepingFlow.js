@@ -10,7 +10,7 @@
 // Internal imports
 import { getIntegrationPoints2D, performIsoparametricMapping2D } from "../mesh/meshUtils.js";
 import { BasisFunctions } from "../mesh/basisFunctions.js";
-import { NumericalIntegration } from "../methods/numericalIntegration.js";
+import { NumericalIntegration } from "../numerics/numericalIntegration.js";
 import { FlowBoundaryConditions } from "./flowBoundaryConditions.js";
 import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 

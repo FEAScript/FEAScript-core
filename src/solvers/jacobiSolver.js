@@ -8,7 +8,7 @@
  */
 
 // Internal imports
-import { dotProduct, copyVector, euclideanNorm } from "../linalg/blasUtilities.js";
+import { dotProduct, copyVector, euclideanNorm } from "../numerics/blasUtilities.js";
 
 /**
  * Function to solve a system of linear equations using the Jacobi iterative method (CPU synchronous version)

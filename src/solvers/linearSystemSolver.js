@@ -8,7 +8,7 @@
  */
 
 // Internal imports
-import { jacobiSolver, mathjsLUSolver } from "../base/solvers/index.js";
+import { jacobiSolver, mathjsLUSolver } from "./index.js";
 import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 import * as Comlink from "../vendor/comlink.mjs";
 

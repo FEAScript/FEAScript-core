@@ -12,7 +12,7 @@ import * as Comlink from "../vendor/comlink.mjs";
 import * as ti from "../vendor/taichi.esm.js";
 
 // Internal imports
-import { WebGPUComputeEngine } from "../methods/webgpuJacobiSolver.js";
+import { WebGPUComputeEngine } from "../solvers/webgpuJacobiSolver.js";
 
 /**
  * Worker for handling FEAScript WebGPU Jacobi solver computations
