@@ -52,7 +52,7 @@ export class FlowBoundaryConditions {
   /**
    * Function to impose velocity Dirichlet boundary conditions
    * @param {array} residualVector - The residual vector to be modified
-   * @param {array} jacobianMatrix - The Jacobian matrix to be modified
+   * @param {SparseMatrix} jacobianMatrix - The Jacobian matrix to be modified
    *
    * For consistency across both linear and nonlinear formulations,
    * this project always refers to the assembled right-hand side vector
@@ -69,7 +69,6 @@ export class FlowBoundaryConditions {
    *    Format: ["stressFree"]
    */
   imposeDirichletBoundaryConditions(residualVector, jacobianMatrix) {
-    const totalDOFs = residualVector.length;
     let hasStressFree = false;
 
     if (this.meshDimension === "2D") {
@@ -99,17 +98,13 @@ export class FlowBoundaryConditions {
                 );
                 // Apply u-velocity Dirichlet boundary condition
                 residualVector[xVelocityDegreeOfFreedom] = xVelocityValue;
-                for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
-                  jacobianMatrix[xVelocityDegreeOfFreedom][colIndex] = 0;
-                }
-                jacobianMatrix[xVelocityDegreeOfFreedom][xVelocityDegreeOfFreedom] = 1;
+                jacobianMatrix.clearRow(xVelocityDegreeOfFreedom);
+                jacobianMatrix.setValue(xVelocityDegreeOfFreedom, xVelocityDegreeOfFreedom, 1);
 
                 // Apply v-velocity Dirichlet boundary condition
                 residualVector[yVelocityDegreeOfFreedom] = yVelocityValue;
-                for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
-                  jacobianMatrix[yVelocityDegreeOfFreedom][colIndex] = 0;
-                }
-                jacobianMatrix[yVelocityDegreeOfFreedom][yVelocityDegreeOfFreedom] = 1;
+                jacobianMatrix.clearRow(yVelocityDegreeOfFreedom);
+                jacobianMatrix.setValue(yVelocityDegreeOfFreedom, yVelocityDegreeOfFreedom, 1);
               });
             } else if (this.elementOrder === "quadratic") {
               const boundarySides = {
@@ -129,17 +124,13 @@ export class FlowBoundaryConditions {
                 );
                 // Apply u-velocity Dirichlet boundary condition
                 residualVector[xVelocityDegreeOfFreedom] = xVelocityValue;
-                for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
-                  jacobianMatrix[xVelocityDegreeOfFreedom][colIndex] = 0;
-                }
-                jacobianMatrix[xVelocityDegreeOfFreedom][xVelocityDegreeOfFreedom] = 1;
+                jacobianMatrix.clearRow(xVelocityDegreeOfFreedom);
+                jacobianMatrix.setValue(xVelocityDegreeOfFreedom, xVelocityDegreeOfFreedom, 1);
 
                 // Apply v-velocity Dirichlet boundary condition
                 residualVector[yVelocityDegreeOfFreedom] = yVelocityValue;
-                for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
-                  jacobianMatrix[yVelocityDegreeOfFreedom][colIndex] = 0;
-                }
-                jacobianMatrix[yVelocityDegreeOfFreedom][yVelocityDegreeOfFreedom] = 1;
+                jacobianMatrix.clearRow(yVelocityDegreeOfFreedom);
+                jacobianMatrix.setValue(yVelocityDegreeOfFreedom, yVelocityDegreeOfFreedom, 1);
               });
             } else if (this.elementOrder === "linear") {
               const boundarySides = {
@@ -159,17 +150,13 @@ export class FlowBoundaryConditions {
                 );
                 // Apply u-velocity Dirichlet boundary condition
                 residualVector[xVelocityDegreeOfFreedom] = xVelocityValue;
-                for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
-                  jacobianMatrix[xVelocityDegreeOfFreedom][colIndex] = 0;
-                }
-                jacobianMatrix[xVelocityDegreeOfFreedom][xVelocityDegreeOfFreedom] = 1;
+                jacobianMatrix.clearRow(xVelocityDegreeOfFreedom);
+                jacobianMatrix.setValue(xVelocityDegreeOfFreedom, xVelocityDegreeOfFreedom, 1);
 
                 // Apply v-velocity Dirichlet boundary condition
                 residualVector[yVelocityDegreeOfFreedom] = yVelocityValue;
-                for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
-                  jacobianMatrix[yVelocityDegreeOfFreedom][colIndex] = 0;
-                }
-                jacobianMatrix[yVelocityDegreeOfFreedom][yVelocityDegreeOfFreedom] = 1;
+                jacobianMatrix.clearRow(yVelocityDegreeOfFreedom);
+                jacobianMatrix.setValue(yVelocityDegreeOfFreedom, yVelocityDegreeOfFreedom, 1);
               });
             }
           });
@@ -180,10 +167,8 @@ export class FlowBoundaryConditions {
       // (pressure is determined only up to a constant for all-Dirichlet velocity problems)
       if (!hasStressFree) {
         const pressureDegreeOfFreedom = 2 * this.totalNodesVelocity; // First pressure DOF
-        for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
-          jacobianMatrix[pressureDegreeOfFreedom][colIndex] = 0;
-        }
-        jacobianMatrix[pressureDegreeOfFreedom][pressureDegreeOfFreedom] = 1;
+        jacobianMatrix.clearRow(pressureDegreeOfFreedom);
+        jacobianMatrix.setValue(pressureDegreeOfFreedom, pressureDegreeOfFreedom, 1);
         residualVector[pressureDegreeOfFreedom] = 0;
         debugLog("Pinned pressure at first pressure node (p = 0) to remove null space");
       }

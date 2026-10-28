@@ -36,7 +36,7 @@ export class GenericBoundaryConditions {
   /**
    * Function to impose Dirichlet boundary conditions
    * @param {array} residualVector - The residual vector to be modified
-   * @param {array} jacobianMatrix - The Jacobian matrix to be modified
+   * @param {SparseMatrix} jacobianMatrix - The Jacobian matrix to be modified
    * @param {array} [solutionVector] - Current solution (Newton-Raphson iterate); when provided, the
    *  residual is set to the increment needed to reach the prescribed value instead of the value itself
    *
@@ -72,11 +72,9 @@ export class GenericBoundaryConditions {
                   ? value - solutionVector[globalNodeIndex]
                   : value;
                 // Set the Jacobian matrix row to zero
-                for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
-                  jacobianMatrix[globalNodeIndex][colIndex] = 0;
-                }
+                jacobianMatrix.clearRow(globalNodeIndex);
                 // Set the diagonal entry of the Jacobian matrix to one
-                jacobianMatrix[globalNodeIndex][globalNodeIndex] = 1;
+                jacobianMatrix.setValue(globalNodeIndex, globalNodeIndex, 1);
               });
             } else if (this.elementOrder === "quadratic") {
               const boundarySides = {
@@ -95,11 +93,9 @@ export class GenericBoundaryConditions {
                   ? value - solutionVector[globalNodeIndex]
                   : value;
                 // Set the Jacobian matrix row to zero
-                for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
-                  jacobianMatrix[globalNodeIndex][colIndex] = 0;
-                }
+                jacobianMatrix.clearRow(globalNodeIndex);
                 // Set the diagonal entry of the Jacobian matrix to one
-                jacobianMatrix[globalNodeIndex][globalNodeIndex] = 1;
+                jacobianMatrix.setValue(globalNodeIndex, globalNodeIndex, 1);
               });
             }
           });
@@ -124,11 +120,9 @@ export class GenericBoundaryConditions {
                   ? value - solutionVector[globalNodeIndex]
                   : value;
                 // Set the Jacobian matrix row to zero
-                for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
-                  jacobianMatrix[globalNodeIndex][colIndex] = 0;
-                }
+                jacobianMatrix.clearRow(globalNodeIndex);
                 // Set the diagonal entry of the Jacobian matrix to one
-                jacobianMatrix[globalNodeIndex][globalNodeIndex] = 1;
+                jacobianMatrix.setValue(globalNodeIndex, globalNodeIndex, 1);
               });
             } else if (this.elementOrder === "linear") {
               const boundarySides = {
@@ -149,11 +143,9 @@ export class GenericBoundaryConditions {
                   ? value - solutionVector[globalNodeIndex]
                   : value;
                 // Set the Jacobian matrix row to zero
-                for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
-                  jacobianMatrix[globalNodeIndex][colIndex] = 0;
-                }
+                jacobianMatrix.clearRow(globalNodeIndex);
                 // Set the diagonal entry of the Jacobian matrix to one
-                jacobianMatrix[globalNodeIndex][globalNodeIndex] = 1;
+                jacobianMatrix.setValue(globalNodeIndex, globalNodeIndex, 1);
               });
             } else if (this.elementOrder === "quadratic") {
               const boundarySides = {
@@ -174,11 +166,9 @@ export class GenericBoundaryConditions {
                   ? value - solutionVector[globalNodeIndex]
                   : value;
                 // Set the Jacobian matrix row to zero
-                for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
-                  jacobianMatrix[globalNodeIndex][colIndex] = 0;
-                }
+                jacobianMatrix.clearRow(globalNodeIndex);
                 // Set the diagonal entry of the Jacobian matrix to one
-                jacobianMatrix[globalNodeIndex][globalNodeIndex] = 1;
+                jacobianMatrix.setValue(globalNodeIndex, globalNodeIndex, 1);
               });
             }
           });

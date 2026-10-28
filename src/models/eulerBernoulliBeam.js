@@ -10,6 +10,7 @@
 // Internal imports
 import { BasisFunctions } from "../mesh/basisFunctions.js";
 import { NumericalIntegration } from "../numerics/numericalIntegration.js";
+import { SparseMatrix } from "../numerics/sparseMatrix.js";
 import { BeamBoundaryConditions } from "./beamBoundaryConditions.js";
 import { basicLog, errorLog } from "../utilities/logging.js";
 
@@ -38,7 +39,7 @@ import { basicLog, errorLog } from "../utilities/logging.js";
  *  - c0(x): elastic foundation modulus (optional, defaults to 0)
  *  - q(x): distributed transverse load (optional, defaults to 0)
  * @returns {object} An object containing:
- *  - jacobianMatrix: The assembled Jacobian (stiffness) matrix
+ *  - jacobianMatrix: The assembled (sparse) Jacobian (stiffness) matrix
  *  - residualVector: The assembled residual (load) vector
  *  - dofsPerNode: Number of degrees of freedom per node (2)
  *  - totalDOFs: Total number of degrees of freedom in the assembled system
@@ -74,10 +75,7 @@ export function assembleEulerBernoulliBeamMat(meshData, boundaryConditions, coef
 
   // Initialize global Jacobian matrix and residual vector
   let residualVector = new Array(totalDOFs).fill(0);
-  let jacobianMatrix = [];
-  for (let dofIndex = 0; dofIndex < totalDOFs; dofIndex++) {
-    jacobianMatrix.push(new Array(totalDOFs).fill(0));
-  }
+  let jacobianMatrix = new SparseMatrix(totalDOFs);
 
   // Cubic Hermite basis functions for the field, with a 4-point Gauss quadrature rule
   const basisFunctions = new BasisFunctions({ meshDimension: "1D", elementOrder: "hermiteCubic" });
@@ -86,6 +84,10 @@ export function assembleEulerBernoulliBeamMat(meshData, boundaryConditions, coef
     elementOrder: "hermiteCubic",
   });
   const { gaussPoints, gaussWeights } = numericalIntegration.getGaussPointsAndWeights();
+
+  // Element matrix and second derivatives of the basis functions, reused for every element and Gauss point
+  const localJacobianMatrix = new Float64Array(4 * 4);
+  const basisFunctionDerivXX = new Float64Array(4);
 
   // Matrix assembly
   for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {
@@ -103,6 +105,7 @@ export function assembleEulerBernoulliBeamMat(meshData, boundaryConditions, coef
       dofsPerNode * globalNode2,
       dofsPerNode * globalNode2 + 1,
     ];
+    localJacobianMatrix.fill(0);
 
     // Loop over Gauss points
     for (let gaussPointIndex = 0; gaussPointIndex < gaussPoints.length; gaussPointIndex++) {
@@ -120,9 +123,9 @@ export function assembleEulerBernoulliBeamMat(meshData, boundaryConditions, coef
 
       // Second derivative with respect to x: d2N/dx2 = (1/J^2) d2N/dksi2 (valid since J is
       // constant along a straight element)
-      const basisFunctionDerivXX = basisFunctionDerivKsi2.map(
-        (secondDerivKsi) => secondDerivKsi / detJacobian ** 2,
-      );
+      for (let localIndex = 0; localIndex < 4; localIndex++) {
+        basisFunctionDerivXX[localIndex] = basisFunctionDerivKsi2[localIndex] / detJacobian ** 2;
+      }
 
       // Physical coordinate of this Gauss point (linear mapping between the 2 end nodes)
       const xCoord = x1 + elementLength * ksi;
@@ -132,26 +135,27 @@ export function assembleEulerBernoulliBeamMat(meshData, boundaryConditions, coef
       const c0Val = c0(xCoord);
       const qVal = q(xCoord);
 
+      // Integration factors, common to every pair of local DOFs
       const weightFactor = gaussWeights[gaussPointIndex] * detJacobian;
+      const bendingFactor = weightFactor * EIVal;
+      const foundationFactor = weightFactor * c0Val;
 
       // Computation of the element contributions to the residual vector and Jacobian matrix
       for (let localIndex1 = 0; localIndex1 < 4; localIndex1++) {
-        const globalDOF1 = dofMap[localIndex1];
-
         // Distributed load contribution to the residual (load) vector
-        residualVector[globalDOF1] += weightFactor * qVal * basisFunction[localIndex1];
+        residualVector[dofMap[localIndex1]] += weightFactor * qVal * basisFunction[localIndex1];
 
         for (let localIndex2 = 0; localIndex2 < 4; localIndex2++) {
-          const globalDOF2 = dofMap[localIndex2];
-
           // Bending stiffness (curvature-curvature) and elastic-foundation terms
-          jacobianMatrix[globalDOF1][globalDOF2] +=
-            weightFactor *
-            (EIVal * basisFunctionDerivXX[localIndex1] * basisFunctionDerivXX[localIndex2] +
-              c0Val * basisFunction[localIndex1] * basisFunction[localIndex2]);
+          localJacobianMatrix[localIndex1 * 4 + localIndex2] +=
+            bendingFactor * basisFunctionDerivXX[localIndex1] * basisFunctionDerivXX[localIndex2] +
+            foundationFactor * basisFunction[localIndex1] * basisFunction[localIndex2];
         }
       }
     }
+
+    // Add the element contribution to the global Jacobian matrix
+    jacobianMatrix.addLocalMatrix(dofMap, localJacobianMatrix);
   }
 
   // Apply boundary conditions: natural/spring contributions first, essential conditions last

@@ -11,6 +11,7 @@
 import { getIntegrationPoints2D, performIsoparametricMapping2D } from "../mesh/meshUtils.js";
 import { BasisFunctions } from "../mesh/basisFunctions.js";
 import { NumericalIntegration } from "../numerics/numericalIntegration.js";
+import { SparseMatrix } from "../numerics/sparseMatrix.js";
 import { FlowBoundaryConditions } from "./flowBoundaryConditions.js";
 import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 
@@ -25,7 +26,7 @@ import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
  * @param {object} meshData - Object containing prepared mesh data (must use quadratic elements)
  * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
  * @returns {object} An object containing:
- *  - jacobianMatrix: The assembled Jacobian matrix
+ *  - jacobianMatrix: The assembled (sparse) Jacobian matrix
  *  - residualVector: The assembled residual vector
  *  - totalNodesVelocity: Number of velocity nodes (Q2)
  *  - totalNodesPressure: Number of pressure nodes (Q1)
@@ -102,15 +103,8 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions) {
   );
 
   // Initialize Jacobian matrix and residual vector
-  let residualVector = [];
-  let jacobianMatrix = [];
-  for (let nodeIndex = 0; nodeIndex < totalDOFs; nodeIndex++) {
-    residualVector[nodeIndex] = 0;
-    jacobianMatrix.push([]);
-    for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
-      jacobianMatrix[nodeIndex][colIndex] = 0;
-    }
-  }
+  let residualVector = new Array(totalDOFs).fill(0);
+  let jacobianMatrix = new SparseMatrix(totalDOFs);
 
   // Initialize basis functions for velocity (Q2/P2) and pressure (Q1/P1)
   const velocityBasisFunctions = new BasisFunctions({
@@ -135,8 +129,26 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions) {
   let gaussWeights = gaussPointsAndWeights.gaussWeights;
   const integrationPoints2D = getIntegrationPoints2D(gaussPoints, gaussWeights, elementShape);
 
+  // Velocity (Q2/P2) and pressure (Q1/P1) basis functions on the reference element at each integration point
+  // (the same for every element)
+  const velocityReferenceBasisFunctions = integrationPoints2D.map(([ksi, eta]) =>
+    velocityBasisFunctions.getBasisFunctions(ksi, eta),
+  );
+  const pressureReferenceBasisFunctions = integrationPoints2D.map(([ksi, eta]) =>
+    pressureBasisFunctions.getBasisFunctions(ksi, eta),
+  );
+
   // Viscosity coefficient
   const mu = 1.0;
+
+  // Local DOF ordering in the element matrix: [u_0 … u_{n_2−1}, v_0 … v_{n_2−1}, p_0 … p_{n_1−1}]
+  const localDOFs = 2 * nodesPerVelocityElement + nodesPerPressureElement;
+  const localToGlobalDOFMap = new Array(localDOFs);
+
+  // Element matrix and basis function derivatives, reused for every element and integration point
+  const localJacobianMatrix = new Float64Array(localDOFs * localDOFs);
+  const basisFunctionDerivX = new Float64Array(nodesPerVelocityElement);
+  const basisFunctionDerivY = new Float64Array(nodesPerVelocityElement);
 
   // Matrix assembly
   for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {
@@ -145,89 +157,91 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions) {
     for (let localNodeIndex = 0; localNodeIndex < nodesPerVelocityElement; localNodeIndex++) {
       // Subtract 1 from nop in order to start numbering from 0
       velLocalToGlobalMap[localNodeIndex] = nop[elementIndex][localNodeIndex] - 1;
+      localToGlobalDOFMap[localNodeIndex] = velLocalToGlobalMap[localNodeIndex]; // u-velocity DOF
+      localToGlobalDOFMap[nodesPerVelocityElement + localNodeIndex] =
+        totalNodesVelocity + velLocalToGlobalMap[localNodeIndex]; // v-velocity DOF
     }
 
     // Build local-to-global mapping for pressure nodes (Q1/P1)
-    let presLocalToGlobalMap = [];
     for (let localNodeIndex = 0; localNodeIndex < nodesPerPressureElement; localNodeIndex++) {
       const globalQ2Node = nop[elementIndex][cornerLocalIndices[localNodeIndex]] - 1;
-      presLocalToGlobalMap[localNodeIndex] = q2ToPressureMap.get(globalQ2Node);
+      localToGlobalDOFMap[2 * nodesPerVelocityElement + localNodeIndex] =
+        2 * totalNodesVelocity + q2ToPressureMap.get(globalQ2Node); // Pressure DOF
     }
+    localJacobianMatrix.fill(0);
 
     // Loop over integration points
-    for (const [ksi, eta, integrationWeight] of integrationPoints2D) {
-      // Get velocity (Q2/P2) basis functions for the current Gauss point
-      const velocityBasisFunctionsAndDerivatives = velocityBasisFunctions.getBasisFunctions(ksi, eta);
+    for (let pointIndex = 0; pointIndex < integrationPoints2D.length; pointIndex++) {
+      const integrationWeight = integrationPoints2D[pointIndex][2];
 
-      // Get pressure (Q1/P1) basis functions for the current Gauss point
-      const pressureBasisFunctionsAndDerivatives = pressureBasisFunctions.getBasisFunctions(ksi, eta);
+      // Velocity (Q2/P2) basis functions on the reference element at this integration point
+      const { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta } =
+        velocityReferenceBasisFunctions[pointIndex];
+
+      // Pressure (Q1/P1) basis functions on the reference element at this integration point
+      const pressureBasisFunction = pressureReferenceBasisFunctions[pointIndex].basisFunction;
 
       // Perform isoparametric mapping using Q2/P2 velocity basis functions
-      const mappingResult = performIsoparametricMapping2D({
-        basisFunction: velocityBasisFunctionsAndDerivatives.basisFunction,
-        basisFunctionDerivKsi: velocityBasisFunctionsAndDerivatives.basisFunctionDerivKsi,
-        basisFunctionDerivEta: velocityBasisFunctionsAndDerivatives.basisFunctionDerivEta,
+      const { detJacobian } = performIsoparametricMapping2D({
+        basisFunction,
+        basisFunctionDerivKsi,
+        basisFunctionDerivEta,
         nodesXCoordinates,
         nodesYCoordinates,
         localToGlobalMap: velLocalToGlobalMap,
         nodesPerElement: nodesPerVelocityElement,
+        basisFunctionDerivX,
+        basisFunctionDerivY,
       });
 
-      // Extract mapping results
-      const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = mappingResult;
-
-      // Gauss integration weight factor
+      // Gauss integration weight factors
       const weightFactor = integrationWeight * detJacobian;
+      const viscousFactor = -weightFactor * mu;
 
       // Assemble viscous stiffness terms (K block)
       for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerVelocityElement; localNodeIndex1++) {
-        let globalNode1 = velLocalToGlobalMap[localNodeIndex1];
-        let xVelocityDegreeOfFreedom1 = globalNode1; // u-velocity DOF
-        let yVelocityDegreeOfFreedom1 = totalNodesVelocity + globalNode1; // v-velocity DOF
+        const xVelocityRowOffset = localNodeIndex1 * localDOFs; // u-velocity row
+        const yVelocityRowOffset = (nodesPerVelocityElement + localNodeIndex1) * localDOFs; // v-velocity row
 
         for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerVelocityElement; localNodeIndex2++) {
-          let globalNode2 = velLocalToGlobalMap[localNodeIndex2];
-          let xVelocityDegreeOfFreedom2 = globalNode2; // u-velocity DOF
-          let yVelocityDegreeOfFreedom2 = totalNodesVelocity + globalNode2; // v-velocity DOF
-
           // Viscous stiffness
-          let viscousContribution =
-            -weightFactor *
-            mu *
+          const viscousContribution =
+            viscousFactor *
             (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] +
               basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
 
           // K appears in both u-u and v-v blocks
-          jacobianMatrix[xVelocityDegreeOfFreedom1][xVelocityDegreeOfFreedom2] += viscousContribution;
-          jacobianMatrix[yVelocityDegreeOfFreedom1][yVelocityDegreeOfFreedom2] += viscousContribution;
+          localJacobianMatrix[xVelocityRowOffset + localNodeIndex2] += viscousContribution;
+          localJacobianMatrix[yVelocityRowOffset + nodesPerVelocityElement + localNodeIndex2] +=
+            viscousContribution;
         }
 
         // Assemble pressure-velocity coupling terms
         for (let localPresIndex = 0; localPresIndex < nodesPerPressureElement; localPresIndex++) {
-          let pressureDegreeOfFreedom = 2 * totalNodesVelocity + presLocalToGlobalMap[localPresIndex];
+          const pressureLocalDOF = 2 * nodesPerVelocityElement + localPresIndex;
+          const pressureRowOffset = pressureLocalDOF * localDOFs;
 
-          let bxContribution =
-            weightFactor *
-            pressureBasisFunctionsAndDerivatives.basisFunction[localPresIndex] *
-            basisFunctionDerivX[localNodeIndex1];
-
-          let byContribution =
-            weightFactor *
-            pressureBasisFunctionsAndDerivatives.basisFunction[localPresIndex] *
-            basisFunctionDerivY[localNodeIndex1];
+          const bxContribution =
+            weightFactor * pressureBasisFunction[localPresIndex] * basisFunctionDerivX[localNodeIndex1];
+          const byContribution =
+            weightFactor * pressureBasisFunction[localPresIndex] * basisFunctionDerivY[localNodeIndex1];
 
           // Pressure gradient in x-momentum
-          jacobianMatrix[xVelocityDegreeOfFreedom1][pressureDegreeOfFreedom] += bxContribution;
+          localJacobianMatrix[xVelocityRowOffset + pressureLocalDOF] += bxContribution;
 
           // Pressure gradient in y-momentum
-          jacobianMatrix[yVelocityDegreeOfFreedom1][pressureDegreeOfFreedom] += byContribution;
+          localJacobianMatrix[yVelocityRowOffset + pressureLocalDOF] += byContribution;
 
           // Continuity equation
-          jacobianMatrix[pressureDegreeOfFreedom][xVelocityDegreeOfFreedom1] += -bxContribution;
-          jacobianMatrix[pressureDegreeOfFreedom][yVelocityDegreeOfFreedom1] += -byContribution;
+          localJacobianMatrix[pressureRowOffset + localNodeIndex1] += -bxContribution;
+          localJacobianMatrix[pressureRowOffset + nodesPerVelocityElement + localNodeIndex1] +=
+            -byContribution;
         }
       }
     }
+
+    // Add the element contribution to the global Jacobian matrix
+    jacobianMatrix.addLocalMatrix(localToGlobalDOFMap, localJacobianMatrix);
   }
 
   // Apply boundary conditions

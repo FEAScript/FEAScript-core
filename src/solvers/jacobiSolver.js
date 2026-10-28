@@ -8,11 +8,12 @@
  */
 
 // Internal imports
-import { dotProduct, copyVector, euclideanNorm } from "../numerics/blasUtilities.js";
+import { copyVector, euclideanNorm } from "../numerics/blasUtilities.js";
+import { SparseMatrix } from "../numerics/sparseMatrix.js";
 
 /**
  * Function to solve a system of linear equations using the Jacobi iterative method (CPU synchronous version)
- * @param {array} systemMatrix - The system matrix
+ * @param {SparseMatrix|array} systemMatrix - The system matrix (SparseMatrix or dense array of arrays)
  * @param {array} rightHandSideVector - The right-hand side vector
  * @param {array} initialGuess - Initial guess for solution vector
  * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance`
@@ -25,20 +26,35 @@ export function jacobiSolver(systemMatrix, rightHandSideVector, initialGuess, op
   // Extract options
   const { maxIterations, tolerance } = options;
 
-  const n = systemMatrix.length;
+  // Convert the system matrix to compressed sparse row (CSR) format
+  const sparseMatrix =
+    systemMatrix instanceof SparseMatrix ? systemMatrix : SparseMatrix.fromDense(systemMatrix);
+  const { rowPointers, columnIndices, values } = sparseMatrix.toCSR();
+  const n = sparseMatrix.size;
+
+  // Extract the diagonal entries
+  const diagonal = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    for (let k = rowPointers[i]; k < rowPointers[i + 1]; k++) {
+      if (columnIndices[k] === i) diagonal[i] = values[k];
+    }
+  }
 
   // Convert inputs to Float64Arrays for BLAS operations
-  const rows = systemMatrix.map((row) => new Float64Array(row));
   const rhs = new Float64Array(rightHandSideVector);
   let solutionVector = new Float64Array(initialGuess);
   let updatedSolutionVector = new Float64Array(n);
   const diff = new Float64Array(n);
 
-  // Jacobi update: xNew[i] = (b[i] - (A[i] · x) + A[i][i] * x[i]) / A[i][i]
+  // Jacobi update: xNew[i] = (b[i] - sum over j != i of A[i][j] * x[j]) / A[i][i]
   for (let iter = 0; iter < maxIterations; iter++) {
     for (let i = 0; i < n; i++) {
-      const rowDot = dotProduct(rows[i], solutionVector);
-      updatedSolutionVector[i] = (rhs[i] - rowDot + rows[i][i] * solutionVector[i]) / rows[i][i];
+      let offDiagonalSum = 0;
+      for (let k = rowPointers[i]; k < rowPointers[i + 1]; k++) {
+        const j = columnIndices[k];
+        if (j !== i) offDiagonalSum += values[k] * solutionVector[j];
+      }
+      updatedSolutionVector[i] = (rhs[i] - offDiagonalSum) / diagonal[i];
     }
 
     // Compute diff and copy updatedSolutionVector into solutionVector

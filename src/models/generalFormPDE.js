@@ -18,7 +18,7 @@ import { basicLog, errorLog } from "../utilities/logging.js";
  * @param {object} boundaryConditions - Object containing boundary conditions
  * @param {object} coefficientFunctions - Functions A(x), B(x), C(x), D(x) for the PDE
  * @returns {object} An object containing:
- *  - jacobianMatrix: The assembled Jacobian matrix
+ *  - jacobianMatrix: The assembled (sparse) Jacobian matrix
  *  - residualVector: The assembled residual vector
  */
 export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coefficientFunctions) {
@@ -44,11 +44,15 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
     residualVector,
     jacobianMatrix,
     localToGlobalMap,
-    basisFunctions,
     gaussPoints,
     gaussWeights,
+    referenceBasisFunctions,
     nodesPerElement,
   } = FEAData;
+
+  // Element matrix and basis function derivatives, reused for every element and Gauss point
+  const localJacobianMatrix = new Float64Array(nodesPerElement * nodesPerElement);
+  const basisFunctionDerivX = new Float64Array(nodesPerElement);
 
   if (meshDimension === "1D") {
     // 1D general form PDE
@@ -60,72 +64,60 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
         // Convert to 0-based indexing
         localToGlobalMap[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]) - 1;
       }
+      localJacobianMatrix.fill(0);
 
       // Loop over Gauss points
       for (let gaussPointIndex = 0; gaussPointIndex < gaussPoints.length; gaussPointIndex++) {
-        // Get basis functions for the current Gauss point
-        const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(
-          gaussPoints[gaussPointIndex],
-        );
+        // Basis functions on the reference element at this Gauss point
+        const { basisFunction, basisFunctionDerivKsi } = referenceBasisFunctions[gaussPointIndex];
 
         // Perform isoparametric mapping
-        const { detJacobian, basisFunctionDerivX } = performIsoparametricMapping1D({
+        const { xCoordinates, detJacobian } = performIsoparametricMapping1D({
           basisFunction,
           basisFunctionDerivKsi,
           nodesXCoordinates,
           localToGlobalMap,
           nodesPerElement,
+          basisFunctionDerivX,
         });
 
-        // Calculate the physical coordinate for this Gauss point
-        let xCoord = 0;
-        for (let i = 0; i < nodesPerElement; i++) {
-          xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunction[i];
-        }
-
         // Evaluate coefficient functions at this physical coordinate
-        const a = A(xCoord);
-        const b = B(xCoord);
-        const c = C(xCoord);
-        const d = D(xCoord);
+        const a = A(xCoordinates);
+        const b = B(xCoordinates);
+        const c = C(xCoordinates);
+        const d = D(xCoordinates);
+
+        // Integration factors, common to every pair of local nodes
+        const weightFactor = gaussWeights[gaussPointIndex] * detJacobian;
+        const diffusionFactor = weightFactor * a;
+        const advectionFactor = -weightFactor * b;
+        const reactionFactor = -weightFactor * c;
 
         // Computation of Galerkin's residuals and local Jacobian matrix
         for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
-          const globalNodeIndex1 = localToGlobalMap[localNodeIndex1];
-
           // Source term contribution to residual vector
-          residualVector[globalNodeIndex1] -=
-            gaussWeights[gaussPointIndex] * detJacobian * d * basisFunction[localNodeIndex1];
+          residualVector[localToGlobalMap[localNodeIndex1]] -=
+            weightFactor * d * basisFunction[localNodeIndex1];
 
+          const rowOffset = localNodeIndex1 * nodesPerElement;
           for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
-            const globalNodeIndex2 = localToGlobalMap[localNodeIndex2];
-
             // Diffusion term
-            jacobianMatrix[globalNodeIndex1][globalNodeIndex2] +=
-              gaussWeights[gaussPointIndex] *
-              detJacobian *
-              a *
-              basisFunctionDerivX[localNodeIndex1] *
-              basisFunctionDerivX[localNodeIndex2];
+            localJacobianMatrix[rowOffset + localNodeIndex2] +=
+              diffusionFactor * basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2];
 
             // Advection term
-            jacobianMatrix[globalNodeIndex1][globalNodeIndex2] -=
-              gaussWeights[gaussPointIndex] *
-              detJacobian *
-              b *
-              basisFunctionDerivX[localNodeIndex2] *
-              basisFunction[localNodeIndex1];
+            localJacobianMatrix[rowOffset + localNodeIndex2] +=
+              advectionFactor * basisFunctionDerivX[localNodeIndex2] * basisFunction[localNodeIndex1];
 
             // Reaction term
-            jacobianMatrix[globalNodeIndex1][globalNodeIndex2] -=
-              gaussWeights[gaussPointIndex] *
-              detJacobian *
-              c *
-              basisFunction[localNodeIndex1] *
-              basisFunction[localNodeIndex2];
+            localJacobianMatrix[rowOffset + localNodeIndex2] +=
+              reactionFactor * basisFunction[localNodeIndex1] * basisFunction[localNodeIndex2];
           }
         }
       }
+
+      // Add the element contribution to the global Jacobian matrix
+      jacobianMatrix.addLocalMatrix(localToGlobalMap, localJacobianMatrix);
     }
   } else if (meshDimension === "2D") {
     errorLog("2D general form PDE is not yet supported in assembleGeneralFormPDEMat.");
@@ -167,7 +159,7 @@ export function assembleGeneralFormPDEFront({
   coefficientFunctions,
 }) {
   // Extract numerical integration parameters and mesh coordinates
-  const { gaussPoints, gaussWeights, nodesPerElement } = FEAData;
+  const { gaussPoints, gaussWeights, referenceBasisFunctions, nodesPerElement } = FEAData;
   const { nodesXCoordinates, meshDimension } = meshData;
   const { A, B, C, D } = coefficientFunctions;
 
@@ -190,13 +182,11 @@ export function assembleGeneralFormPDEFront({
 
     // Loop over Gauss points
     for (let gaussPointIndex = 0; gaussPointIndex < gaussPoints.length; gaussPointIndex++) {
-      // Get basis functions for the current Gauss point
-      const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(
-        gaussPoints[gaussPointIndex],
-      );
+      // Basis functions on the reference element at this Gauss point
+      const { basisFunction, basisFunctionDerivKsi } = referenceBasisFunctions[gaussPointIndex];
 
       // Perform isoparametric mapping
-      const { detJacobian, basisFunctionDerivX } = performIsoparametricMapping1D({
+      const { xCoordinates, detJacobian, basisFunctionDerivX } = performIsoparametricMapping1D({
         basisFunction,
         basisFunctionDerivKsi,
         nodesXCoordinates,
@@ -204,48 +194,35 @@ export function assembleGeneralFormPDEFront({
         nodesPerElement,
       });
 
-      // Calculate the physical coordinate for this Gauss point
-      let xCoord = 0;
-      for (let i = 0; i < nodesPerElement; i++) {
-        xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunction[i];
-      }
-
       // Evaluate coefficient functions at this physical coordinate
-      const a = A(xCoord);
-      const b = B(xCoord);
-      const c = C(xCoord);
-      const d = D(xCoord);
+      const a = A(xCoordinates);
+      const b = B(xCoordinates);
+      const c = C(xCoordinates);
+      const d = D(xCoordinates);
+
+      // Integration factors, common to every pair of local nodes
+      const weightFactor = gaussWeights[gaussPointIndex] * detJacobian;
+      const diffusionFactor = weightFactor * a;
+      const advectionFactor = weightFactor * b;
+      const reactionFactor = weightFactor * c;
 
       // Computation of local Jacobian matrix and residual vector
       for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
         // Source term contribution to local residual vector
-        localResidualVector[localNodeIndex1] -=
-          gaussWeights[gaussPointIndex] * detJacobian * d * basisFunction[localNodeIndex1];
+        localResidualVector[localNodeIndex1] -= weightFactor * d * basisFunction[localNodeIndex1];
 
         for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
           // Diffusion term
           localJacobianMatrix[localNodeIndex1][localNodeIndex2] +=
-            gaussWeights[gaussPointIndex] *
-            detJacobian *
-            a *
-            basisFunctionDerivX[localNodeIndex1] *
-            basisFunctionDerivX[localNodeIndex2];
+            diffusionFactor * basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2];
 
           // Advection term
           localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
-            gaussWeights[gaussPointIndex] *
-            detJacobian *
-            b *
-            basisFunctionDerivX[localNodeIndex2] *
-            basisFunction[localNodeIndex1];
+            advectionFactor * basisFunctionDerivX[localNodeIndex2] * basisFunction[localNodeIndex1];
 
           // Reaction term
           localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
-            gaussWeights[gaussPointIndex] *
-            detJacobian *
-            c *
-            basisFunction[localNodeIndex1] *
-            basisFunction[localNodeIndex2];
+            reactionFactor * basisFunction[localNodeIndex1] * basisFunction[localNodeIndex2];
         }
       }
     }
@@ -270,7 +247,7 @@ export function assembleGeneralFormPDEFront({
  *  dDdu(x, u) for the nonlinear reaction/source term and its derivative with respect to u
  * @param {array} solutionVector - The current solution vector (Newton-Raphson iterate)
  * @returns {object} An object containing:
- *  - jacobianMatrix: The assembled Jacobian matrix (negative of dResidual/du)
+ *  - jacobianMatrix: The assembled (sparse) Jacobian matrix (negative of dResidual/du)
  *  - residualVector: The assembled residual vector
  */
 export function assembleGeneralFormPDENonlinearMat(
@@ -301,11 +278,15 @@ export function assembleGeneralFormPDENonlinearMat(
     residualVector,
     jacobianMatrix,
     localToGlobalMap,
-    basisFunctions,
     gaussPoints,
     gaussWeights,
+    referenceBasisFunctions,
     nodesPerElement,
   } = FEAData;
+
+  // Element matrix and basis function derivatives, reused for every element and Gauss point
+  const localJacobianMatrix = new Float64Array(nodesPerElement * nodesPerElement);
+  const basisFunctionDerivX = new Float64Array(nodesPerElement);
 
   if (meshDimension === "1D") {
     // 1D nonlinear general form PDE
@@ -317,60 +298,56 @@ export function assembleGeneralFormPDENonlinearMat(
         // Convert to 0-based indexing
         localToGlobalMap[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]) - 1;
       }
+      localJacobianMatrix.fill(0);
 
       // Loop over Gauss points
       for (let gaussPointIndex = 0; gaussPointIndex < gaussPoints.length; gaussPointIndex++) {
-        // Get basis functions for the current Gauss point
-        const { basisFunction, basisFunctionDerivKsi } = basisFunctions.getBasisFunctions(
-          gaussPoints[gaussPointIndex],
-        );
+        // Basis functions on the reference element at this Gauss point
+        const { basisFunction, basisFunctionDerivKsi } = referenceBasisFunctions[gaussPointIndex];
 
         // Perform isoparametric mapping
-        const { detJacobian, basisFunctionDerivX } = performIsoparametricMapping1D({
+        const { xCoordinates, detJacobian } = performIsoparametricMapping1D({
           basisFunction,
           basisFunctionDerivKsi,
           nodesXCoordinates,
           localToGlobalMap,
           nodesPerElement,
+          basisFunctionDerivX,
         });
 
-        // Calculate the physical coordinate, solution value and solution derivative at this Gauss point
-        let xCoord = 0;
+        // Calculate the solution value and solution derivative at this Gauss point
         let uValue = 0;
         let uDerivX = 0;
         for (let i = 0; i < nodesPerElement; i++) {
-          xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunction[i];
           uValue += solutionVector[localToGlobalMap[i]] * basisFunction[i];
           uDerivX += solutionVector[localToGlobalMap[i]] * basisFunctionDerivX[i];
         }
 
         // Evaluate coefficient functions at this physical coordinate and solution state
-        const a = A(xCoord);
-        const b = B(xCoord);
-        const c = C(xCoord);
-        const d = D(xCoord, uValue);
-        const dDduVal = dDdu(xCoord, uValue);
+        const a = A(xCoordinates);
+        const b = B(xCoordinates);
+        const c = C(xCoordinates);
+        const d = D(xCoordinates, uValue);
+        const dDduVal = dDdu(xCoordinates, uValue);
+
+        // Integration factors, common to every pair of local nodes
+        const weightFactor = gaussWeights[gaussPointIndex] * detJacobian;
 
         // Computation of the residual vector and the Newton-Raphson Jacobian matrix
         for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
-          const globalNodeIndex1 = localToGlobalMap[localNodeIndex1];
-
           // Residual contribution (diffusion, advection, reaction and nonlinear source terms)
-          residualVector[globalNodeIndex1] +=
-            gaussWeights[gaussPointIndex] *
-            detJacobian *
+          residualVector[localToGlobalMap[localNodeIndex1]] +=
+            weightFactor *
             (a * uDerivX * basisFunctionDerivX[localNodeIndex1] -
               b * uDerivX * basisFunction[localNodeIndex1] -
               c * uValue * basisFunction[localNodeIndex1] +
               d * basisFunction[localNodeIndex1]);
 
+          const rowOffset = localNodeIndex1 * nodesPerElement;
           for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
-            const globalNodeIndex2 = localToGlobalMap[localNodeIndex2];
-
             // Jacobian is the negative of the residual derivative, matching the Newton-Raphson solver convention
-            jacobianMatrix[globalNodeIndex1][globalNodeIndex2] +=
-              -gaussWeights[gaussPointIndex] *
-              detJacobian *
+            localJacobianMatrix[rowOffset + localNodeIndex2] +=
+              -weightFactor *
               (a * basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] -
                 b * basisFunctionDerivX[localNodeIndex2] * basisFunction[localNodeIndex1] -
                 c * basisFunction[localNodeIndex1] * basisFunction[localNodeIndex2] +
@@ -378,6 +355,9 @@ export function assembleGeneralFormPDENonlinearMat(
           }
         }
       }
+
+      // Add the element contribution to the global Jacobian matrix
+      jacobianMatrix.addLocalMatrix(localToGlobalMap, localJacobianMatrix);
     }
   } else if (meshDimension === "2D") {
     errorLog("2D nonlinear general form PDE is not yet supported in assembleGeneralFormPDENonlinearMat.");
