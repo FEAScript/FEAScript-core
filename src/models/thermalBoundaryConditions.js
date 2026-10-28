@@ -8,7 +8,9 @@
  */
 
 // Internal imports
-import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
+import { triangleBoundarySides } from "../mesh/basisFunctions.js";
+import { NumericalIntegration } from "../methods/numericalIntegration.js";
+import { debugLog } from "../utilities/logging.js";
 
 /**
  * Class to handle thermal boundary conditions application
@@ -21,13 +23,98 @@ export class ThermalBoundaryConditions {
    * @param {array} nop - Nodal numbering (NOP) array representing the connectivity between elements and nodes
    * @param {string} meshDimension - The dimension of the mesh (e.g., "2D")
    * @param {string} elementOrder - The order of elements (e.g., "linear", "quadratic")
+   * @param {string} [elementShape='quad'] - The 2D element shape, either 'quad' or 'triangle'
    */
-  constructor(boundaryConditions, boundaryElements, nop, meshDimension, elementOrder) {
+  constructor(boundaryConditions, boundaryElements, nop, meshDimension, elementOrder, elementShape = "quad") {
     this.boundaryConditions = boundaryConditions;
     this.boundaryElements = boundaryElements;
     this.nop = nop;
     this.meshDimension = meshDimension;
     this.elementOrder = elementOrder;
+    this.elementShape = elementShape;
+  }
+
+  /**
+   * Function to compute the convection contributions on one side of a triangular element
+   * @param {number} elementIndex - Index of the element
+   * @param {number} side - Side of the reference triangle (0: bottom, 1: left, 2: hypotenuse)
+   * @param {number} convectionHeatTransferCoefficient - Convection heat transfer coefficient
+   * @param {number} externalTemperature - External temperature
+   * @param {array} nodesXCoordinates - Array of x-coordinates of nodes
+   * @param {array} nodesYCoordinates - Array of y-coordinates of nodes
+   * @param {object} basisFunctions - Object containing basis functions and their derivatives
+   * @returns {object} An object containing:
+   *  - sideNodeIndices: Local node indices on the side
+   *  - localJacobianMatrix: Contributions indexed by local node indices
+   *  - localResidualVector: Contributions indexed by local node indices
+   */
+  computeTriangleConvectionContributions(
+    elementIndex,
+    side,
+    convectionHeatTransferCoefficient,
+    externalTemperature,
+    nodesXCoordinates,
+    nodesYCoordinates,
+    basisFunctions,
+  ) {
+    const nodesPerElement = this.nop[elementIndex].length;
+    const sideNodeIndices = triangleBoundarySides[this.elementOrder][side];
+    const localJacobianMatrix = Array(nodesPerElement)
+      .fill()
+      .map(() => Array(nodesPerElement).fill(0));
+    const localResidualVector = Array(nodesPerElement).fill(0);
+
+    // Parametrize the side with t in [0, 1]: (ksi, eta) = start + t * direction
+    const sideParametrization = {
+      0: { start: [0, 0], direction: [1, 0] }, // Bottom side (eta = 0)
+      1: { start: [0, 0], direction: [0, 1] }, // Left side (ksi = 0)
+      2: { start: [0, 1], direction: [1, -1] }, // Hypotenuse (ksi + eta = 1)
+    };
+    const { start, direction } = sideParametrization[side];
+
+    // 3-point Gauss rule on [0, 1], exact for the boundary mass terms of both linear and quadratic triangles
+    const { gaussPoints, gaussWeights } = new NumericalIntegration({
+      meshDimension: "1D",
+      elementOrder: "quadratic",
+    }).getGaussPointsAndWeights();
+
+    for (let gaussPointIndex = 0; gaussPointIndex < gaussPoints.length; gaussPointIndex++) {
+      const t = gaussPoints[gaussPointIndex];
+      const { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta } =
+        basisFunctions.getBasisFunctions(start[0] + t * direction[0], start[1] + t * direction[1]);
+
+      // Tangent vector of the side in physical space (chain rule along the side parametrization)
+      let tangentX = 0;
+      let tangentY = 0;
+      for (let nodeIndex = 0; nodeIndex < nodesPerElement; nodeIndex++) {
+        const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+        const basisFunctionDerivT =
+          basisFunctionDerivKsi[nodeIndex] * direction[0] + basisFunctionDerivEta[nodeIndex] * direction[1];
+        tangentX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivT;
+        tangentY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivT;
+      }
+      const tangentVectorLength = Math.sqrt(tangentX ** 2 + tangentY ** 2);
+
+      for (const localNodeIndex of sideNodeIndices) {
+        localResidualVector[localNodeIndex] +=
+          -gaussWeights[gaussPointIndex] *
+          tangentVectorLength *
+          basisFunction[localNodeIndex] *
+          convectionHeatTransferCoefficient *
+          externalTemperature;
+
+        for (const localNodeIndex2 of sideNodeIndices) {
+          localJacobianMatrix[localNodeIndex][localNodeIndex2] +=
+            -gaussWeights[gaussPointIndex] *
+            tangentVectorLength *
+            basisFunction[localNodeIndex] *
+            basisFunction[localNodeIndex2] *
+            convectionHeatTransferCoefficient;
+        }
+      }
+    }
+
+    return { sideNodeIndices, localJacobianMatrix, localResidualVector };
   }
 
   /**
@@ -106,7 +193,24 @@ export class ThermalBoundaryConditions {
             `Boundary ${boundaryKey}: Applying constant temperature of ${constantTemperatureValue} K (Dirichlet condition)`,
           );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
-            if (this.elementOrder === "linear") {
+            if (this.elementShape === "triangle") {
+              triangleBoundarySides[this.elementOrder][side].forEach((nodeIndex) => {
+                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+                debugLog(
+                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
+                    elementIndex + 1
+                  }, local node ${nodeIndex + 1})`,
+                );
+                // Set the residual vector to the ConstantTemp value
+                residualVector[globalNodeIndex] = constantTemperatureValue;
+                // Set the Jacobian matrix row to zero
+                for (let colIndex = 0; colIndex < residualVector.length; colIndex++) {
+                  jacobianMatrix[globalNodeIndex][colIndex] = 0;
+                }
+                // Set the diagonal entry of the Jacobian matrix to one
+                jacobianMatrix[globalNodeIndex][globalNodeIndex] = 1;
+              });
+            } else if (this.elementOrder === "linear") {
               const boundarySides = {
                 0: [0, 2], // Nodes at the bottom side of the reference element
                 1: [0, 1], // Nodes at the left side of the reference element
@@ -195,7 +299,7 @@ export class ThermalBoundaryConditions {
             } else if (this.elementOrder === "quadratic") {
               const boundarySides = {
                 0: [0], // Node at the left side of the reference element
-                2: [2], // Node at the right side of the reference element
+                1: [2], // Node at the right side of the reference element
               };
 
               boundarySides[side].forEach((nodeIndex) => {
@@ -223,7 +327,20 @@ export class ThermalBoundaryConditions {
           );
 
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
-            if (this.elementOrder === "linear") {
+            if (this.elementShape === "triangle") {
+              triangleBoundarySides[this.elementOrder][side].forEach((nodeIndex) => {
+                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+                debugLog(
+                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
+                    elementIndex + 1
+                  }, local node ${nodeIndex + 1})`,
+                );
+
+                // Set boundary condition code and value
+                nodeConstraintCode[globalNodeIndex] = 1;
+                boundaryValues[globalNodeIndex] = constantTemperatureValue;
+              });
+            } else if (this.elementOrder === "linear") {
               const boundarySides = {
                 0: [0, 2], // Nodes at the bottom side of the reference element
                 1: [0, 1], // Nodes at the left side of the reference element
@@ -348,7 +465,34 @@ export class ThermalBoundaryConditions {
             `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionHeatTransferCoefficient} W/(m²·K) and external temperature T∞=${externalTemperature} K`,
           );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
-            if (this.elementOrder === "linear") {
+            if (this.elementShape === "triangle") {
+              const { sideNodeIndices, localJacobianMatrix, localResidualVector } =
+                this.computeTriangleConvectionContributions(
+                  elementIndex,
+                  side,
+                  convectionHeatTransferCoefficient,
+                  externalTemperature,
+                  nodesXCoordinates,
+                  nodesYCoordinates,
+                  basisFunctions,
+                );
+
+              for (const localNodeIndex of sideNodeIndices) {
+                const globalNodeIndex = this.nop[elementIndex][localNodeIndex] - 1;
+                debugLog(
+                  `  - Applied convection boundary condition to node ${globalNodeIndex + 1} (element ${
+                    elementIndex + 1
+                  }, local node ${localNodeIndex + 1})`,
+                );
+                residualVector[globalNodeIndex] += localResidualVector[localNodeIndex];
+
+                for (const localNodeIndex2 of sideNodeIndices) {
+                  const globalNodeIndex2 = this.nop[elementIndex][localNodeIndex2] - 1;
+                  jacobianMatrix[globalNodeIndex][globalNodeIndex2] +=
+                    localJacobianMatrix[localNodeIndex][localNodeIndex2];
+                }
+              }
+            } else if (this.elementOrder === "linear") {
               let gaussPoint1, gaussPoint2, firstNodeIndex, lastNodeIndex, nodeIncrement;
               if (side === 0) {
                 // Nodes at the bottom side of the reference element
@@ -603,10 +747,33 @@ export class ThermalBoundaryConditions {
 
         // Find if this element is on this boundary and which side
         const boundaryElement = this.boundaryElements[boundaryKey].find(
-          ([boundaryElementIndex, _]) => boundaryElementIndex === elementIndex,
+          ([boundaryElementIndex]) => boundaryElementIndex === elementIndex,
         );
 
-        if (boundaryElement) {
+        if (boundaryElement && this.meshDimension === "2D" && this.elementShape === "triangle") {
+          // A triangle may have more than one side on the same boundary, so all of its sides are processed
+          this.boundaryElements[boundaryKey]
+            .filter(([boundaryElementIndex]) => boundaryElementIndex === elementIndex)
+            .forEach(([, side]) => {
+              const triangleContributions = this.computeTriangleConvectionContributions(
+                elementIndex,
+                side,
+                convectionHeatTransferCoefficient,
+                externalTemperature,
+                nodesXCoordinates,
+                nodesYCoordinates,
+                basisFunctions,
+              );
+              for (const localNodeIndex of triangleContributions.sideNodeIndices) {
+                localResidualVector[localNodeIndex] +=
+                  triangleContributions.localResidualVector[localNodeIndex];
+                for (const localNodeIndex2 of triangleContributions.sideNodeIndices) {
+                  localJacobianMatrix[localNodeIndex][localNodeIndex2] +=
+                    triangleContributions.localJacobianMatrix[localNodeIndex][localNodeIndex2];
+                }
+              }
+            });
+        } else if (boundaryElement) {
           const side = boundaryElement[1];
 
           if (this.meshDimension === "1D") {

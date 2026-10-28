@@ -137,10 +137,7 @@ export class FEAScriptWorker {
    */
   async solve() {
     await this._ensureReady();
-    const startTime = performance.now();
-    const result = await this.feaWorker.solve();
-    const endTime = performance.now();
-    return result;
+    return this.feaWorker.solve();
   }
 
   /**

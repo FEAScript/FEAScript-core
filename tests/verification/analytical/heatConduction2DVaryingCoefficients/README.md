@@ -1,3 +1,10 @@
+<img
+src="https://feascript.github.io/FEAScript-website/assets/feascript-heat-transfer.png"
+width="80"
+alt="FEAScript heat conduction logo"
+
+>
+
 # Analytical Test — Spatially Varying Heat Conduction in 2D
 
 ## Purpose

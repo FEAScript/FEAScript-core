@@ -8,7 +8,7 @@
  */
 
 // Internal imports
-import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
+import { debugLog, errorLog } from "../utilities/logging.js";
 
 /**
  * Class to handle boundary conditions for the 1D Euler-Bernoulli beam model

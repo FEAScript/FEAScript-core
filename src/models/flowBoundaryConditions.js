@@ -8,7 +8,8 @@
  */
 
 // Internal imports
-import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
+import { triangleBoundarySides } from "../mesh/basisFunctions.js";
+import { debugLog } from "../utilities/logging.js";
 
 /**
  * Class to handle flow boundary conditions application for Stokes and Navier-Stokes models
@@ -24,6 +25,7 @@ export class FlowBoundaryConditions {
    * @param {number} totalNodesVelocity - Total number of velocity nodes (Q2)
    * @param {number} totalNodesPressure - Total number of pressure nodes (Q1)
    * @param {Map} q2ToPressureMap - Map from global Q2 node index to pressure DOF index
+   * @param {string} [elementShape='quad'] - The 2D element shape, either 'quad' or 'triangle'
    */
   constructor(
     boundaryConditions,
@@ -34,6 +36,7 @@ export class FlowBoundaryConditions {
     totalNodesVelocity,
     totalNodesPressure,
     q2ToPressureMap,
+    elementShape = "quad",
   ) {
     this.boundaryConditions = boundaryConditions;
     this.boundaryElements = boundaryElements;
@@ -43,6 +46,7 @@ export class FlowBoundaryConditions {
     this.totalNodesVelocity = totalNodesVelocity;
     this.totalNodesPressure = totalNodesPressure;
     this.q2ToPressureMap = q2ToPressureMap;
+    this.elementShape = elementShape;
   }
 
   /**
@@ -83,7 +87,31 @@ export class FlowBoundaryConditions {
             `Boundary ${boundaryKey}: Applying constant velocity condition (u=${xVelocityValue}, v=${yVelocityValue})`,
           );
           this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
-            if (this.elementOrder === "quadratic") {
+            if (this.elementShape === "triangle") {
+              triangleBoundarySides[this.elementOrder][side].forEach((nodeIndex) => {
+                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+                const xVelocityDegreeOfFreedom = globalNodeIndex;
+                const yVelocityDegreeOfFreedom = this.totalNodesVelocity + globalNodeIndex;
+                debugLog(
+                  `  - Applied velocity Dirichlet to node ${globalNodeIndex + 1} (element ${
+                    elementIndex + 1
+                  }, local node ${nodeIndex + 1})`,
+                );
+                // Apply u-velocity Dirichlet boundary condition
+                residualVector[xVelocityDegreeOfFreedom] = xVelocityValue;
+                for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
+                  jacobianMatrix[xVelocityDegreeOfFreedom][colIndex] = 0;
+                }
+                jacobianMatrix[xVelocityDegreeOfFreedom][xVelocityDegreeOfFreedom] = 1;
+
+                // Apply v-velocity Dirichlet boundary condition
+                residualVector[yVelocityDegreeOfFreedom] = yVelocityValue;
+                for (let colIndex = 0; colIndex < totalDOFs; colIndex++) {
+                  jacobianMatrix[yVelocityDegreeOfFreedom][colIndex] = 0;
+                }
+                jacobianMatrix[yVelocityDegreeOfFreedom][yVelocityDegreeOfFreedom] = 1;
+              });
+            } else if (this.elementOrder === "quadratic") {
               const boundarySides = {
                 0: [0, 3, 6], // Nodes at the bottom side of the reference element
                 1: [0, 1, 2], // Nodes at the left side of the reference element

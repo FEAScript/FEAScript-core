@@ -10,7 +10,7 @@
 // Internal imports
 import { euclideanNorm, axpy } from "../base/linalg/index.js";
 import { solveLinearSystem } from "./linearSystemSolver.js";
-import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
+import { basicLog, errorLog } from "../utilities/logging.js";
 import { runFrontalSolver } from "./frontalSolver.js";
 import { assembleFrontPropagationFront } from "../models/frontPropagation.js";
 

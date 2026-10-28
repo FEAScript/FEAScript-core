@@ -49,6 +49,7 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
   basisFunctions = new BasisFunctions({
     meshDimension: meshData.meshDimension,
     elementOrder: meshData.elementOrder,
+    elementShape: meshData.elementShape,
   });
 
   // Copy node connectivity array into frontalData storage
@@ -75,6 +76,7 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
       meshData.nop,
       meshData.meshDimension,
       meshData.elementOrder,
+      meshData.elementShape,
     );
 
     dirichletBoundaryConditionsHandler.imposeConstantTempBoundaryConditionsFront(
@@ -89,6 +91,7 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
       meshData.nop,
       meshData.meshDimension,
       meshData.elementOrder,
+      meshData.elementShape,
     );
 
     dirichletBoundaryConditionsHandler.imposeConstantValueBoundaryConditionsFront(
@@ -212,12 +215,6 @@ function estimateFrontSize(nodesPerElement, numElements) {
   );
   return frontWidthEstimate * numElements;
 }
-// Old function to estimate the required front size
-// function estimateFrontSize(nodesPerElement, numElements, nodesPerElement) {
-//   const frontWidthEstimate = Math.ceil(Math.sqrt(numElements) * nodesPerElement * 2);
-//   const frontSize = frontWidthEstimate * nodesPerElement * 4;
-//   return Math.max(frontSize, 10000);
-// }
 
 /**
  * Function to compute local Jacobian matrix and local residual vector
@@ -262,7 +259,7 @@ function assembleElementContribution(meshData, FEAData, thermalBoundaryCondition
       if (
         thermalBoundaryConditions.boundaryConditions[boundaryKey]?.[0] === "convection" &&
         meshData.boundaryElements[boundaryKey].some(
-          ([boundaryElementIndex, _]) => boundaryElementIndex === elementIndex,
+          ([boundaryElementIndex]) => boundaryElementIndex === elementIndex,
         )
       ) {
         isOnRobinTypeBoundary = true;
@@ -493,6 +490,9 @@ function runFrontalAlgorithm(meshData, FEAData, thermalBoundaryConditions, assem
 
     if (availableColumnCount > summedRows || elementData.currentElementIndex < totalElements) {
       if (availableColumnCount === 0) {
+        // No node is fully summed yet (e.g. unstructured meshes); assemble the next element before eliminating
+        if (elementData.currentElementIndex < totalElements) continue;
+
         errorLog("Error: no more rows fully summed");
         return;
       }
@@ -708,7 +708,6 @@ function performBackSubstitution(frontDataCounter) {
     let pivotGlobalRowIndex = frontStorage.frontValues[frontDataCounter - 1];
     let columnCount = frontStorage.frontValues[frontDataCounter];
     let pivotColumnIndex = frontStorage.frontValues[frontDataCounter + 1];
-    let pivotValue = frontStorage.frontValues[frontDataCounter + 2];
 
     if (iterationIndex === 1) {
       frontDataCounter--;

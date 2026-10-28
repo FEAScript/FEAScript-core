@@ -11,6 +11,7 @@
 import {
   prepareMesh,
   pointInsideQuadrilateral,
+  pointInsideTriangularElement,
   computeNodeNeighbors,
   getBoundarySegments,
 } from "../mesh/meshUtils.js";
@@ -456,8 +457,17 @@ function convertElementNodesToLinearCell(elementNodes) {
   const indices = elementNodes.map((node) => node - 1);
   const n = indices.length;
 
-  if (n === 2 || n === 3) {
+  if (n === 2) {
     return indices;
+  }
+
+  if (n === 3) {
+    // FEAScript linear triangle numbering:
+    //   1
+    //   | \
+    //   0 - 2
+    // Perimeter order for VTK polygon (counterclockwise): 0 -> 2 -> 1
+    return [indices[0], indices[2], indices[1]];
   }
 
   if (n === 4) {
@@ -470,15 +480,14 @@ function convertElementNodesToLinearCell(elementNodes) {
   }
 
   if (n === 6) {
-    return [indices[0], indices[2], indices[5]];
-  }
-
-  if (n === 8) {
-    // Perimeter corners for FEAScript serendipity quad:
-    //   2 --- 6
-    //   |     |
-    //   0 --- 4
-    return [indices[0], indices[4], indices[6], indices[2]];
+    // FEAScript quadratic triangle numbering:
+    //   2
+    //   | \
+    //   1   4
+    //   |     \
+    //   0 - 3 - 5
+    // Corner perimeter order for VTK polygon (counterclockwise): 0 -> 5 -> 2
+    return [indices[0], indices[5], indices[2]];
   }
 
   if (n === 9) {
@@ -578,6 +587,7 @@ async function buildInterpolatedGridValues(model, result, meshData) {
   const basisFunctions = new BasisFunctions({
     meshDimension: model.meshConfig.meshDimension,
     elementOrder: model.meshConfig.elementOrder,
+    elementShape: meshData.elementShape,
   });
 
   let minX = nodesXCoordinates[0];
@@ -767,7 +777,35 @@ function pointSearch(
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const nodesPerElement = meshData.nop[currentElement].length;
 
-  if (nodesPerElement === 4) {
+  if (meshData.elementShape === "triangle") {
+    // Linear (3 nodes) or quadratic (6 nodes) triangular element, located through its vertex nodes
+    // Linear:       Quadratic:
+    // 1             2
+    // | \           | \
+    // |   \         1   4
+    // |     \       |     \
+    // 0 --- 2       0--3--5
+    const vertexLocalIndices = nodesPerElement === 6 ? [0, 2, 5] : [0, 1, 2];
+    const vertices = vertexLocalIndices.map((localNodeIndex) => [
+      nodesXCoordinates[meshData.nop[currentElement][localNodeIndex] - 1],
+      nodesYCoordinates[meshData.nop[currentElement][localNodeIndex] - 1],
+    ]);
+    const pointCheck = pointInsideTriangularElement(visNodeXCoordinate, visNodeYCoordinate, vertices);
+    if (pointCheck.inside) {
+      return {
+        inside: true,
+        value: solutionInterpolation(
+          model,
+          meshData,
+          result,
+          currentElement,
+          pointCheck.ksi,
+          pointCheck.eta,
+          basisFunctions,
+        ),
+      };
+    }
+  } else if (nodesPerElement === 4) {
     const vertices = [
       [
         nodesXCoordinates[meshData.nop[currentElement][0] - 1],

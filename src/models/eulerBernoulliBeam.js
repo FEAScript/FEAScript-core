@@ -11,7 +11,7 @@
 import { BasisFunctions } from "../mesh/basisFunctions.js";
 import { NumericalIntegration } from "../methods/numericalIntegration.js";
 import { BeamBoundaryConditions } from "./beamBoundaryConditions.js";
-import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
+import { basicLog, errorLog } from "../utilities/logging.js";
 
 /**
  * Function to assemble the Jacobian matrix and residual vector for the 1D Euler-Bernoulli beam model

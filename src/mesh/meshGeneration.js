@@ -8,6 +8,7 @@
  */
 
 // Internal imports
+import { triangleBoundarySides } from "./basisFunctions.js";
 import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 
 /**
@@ -79,8 +80,16 @@ export class Mesh {
           JSON.stringify(this.parsedMesh.nodalNumbering),
       );
 
+      const hasQuadElements = quadElements.length > 0;
+      const hasTriangleElements = triangleElements.length > 0;
+
+      if (hasQuadElements && hasTriangleElements) {
+        errorLog("Mixed quadrilateral and triangular meshes are not supported yet.");
+      }
+
       // Check if it has quadElements or triangleElements structure from gmshReader
-      if (this.parsedMesh.elementTypes[3] || this.parsedMesh.elementTypes[10]) {
+      if (hasQuadElements) {
+        this.parsedMesh.elementShape = "quad";
         // Map nodal numbering from Gmsh format to FEAScript format for quad elements
         const mappedNodalNumbering = [];
 
@@ -124,7 +133,57 @@ export class Mesh {
         }
 
         this.parsedMesh.nodalNumbering = mappedNodalNumbering;
-      } else if (this.parsedMesh.elementTypes[2]) {
+      } else if (hasTriangleElements) {
+        this.parsedMesh.elementShape = "triangle";
+
+        // Map nodal numbering from Gmsh format to FEAScript format for triangular elements
+        const mappedNodalNumbering = [];
+
+        for (let elementIndex = 0; elementIndex < triangleElements.length; elementIndex++) {
+          const gmshNodes = triangleElements[elementIndex];
+          const FEAScriptNodes = new Array(gmshNodes.length);
+
+          // Check for element type based on number of nodes
+          if (gmshNodes.length === 3) {
+            // Mapping for linear triangular elements (3 nodes)
+            // Gmsh:         FEAScript:
+            // 2             1
+            // | \           | \
+            // |   \    -->  |   \
+            // 0 --- 1       0 --- 2
+
+            FEAScriptNodes[0] = gmshNodes[0]; // 0 -> 0
+            FEAScriptNodes[1] = gmshNodes[2]; // 2 -> 1
+            FEAScriptNodes[2] = gmshNodes[1]; // 1 -> 2
+          } else if (gmshNodes.length === 6) {
+            // Mapping for quadratic triangular elements (6 nodes)
+            // Gmsh:         FEAScript:
+            // 2             2
+            // | \           | \
+            // 5   4    -->  1   4
+            // |     \       |     \
+            // 0--3--1       0--3--5
+
+            FEAScriptNodes[0] = gmshNodes[0]; // 0 -> 0
+            FEAScriptNodes[1] = gmshNodes[5]; // 5 -> 1
+            FEAScriptNodes[2] = gmshNodes[2]; // 2 -> 2
+            FEAScriptNodes[3] = gmshNodes[3]; // 3 -> 3
+            FEAScriptNodes[4] = gmshNodes[4]; // 4 -> 4
+            FEAScriptNodes[5] = gmshNodes[1]; // 1 -> 5
+          }
+
+          mappedNodalNumbering.push(FEAScriptNodes);
+        }
+
+        this.parsedMesh.nodalNumbering = mappedNodalNumbering;
+
+        const expectedNodesPerTriangle = this.elementOrder === "quadratic" ? 6 : 3;
+        if (triangleElements[0].length !== expectedNodesPerTriangle) {
+          errorLog(
+            `The Gmsh mesh contains ${triangleElements[0].length}-node triangles, but elementOrder is '${this.elementOrder}' (expects ${expectedNodesPerTriangle}-node triangles). Use 'linear' for first-order and 'quadratic' for second-order meshes.`,
+          );
+        }
+      } else {
         errorLog("Element type is neither triangle nor quad; mapping for this type is not implemented yet.");
       }
 
@@ -191,8 +250,45 @@ export class Mesh {
                   ) {
                     const elementConnectivity = this.parsedMesh.nodalNumbering[elementIndex];
 
+                    // For linear (3 nodes) and quadratic (6 nodes) triangular elements
+                    if (this.parsedMesh.elementShape === "triangle") {
+                      // Based on FEAScript triangle numbering:
+                      // Linear:       Quadratic:
+                      // 1             2
+                      // | \           | \
+                      // |   \         1   4
+                      // |     \       |     \
+                      // 0 --- 2       0--3--5
+                      // Side 0: bottom, side 1: left, side 2: hypotenuse
+                      const sides =
+                        triangleBoundarySides[elementConnectivity.length === 6 ? "quadratic" : "linear"];
+
+                      // Boundary node pairs are the end vertices of the boundary line, so they are
+                      // compared against the first and last node of each side
+                      const side = Object.keys(sides).find((sideKey) => {
+                        const sideNodes = sides[sideKey];
+                        const firstNode = elementConnectivity[sideNodes[0]];
+                        const lastNode = elementConnectivity[sideNodes[sideNodes.length - 1]];
+                        return (
+                          (firstNode === node1 && lastNode === node2) ||
+                          (firstNode === node2 && lastNode === node1)
+                        );
+                      });
+
+                      if (side !== undefined) {
+                        debugLog(
+                          `  Found triangle ${elementIndex} containing boundary nodes on side ${side}. Element nodes: [${elementConnectivity.join(
+                            ", ",
+                          )}]`,
+                        );
+
+                        this.parsedMesh.boundaryElements[prop.tag].push([elementIndex, Number(side)]);
+                        foundElement = true;
+                        break;
+                      }
+                    }
                     // For linear quadrilateral linear elements (4 nodes)
-                    if (elementConnectivity.length === 4) {
+                    else if (elementConnectivity.length === 4) {
                       // Check if both boundary nodes are in this element
                       if (elementConnectivity.includes(node1) && elementConnectivity.includes(node2)) {
                         // Find which side of the element these nodes form
@@ -438,7 +534,6 @@ export class Mesh1D extends Mesh {
     // TODO: The totalNodesX is not used in the original function. Verify if
     // there is a multiple calculation on the totalNodes.
 
-    let elementIndex = 0;
     let nop = [];
 
     if (elementOrder === "linear") {

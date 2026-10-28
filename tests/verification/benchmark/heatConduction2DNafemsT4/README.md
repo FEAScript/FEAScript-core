@@ -1,3 +1,10 @@
+<img
+src="https://feascript.github.io/FEAScript-website/assets/feascript-heat-transfer.png"
+width="80"
+alt="FEAScript heat conduction logo"
+
+>
+
 # Benchmark Test — NAFEMS T4 (2D Heat Conduction with Convection)
 
 ## Purpose

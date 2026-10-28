@@ -9,12 +9,13 @@
 
 // Internal imports
 import {
+  getIntegrationPoints2D,
   initializeFEA,
   performIsoparametricMapping1D,
   performIsoparametricMapping2D,
 } from "../mesh/meshUtils.js";
 import { ThermalBoundaryConditions } from "./thermalBoundaryConditions.js";
-import { basicLog, debugLog } from "../utilities/logging.js";
+import { basicLog } from "../utilities/logging.js";
 
 /**
  * Function to assemble the Jacobian matrix and residuals vector for the solid heat transfer model
@@ -45,14 +46,13 @@ export function assembleHeatConductionMat(meshData, boundaryConditions, coeffici
     totalElements,
     meshDimension,
     elementOrder,
+    elementShape,
   } = meshData;
 
   // Extract coefficient functions
-  let heatTransferCoefficient = 1;
   let thermalConductivity = 1;
   let heatSource = 0;
   if (coefficientFunctions) {
-    heatTransferCoefficient = coefficientFunctions.heatTransferCoefficient ?? 1;
     thermalConductivity = coefficientFunctions.thermalConductivity ?? 1;
     heatSource = coefficientFunctions.heatSource ?? 0;
   }
@@ -69,6 +69,10 @@ export function assembleHeatConductionMat(meshData, boundaryConditions, coeffici
     nodesPerElement,
   } = FEAData;
 
+  // Integration points for 2D elements (tensor product for quads, collapsed rule for triangles)
+  const integrationPoints2D =
+    meshDimension === "2D" ? getIntegrationPoints2D(gaussPoints, gaussWeights, elementShape) : [];
+
   // Matrix assembly
   for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {
     // Map local element nodes to global mesh nodes
@@ -77,10 +81,10 @@ export function assembleHeatConductionMat(meshData, boundaryConditions, coeffici
       localToGlobalMap[localNodeIndex] = nop[elementIndex][localNodeIndex] - 1;
     }
 
-    // Loop over Gauss points
-    for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
-      // 1D solid heat transfer
-      if (meshDimension === "1D") {
+    // 1D solid heat transfer
+    if (meshDimension === "1D") {
+      // Loop over Gauss points
+      for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
         // Get basis functions for the current Gauss point
         const basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoints[gaussPointIndex1]);
 
@@ -128,66 +132,59 @@ export function assembleHeatConductionMat(meshData, boundaryConditions, coeffici
           }
         }
       }
-      // 2D solid heat transfer
-      else if (meshDimension === "2D") {
-        for (let gaussPointIndex2 = 0; gaussPointIndex2 < gaussPoints.length; gaussPointIndex2++) {
-          // Get basis functions for the current Gauss point
-          const basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(
-            gaussPoints[gaussPointIndex1],
-            gaussPoints[gaussPointIndex2],
-          );
+    }
+    // 2D solid heat transfer
+    else if (meshDimension === "2D") {
+      // Loop over integration points
+      for (const [ksi, eta, integrationWeight] of integrationPoints2D) {
+        // Get basis functions for the current Gauss point
+        const basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(ksi, eta);
 
-          // Perform isoparametric mapping
-          const mappingResult = performIsoparametricMapping2D({
-            basisFunction: basisFunctionsAndDerivatives.basisFunction,
-            basisFunctionDerivKsi: basisFunctionsAndDerivatives.basisFunctionDerivKsi,
-            basisFunctionDerivEta: basisFunctionsAndDerivatives.basisFunctionDerivEta,
-            nodesXCoordinates,
-            nodesYCoordinates,
-            localToGlobalMap,
-            nodesPerElement,
-          });
+        // Perform isoparametric mapping
+        const mappingResult = performIsoparametricMapping2D({
+          basisFunction: basisFunctionsAndDerivatives.basisFunction,
+          basisFunctionDerivKsi: basisFunctionsAndDerivatives.basisFunctionDerivKsi,
+          basisFunctionDerivEta: basisFunctionsAndDerivatives.basisFunctionDerivEta,
+          nodesXCoordinates,
+          nodesYCoordinates,
+          localToGlobalMap,
+          nodesPerElement,
+        });
 
-          // Extract mapping results
-          const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = mappingResult;
+        // Extract mapping results
+        const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = mappingResult;
 
-          // Calculate the physical (x, y) coordinates at this Gauss point
-          let xCoord = 0;
-          let yCoord = 0;
-          for (let i = 0; i < nodesPerElement; i++) {
-            xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunctionsAndDerivatives.basisFunction[i];
-            yCoord += nodesYCoordinates[localToGlobalMap[i]] * basisFunctionsAndDerivatives.basisFunction[i];
-          }
+        // Calculate the physical (x, y) coordinates at this Gauss point
+        let xCoord = 0;
+        let yCoord = 0;
+        for (let i = 0; i < nodesPerElement; i++) {
+          xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunctionsAndDerivatives.basisFunction[i];
+          yCoord += nodesYCoordinates[localToGlobalMap[i]] * basisFunctionsAndDerivatives.basisFunction[i];
+        }
 
-          // Evaluate thermal conductivity and heat source at this Gauss point
-          const k =
-            typeof thermalConductivity === "function"
-              ? thermalConductivity(xCoord, yCoord)
-              : thermalConductivity;
-          const Q = typeof heatSource === "function" ? heatSource(xCoord, yCoord) : heatSource;
+        // Evaluate thermal conductivity and heat source at this Gauss point
+        const k =
+          typeof thermalConductivity === "function"
+            ? thermalConductivity(xCoord, yCoord)
+            : thermalConductivity;
+        const Q = typeof heatSource === "function" ? heatSource(xCoord, yCoord) : heatSource;
 
-          // Computation of Galerkin's residuals and Jacobian matrix
-          for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
-            let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
+        // Computation of Galerkin's residuals and Jacobian matrix
+        for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
+          let localToGlobalMap1 = localToGlobalMap[localNodeIndex1];
 
-            // Heat source contribution to residual vector
-            residualVector[localToGlobalMap1] -=
-              gaussWeights[gaussPointIndex1] *
-              gaussWeights[gaussPointIndex2] *
+          // Heat source contribution to residual vector
+          residualVector[localToGlobalMap1] -=
+            integrationWeight * detJacobian * Q * basisFunctionsAndDerivatives.basisFunction[localNodeIndex1];
+
+          for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
+            let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
+            jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
+              -integrationWeight *
               detJacobian *
-              Q *
-              basisFunctionsAndDerivatives.basisFunction[localNodeIndex1];
-
-            for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
-              let localToGlobalMap2 = localToGlobalMap[localNodeIndex2];
-              jacobianMatrix[localToGlobalMap1][localToGlobalMap2] +=
-                -gaussWeights[gaussPointIndex1] *
-                gaussWeights[gaussPointIndex2] *
-                detJacobian *
-                k *
-                (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] +
-                  basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
-            }
+              k *
+              (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] +
+                basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
           }
         }
       }
@@ -201,6 +198,7 @@ export function assembleHeatConductionMat(meshData, boundaryConditions, coeffici
     nop,
     meshDimension,
     elementOrder,
+    elementShape,
   );
 
   // Impose Convection boundary conditions
@@ -246,7 +244,7 @@ export function assembleHeatConductionFront({
 }) {
   // Extract numerical integration parameters and mesh coordinates
   const { gaussPoints, gaussWeights, nodesPerElement } = FEAData;
-  const { nodesXCoordinates, nodesYCoordinates, meshDimension } = meshData;
+  const { nodesXCoordinates, nodesYCoordinates, meshDimension, elementShape } = meshData;
 
   // Extract coefficient functions (with safe defaults)
   let thermalConductivity = 1;
@@ -315,60 +313,53 @@ export function assembleHeatConductionFront({
     }
   } else if (meshDimension === "2D") {
     // 2D solid heat transfer
-    for (let gaussPointIndex1 = 0; gaussPointIndex1 < gaussPoints.length; gaussPointIndex1++) {
-      for (let gaussPointIndex2 = 0; gaussPointIndex2 < gaussPoints.length; gaussPointIndex2++) {
-        // Get basis functions for the current Gauss point
-        const { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta } =
-          basisFunctions.getBasisFunctions(gaussPoints[gaussPointIndex1], gaussPoints[gaussPointIndex2]);
+    // Loop over integration points
+    const integrationPoints2D = getIntegrationPoints2D(gaussPoints, gaussWeights, elementShape);
+    for (const [ksi, eta, integrationWeight] of integrationPoints2D) {
+      // Get basis functions for the current Gauss point
+      const { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta } =
+        basisFunctions.getBasisFunctions(ksi, eta);
 
-        // Create mapping from local element space to global mesh (convert to 0-based indexing)
-        const localToGlobalMap = ngl.map((globalIndex) => globalIndex - 1);
+      // Create mapping from local element space to global mesh (convert to 0-based indexing)
+      const localToGlobalMap = ngl.map((globalIndex) => globalIndex - 1);
 
-        // Perform isoparametric mapping
-        const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = performIsoparametricMapping2D({
-          basisFunction,
-          basisFunctionDerivKsi,
-          basisFunctionDerivEta,
-          nodesXCoordinates,
-          nodesYCoordinates,
-          localToGlobalMap,
-          nodesPerElement,
-        });
+      // Perform isoparametric mapping
+      const { detJacobian, basisFunctionDerivX, basisFunctionDerivY } = performIsoparametricMapping2D({
+        basisFunction,
+        basisFunctionDerivKsi,
+        basisFunctionDerivEta,
+        nodesXCoordinates,
+        nodesYCoordinates,
+        localToGlobalMap,
+        nodesPerElement,
+      });
 
-        // Calculate the physical (x, y) coordinates at this Gauss point
-        let xCoord = 0;
-        let yCoord = 0;
-        for (let i = 0; i < nodesPerElement; i++) {
-          xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunction[i];
-          yCoord += nodesYCoordinates[localToGlobalMap[i]] * basisFunction[i];
-        }
+      // Calculate the physical (x, y) coordinates at this Gauss point
+      let xCoord = 0;
+      let yCoord = 0;
+      for (let i = 0; i < nodesPerElement; i++) {
+        xCoord += nodesXCoordinates[localToGlobalMap[i]] * basisFunction[i];
+        yCoord += nodesYCoordinates[localToGlobalMap[i]] * basisFunction[i];
+      }
 
-        // Evaluate thermal conductivity and heat source at this Gauss point
-        const k =
-          typeof thermalConductivity === "function"
-            ? thermalConductivity(xCoord, yCoord)
-            : thermalConductivity;
-        const Q = typeof heatSource === "function" ? heatSource(xCoord, yCoord) : heatSource;
+      // Evaluate thermal conductivity and heat source at this Gauss point
+      const k =
+        typeof thermalConductivity === "function" ? thermalConductivity(xCoord, yCoord) : thermalConductivity;
+      const Q = typeof heatSource === "function" ? heatSource(xCoord, yCoord) : heatSource;
 
-        // Computation of Galerkin's residuals and local Jacobian matrix
-        for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
-          // Heat source contribution to local residual vector
-          localResidualVector[localNodeIndex1] -=
-            gaussWeights[gaussPointIndex1] *
-            gaussWeights[gaussPointIndex2] *
+      // Computation of Galerkin's residuals and local Jacobian matrix
+      for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
+        // Heat source contribution to local residual vector
+        localResidualVector[localNodeIndex1] -=
+          integrationWeight * detJacobian * Q * basisFunction[localNodeIndex1];
+
+        for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
+          localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
+            integrationWeight *
             detJacobian *
-            Q *
-            basisFunction[localNodeIndex1];
-
-          for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
-            localJacobianMatrix[localNodeIndex1][localNodeIndex2] -=
-              gaussWeights[gaussPointIndex1] *
-              gaussWeights[gaussPointIndex2] *
-              detJacobian *
-              k *
-              (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] +
-                basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
-          }
+            k *
+            (basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] +
+              basisFunctionDerivY[localNodeIndex1] * basisFunctionDerivY[localNodeIndex2]);
         }
       }
     }

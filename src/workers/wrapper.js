@@ -141,12 +141,7 @@ class workerWrapper {
    * @returns {boolean} Returns true to indicate the worker is available
    */
   ping() {
-    try {
-      return true;
-    } catch (error) {
-      console.error("FEA Worker: Error in ping", error);
-      throw error;
-    }
+    return true;
   }
 }
 

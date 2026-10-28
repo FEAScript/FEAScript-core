@@ -13,11 +13,7 @@ import { solveLinearSystem } from "./methods/linearSystemSolver.js";
 import { solveLinearSystemAsync } from "./methods/linearSystemSolver.js";
 import { prepareMesh } from "./mesh/meshUtils.js";
 import { assembleFrontPropagationMat } from "./models/frontPropagation.js";
-import {
-  assembleGeneralFormPDEMat,
-  assembleGeneralFormPDEFront,
-  assembleGeneralFormPDENonlinearMat,
-} from "./models/generalFormPDE.js";
+import { assembleGeneralFormPDEMat, assembleGeneralFormPDENonlinearMat } from "./models/generalFormPDE.js";
 import { assembleHeatConductionMat, assembleHeatConductionFront } from "./models/heatConduction.js";
 import { assembleCreepingFlowMatrix } from "./models/creepingFlow.js";
 import { assembleEulerBernoulliBeamMat } from "./models/eulerBernoulliBeam.js";
@@ -182,7 +178,11 @@ export class FEAScriptModel {
         tolerance: options.tolerance ?? this.tolerance,
       };
 
-      while (eikonalActivationFlag <= 1) {
+      // Count the incremental steps with an integer, so that the last step activates the eikonal equation
+      // exactly (accumulating 1 / eikonalExteralIterations can overshoot 1 and skip it)
+      for (let stepIndex = 0; stepIndex <= eikonalExteralIterations; stepIndex++) {
+        eikonalActivationFlag = stepIndex / eikonalExteralIterations;
+
         // Update the context object with current eikonalActivationFlag
         context.eikonalActivationFlag = eikonalActivationFlag;
 
@@ -199,8 +199,13 @@ export class FEAScriptModel {
         residualVector = newtonRaphsonResult.residualVector;
         solutionVector = newtonRaphsonResult.solutionVector;
 
-        // Increment eikonalActivationFlag for next iteration
-        eikonalActivationFlag += 1 / eikonalExteralIterations;
+        // Stop at the first step that does not converge, instead of continuing from a wrong solution
+        if (!newtonRaphsonResult.converged) {
+          errorLog(
+            `Front propagation did not converge at eikonal activation ${eikonalActivationFlag} (step ${stepIndex} of ${eikonalExteralIterations}). The solution is not valid; a finer mesh may be required.`,
+          );
+          break;
+        }
       }
     } else if (this.solverConfig === "generalFormPDEScript") {
       // Check if using frontal solver

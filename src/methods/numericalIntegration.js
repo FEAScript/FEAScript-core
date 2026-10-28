@@ -34,7 +34,7 @@ export class NumericalIntegration {
     let gaussWeights = []; // Gauss weights
 
     if (this.elementShape === "triangle") {
-      // Collapsed (non-tensor-product) rules on the reference triangle (0,0), (1,0), (0,1)
+      // Collapsed (non-tensor-product) rules on the reference triangle (0,0), (0,1), (1,0)
       if (this.elementOrder === "linear") {
         // 3-point rule, exact up to degree 2
         gaussPoints = [
