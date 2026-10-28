@@ -133,7 +133,7 @@ for (const testCase of cases) {
     const label = `${testCase.label}, ${solverMethod}`;
     const { solutionVector, nodesCoordinates } = runSimulation(meshConfig, solverMethod);
     const { nodesXCoordinates, nodesYCoordinates } = nodesCoordinates;
-    const values = Array.from(solutionVector, (value) => (Array.isArray(value) ? value[0] : value));
+    const values = Array.from(solutionVector);
 
     const nodeIndex = nodesXCoordinates.findIndex(
       (x, i) => Math.abs(x - EXPECTED_X) < 1e-10 && Math.abs(nodesYCoordinates[i] - EXPECTED_Y) < 1e-10,

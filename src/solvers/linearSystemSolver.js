@@ -19,7 +19,7 @@ import * as Comlink from "../vendor/comlink.mjs";
  * @param {Array} residualVector - The right-hand side vector
  * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance`
  * @returns {object} An object containing:
- *  - solutionVector: The solution vector
+ *  - solutionVector: The solution vector (Float64Array)
  *  - converged: Boolean indicating whether the method converged (for iterative methods)
  *  - iterations: Number of iterations performed (for iterative methods)
  */
@@ -27,7 +27,7 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
   // Extract options
   const { maxIterations = 10000, tolerance = 1e-4 } = options;
 
-  let solutionVector = [];
+  let solutionVector = new Float64Array(0);
   let converged = true;
   let iterations = 0;
 
@@ -87,7 +87,7 @@ async function createDefaultComputeEngine() {
  * @param {array} residualVector - The right-hand side vector
  * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance`
  * @returns {Promise<object>} A promise that resolves to an object containing:
- *  - solutionVector: The solution vector
+ *  - solutionVector: The solution vector (Float64Array)
  *  - converged: Boolean indicating whether the method converged (for iterative methods)
  *  - iterations: Number of iterations performed (for iterative methods)
  */
@@ -109,7 +109,7 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
   let created = null;
   let computeEngine = null;
 
-  let solutionVector = [];
+  let solutionVector = new Float64Array(0);
   let converged = true;
   let iterations;
 
@@ -125,7 +125,7 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
       maxIterations,
       tolerance,
     });
-    solutionVector = result.solutionVector;
+    solutionVector = Float64Array.from(result.solutionVector);
     converged = result.converged;
     iterations = result.iterations;
 

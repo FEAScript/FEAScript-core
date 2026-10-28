@@ -44,9 +44,8 @@ function runSimulation(coefficientFunctions, elementOrder, boundaryConditions, s
 
   const { solutionVector, nodesCoordinates } = model.solve();
 
-  // solutionVector from math.lusolve is a nested array: [[T0], [T1], ...]
   return {
-    temperatures: solutionVector.map((value) => (Array.isArray(value) ? value[0] : value)),
+    temperatures: Array.from(solutionVector),
     nodesXCoordinates: nodesCoordinates.nodesXCoordinates,
   };
 }

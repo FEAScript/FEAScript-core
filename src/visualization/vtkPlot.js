@@ -426,8 +426,7 @@ function buildPointsArray(nodesXCoordinates, nodesYCoordinates) {
 function extractScalarSolution(solutionVector, expectedLength) {
   const scalars = new Float32Array(expectedLength);
   for (let i = 0; i < expectedLength; i++) {
-    const value = solutionVector?.[i];
-    scalars[i] = Number(Array.isArray(value) ? value[0] : value) || 0;
+    scalars[i] = Number(solutionVector?.[i]) || 0;
   }
   return scalars;
 }
@@ -886,12 +885,10 @@ function solutionInterpolation(model, meshData, result, elementIndex, ksi, eta, 
   const basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(ksi, eta);
   const basisFunction = basisFunctionsAndDerivatives.basisFunction;
 
-  const zData = Array.isArray(solutionVector[0]) ? solutionVector.map((value) => value[0]) : solutionVector;
-
   let interpolatedValue = 0;
   for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
     interpolatedValue +=
-      zData[meshData.nop[elementIndex][localNodeIndex] - 1] * basisFunction[localNodeIndex];
+      solutionVector[meshData.nop[elementIndex][localNodeIndex] - 1] * basisFunction[localNodeIndex];
   }
 
   return interpolatedValue;

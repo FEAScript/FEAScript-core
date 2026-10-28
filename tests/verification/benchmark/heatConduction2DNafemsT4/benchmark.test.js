@@ -56,10 +56,7 @@ function runSimulation(numElementsX, numElementsY) {
     (x, i) => Math.abs(x - POINT_E.x) < 1e-10 && Math.abs(nodesYCoordinates[i] - POINT_E.y) < 1e-10,
   );
 
-  // solutionVector from math.lusolve is a nested array: [[T0], [T1], ...]
-  const temperatureAtE = Array.isArray(solutionVector[nodeIndex])
-    ? solutionVector[nodeIndex][0]
-    : solutionVector[nodeIndex];
+  const temperatureAtE = solutionVector[nodeIndex];
 
   return { nodeIndex, temperatureAtE };
 }

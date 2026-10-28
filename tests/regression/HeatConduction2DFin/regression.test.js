@@ -141,9 +141,8 @@ function runSimulation(meshConfig, boundaryConditions, solverMethod) {
 
   const { solutionVector, nodesCoordinates } = model.solve({ maxIterations: 200000, tolerance: 1e-8 });
 
-  // solutionVector from math.lusolve is a nested array: [[T0], [T1], ...]
   return {
-    temperatures: Array.from(solutionVector, (value) => (Array.isArray(value) ? value[0] : value)),
+    temperatures: Array.from(solutionVector),
     nodesXCoordinates: nodesCoordinates.nodesXCoordinates,
     nodesYCoordinates: nodesCoordinates.nodesYCoordinates,
   };

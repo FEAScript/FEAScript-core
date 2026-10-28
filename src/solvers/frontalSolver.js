@@ -29,7 +29,7 @@ let basisFunctions;
  * @param {object} meshData - Object containing mesh data
  * @param {object} boundaryConditions - Object containing boundary conditions
  * @param {object} [options] - Additional options for the solver
- * @returns {object} An object containing the solution vector and node coordinates
+ * @returns {object} An object containing the solution vector (Float64Array) and node coordinates
  */
 export function runFrontalSolver(assembleFront, meshData, boundaryConditions, options = {}) {
   // Initialize FEA components
@@ -151,7 +151,7 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditions, op
 
   const { nodesXCoordinates: finalNodesX, nodesYCoordinates: finalNodesY } = meshData;
   return {
-    solutionVector: frontalData.solutionVector.slice(0, totalNodes),
+    solutionVector: Float64Array.from(frontalData.solutionVector.slice(0, totalNodes)),
     nodesCoordinates: {
       nodesXCoordinates: finalNodesX,
       nodesYCoordinates: finalNodesY,

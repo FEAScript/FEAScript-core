@@ -17,7 +17,7 @@ import { dotProduct, copyVector, euclideanNorm } from "../numerics/blasUtilities
  * @param {array} initialGuess - Initial guess for solution vector
  * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance`
  * @returns {object} An object containing:
- *  - solutionVector: The solution vector
+ *  - solutionVector: The solution vector (Float64Array)
  *  - iterations: The number of iterations performed
  *  - converged: Boolean indicating whether the method converged
  */

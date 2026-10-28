@@ -17,7 +17,7 @@ const math = create(all);
  * @param {array} rightHandSideVector - The right-hand side vector
  * @param {object} [options] - Optional parameters for the solver, such as `matrixType` ("sparse" or "dense")
  * @returns {object} An object containing:
- *  - solutionVector: The solution vector
+ *  - solutionVector: The solution vector (Float64Array)
  */
 export function mathjsLUSolver(systemMatrix, rightHandSideVector, options = {}) {
   // Extract options
@@ -28,11 +28,11 @@ export function mathjsLUSolver(systemMatrix, rightHandSideVector, options = {}) 
     const sparseMatrix = math.sparse(systemMatrix);
     const luFactorization = math.slu(sparseMatrix, 1, 1); // order=1, threshold=1 for pivoting
     const solutionMatrix = math.lusolve(luFactorization, rightHandSideVector);
-    solutionVector = math.squeeze(solutionMatrix).valueOf();
+    solutionVector = Float64Array.from(math.flatten(solutionMatrix).valueOf());
   } else {
     // Dense matrix
     const solutionMatrix = math.lusolve(systemMatrix, rightHandSideVector);
-    solutionVector = math.squeeze(solutionMatrix).valueOf();
+    solutionVector = Float64Array.from(math.flatten(solutionMatrix).valueOf());
   }
 
   return { solutionVector };

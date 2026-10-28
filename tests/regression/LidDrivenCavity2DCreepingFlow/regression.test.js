@@ -121,8 +121,7 @@ for (const testCase of cases) {
   const { solutionVector, nodesCoordinates } = runSimulation(await getMeshConfig(testCase));
 
   // DOF ordering: [u_0 … u_{N-1}, v_0 … v_{N-1}, p_0 … p_{M-1}]
-  // solutionVector from math.lusolve is a nested array: [[u0], [u1], ...]
-  const solution = Array.from(solutionVector, (value) => (Array.isArray(value) ? value[0] : value));
+  const solution = Array.from(solutionVector);
   const totalNodesVelocity = nodesCoordinates.nodesXCoordinates.length;
   const xVelocities = solution.slice(0, totalNodesVelocity);
   const yVelocities = solution.slice(totalNodesVelocity, 2 * totalNodesVelocity);

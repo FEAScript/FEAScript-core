@@ -43,9 +43,8 @@ async function runSimulation(meshConfig, boundaryConditions) {
 
   const { solutionVector, nodesCoordinates } = model.solve();
 
-  // solutionVector from math.lusolve is a nested array: [[u0], [u1], ...]
   return {
-    solution: solutionVector.map((value) => (Array.isArray(value) ? value[0] : value)),
+    solution: Array.from(solutionVector),
     nodesYCoordinates: nodesCoordinates.nodesYCoordinates,
   };
 }

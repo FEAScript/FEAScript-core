@@ -79,9 +79,7 @@ for (const testCase of cases) {
   for (const { x, T: expectedT } of EXPECTED) {
     const nodeIndex = nodesCoordinates.nodesXCoordinates.findIndex((nodeX) => Math.abs(nodeX - x) < 1e-10);
 
-    // solutionVector from math.lusolve is a nested array: [[T0], [T1], ...]
-    const value = solutionVector[nodeIndex];
-    const T = Array.isArray(value) ? value[0] : value;
+    const T = solutionVector[nodeIndex];
 
     assert(
       Math.abs(T - expectedT) < TOLERANCE,

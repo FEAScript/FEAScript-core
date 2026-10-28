@@ -32,13 +32,7 @@ export function plotSolution(model, result, plotType, plotDivId) {
   const meshDimension = model.meshConfig.meshDimension;
 
   if (meshDimension === "1D" && plotType === "line") {
-    // Check if solutionVector is a nested array
-    let yData;
-    if (solutionVector.length > 0 && Array.isArray(solutionVector[0])) {
-      yData = solutionVector.map((arr) => arr[0]);
-    } else {
-      yData = solutionVector;
-    }
+    const yData = Array.from(solutionVector);
 
     let lineData = {
       x: nodesXCoordinates,
@@ -65,13 +59,7 @@ export function plotSolution(model, result, plotType, plotDivId) {
     Plotly.newPlot(plotDivId, [lineData], layout, { responsive: true });
     console.timeEnd("plottingTime");
   } else if (meshDimension === "2D" && plotType === "contour") {
-    // Check if solutionVector is a nested array
-    let zData;
-    if (Array.isArray(solutionVector[0])) {
-      zData = solutionVector.map((val) => val[0]);
-    } else {
-      zData = solutionVector;
-    }
+    const zData = Array.from(solutionVector);
 
     // Plot sizing parameters
     let maxWindowWidth = Math.min(window.innerWidth, 700);
@@ -447,19 +435,11 @@ function solutionInterpolation(model, meshData, result, elementIndex, ksi, eta, 
   const basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(ksi, eta);
   let basisFunction = basisFunctionsAndDerivatives.basisFunction;
 
-  // Check if solutionVector is a nested array
-  let zData;
-  if (Array.isArray(solutionVector[0])) {
-    zData = solutionVector.map((val) => val[0]);
-  } else {
-    zData = solutionVector;
-  }
-
   // Interpolate solution
   let solutionInterpolationValue = 0;
   for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
     solutionInterpolationValue +=
-      zData[meshData.nop[elementIndex][localNodeIndex] - 1] * basisFunction[localNodeIndex];
+      solutionVector[meshData.nop[elementIndex][localNodeIndex] - 1] * basisFunction[localNodeIndex];
   }
 
   return solutionInterpolationValue;

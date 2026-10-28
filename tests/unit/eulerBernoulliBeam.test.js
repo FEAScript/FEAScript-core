@@ -102,7 +102,7 @@ const { jacobianMatrix, residualVector } = assembleEulerBernoulliBeamMat(
   { EI: () => EI },
 );
 const { solutionVector } = solveLinearSystem("lusolve", jacobianMatrix, residualVector);
-const flatSolution = solutionVector.map((entry) => (Array.isArray(entry) ? entry[0] : entry));
+const flatSolution = Array.from(solutionVector);
 
 const wExact = (P * L ** 3) / (3 * EI);
 const thetaExact = (P * L ** 2) / (2 * EI);

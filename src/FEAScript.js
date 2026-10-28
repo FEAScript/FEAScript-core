@@ -102,7 +102,7 @@ export class FEAScriptModel {
   /**
    * Method to solve the finite element problem synchronously
    * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
-   * @returns {object} An object containing the solution vector and mesh information
+   * @returns {object} An object containing the solution vector (Float64Array, the same for every solver method) and mesh information
    */
   solve(options = {}) {
     if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
@@ -120,7 +120,7 @@ export class FEAScriptModel {
 
     let jacobianMatrix = [];
     let residualVector = [];
-    let solutionVector = [];
+    let solutionVector = new Float64Array(0);
     let initialSolution = [];
 
     // Prepare the mesh
@@ -302,7 +302,7 @@ export class FEAScriptModel {
    * Method to solve the finite element problem asynchronously
    * @param {object} computeEngine - The compute engine to use for the asynchronous solver (e.g., a worker or a WebGPU context)
    * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
-   * @returns {Promise<object>} A promise that resolves to an object containing the solution vector and the coordinates of the mesh nodes
+   * @returns {Promise<object>} A promise that resolves to an object containing the solution vector (Float64Array) and the coordinates of the mesh nodes
    */
   async solveAsync(computeEngine, options = {}) {
     if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
@@ -311,7 +311,7 @@ export class FEAScriptModel {
 
     let jacobianMatrix = [];
     let residualVector = [];
-    let solutionVector = [];
+    let solutionVector = new Float64Array(0);
 
     basicLog("Preparing mesh...");
     const meshData = prepareMesh(this.meshConfig);

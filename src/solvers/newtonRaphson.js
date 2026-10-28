@@ -19,7 +19,7 @@ import { assembleFrontPropagationFront } from "../models/frontPropagation.js";
  * @param {function} assembleMat - Matrix assembler based on the physical model
  * @param {object} context - Context object containing simulation data and options
  * @returns {object} An object containing:
- *  - solutionVector: The solution vector
+ *  - solutionVector: The solution vector (Float64Array)
  *  - iterations: The number of iterations performed
  *  - converged: Boolean indicating whether the method converged
  */

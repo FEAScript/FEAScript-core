@@ -90,8 +90,7 @@ basicLog("================================");
 basicLog("Starting regression test for the 1D Euler-Bernoulli beam model...");
 
 const { solutionVector } = runSimulation();
-// mathjs' lusolve returns a nested array: [[v0], [v1], ...]
-const flatSolution = solutionVector.map((entry) => (Array.isArray(entry) ? entry[0] : entry));
+const flatSolution = Array.from(solutionVector);
 const [w1, theta1, w2, theta2, w3, theta3] = flatSolution;
 
 basicLog("");
