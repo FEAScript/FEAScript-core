@@ -58,10 +58,16 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions) {
 
   // Validate mesh configuration
   if (meshDimension !== "2D") {
-    errorLog("Creeping flow solver requires a 2D mesh");
+    errorLog(
+      "Creeping flow requires a 2D mesh. For fully developed 1D channel flow (μ u″ = dp/dx), " +
+        "use generalFormPDEScript or heatConductionScript.",
+    );
   }
   if (elementOrder !== "quadratic") {
-    errorLog("Creeping flow solver requires quadratic elements for Taylor-Hood (Q2-Q1 or P2-P1) formulation");
+    errorLog(
+      "Creeping flow requires quadratic elements (Taylor-Hood Q2-Q1 / P2-P1); set elementOrder: 'quadratic'. " +
+        "Linear (equal-order) elements need stabilization, which is not yet supported.",
+    );
   }
 
   // Number of velocity nodes (Q2/P2) is the total number of nodes in the quadratic mesh
