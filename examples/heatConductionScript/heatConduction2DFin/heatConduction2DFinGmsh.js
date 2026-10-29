@@ -47,9 +47,9 @@ async function main() {
 
   // Define boundary conditions
   model.addBoundaryCondition("0", ["constantTemperature", 200]); // Bottom boundary
-  model.addBoundaryCondition("1", ["constantTemperature", 200]); // Right boundary
+  model.addBoundaryCondition("1", ["symmetry"]); // Left boundary
   model.addBoundaryCondition("2", ["convection", 1, 20]); // Top boundary
-  model.addBoundaryCondition("3", ["symmetry"]); // Left boundary
+  model.addBoundaryCondition("3", ["constantTemperature", 200]); // Right boundary
 
   // Solve the problem
   const { solutionVector, nodesCoordinates } = model.solve();
