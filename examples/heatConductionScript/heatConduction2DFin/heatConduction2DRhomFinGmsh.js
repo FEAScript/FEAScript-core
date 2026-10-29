@@ -43,7 +43,6 @@ async function main() {
   // Define mesh configuration with the parsed result
   model.setMeshConfig({
     parsedMesh: result,
-    meshDimension: "2D",
   });
 
   // Define boundary conditions

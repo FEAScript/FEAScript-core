@@ -13,8 +13,9 @@
  * Uses the test meshes of linear and quadratic quadrilaterals and triangles
  *
  * Covers:
- *  - Element order detection: the element order is read from the Gmsh element types, so a mesh
- *    configuration without elementOrder gives the same solution as one that sets it
+ *  - Mesh settings detection: the mesh dimension and element order are read from the Gmsh element
+ *    types, so a mesh configuration without meshDimension and elementOrder gives the same solution
+ *    as one that sets them
  *  - Non-contiguous node tags: each mesh is copied with gaps in its node tags (same geometry and
  *    connectivity) and compared against the original
  *    - No extra (disconnected) nodes are created by the gaps
@@ -97,10 +98,10 @@ const largestDifference = (a, b) => {
   return Math.max(0, ...a.flat(Infinity).map((value, i) => Math.abs(value - flatB[i])));
 };
 
-function runSimulation(parsedMesh, elementOrder, solverMethod) {
+function runSimulation(parsedMesh, meshSettings, solverMethod) {
   const model = new FEAScriptModel();
   model.setModelConfig("heatConductionScript");
-  model.setMeshConfig({ parsedMesh, meshDimension: "2D", elementOrder });
+  model.setMeshConfig({ parsedMesh, ...meshSettings });
   Object.entries(boundaryConditions).forEach(([boundaryKey, condition]) => {
     model.addBoundaryCondition(boundaryKey, condition);
   });
@@ -108,26 +109,38 @@ function runSimulation(parsedMesh, elementOrder, solverMethod) {
   return model.solve({ maxIterations: 200000, tolerance: 1e-10 });
 }
 
-// ─── Element order detection ────────────────────────────────────
+// ─── Mesh settings detection ────────────────────────────────────
 
 for (const { meshFile, elementOrder } of meshCases) {
   const meshContent = readMeshFile(meshFile);
   const parsed = await parseMesh(meshContent);
   assert(
+    parsed.meshDimension === "2D",
+    `${meshFile}: detected mesh dimension '2D' (got '${parsed.meshDimension}')`,
+  );
+  assert(
     parsed.elementOrder === elementOrder,
     `${meshFile}: detected element order '${elementOrder}' (got '${parsed.elementOrder}')`,
   );
 
+  // The model configuration holds the detected settings (e.g., for plotting)
+  const model = new FEAScriptModel();
+  model.setMeshConfig({ parsedMesh: parsed });
+  assert(
+    model.meshConfig.meshDimension === "2D" && model.meshConfig.elementOrder === elementOrder,
+    `${meshFile}: model mesh configuration filled in with '2D' and '${elementOrder}' (got '${model.meshConfig.meshDimension}' and '${model.meshConfig.elementOrder}')`,
+  );
+
   const configuredSolution = runSimulation(
     await parseMesh(meshContent),
-    elementOrder,
+    { meshDimension: "2D", elementOrder },
     "lusolve",
   ).solutionVector;
-  const detectedSolution = runSimulation(await parseMesh(meshContent), undefined, "lusolve").solutionVector;
+  const detectedSolution = runSimulation(await parseMesh(meshContent), {}, "lusolve").solutionVector;
   const solutionDifference = largestDifference(Array.from(detectedSolution), Array.from(configuredSolution));
   assert(
     solutionDifference === 0,
-    `${meshFile}: same solution without elementOrder in the mesh configuration (largest difference ${solutionDifference})`,
+    `${meshFile}: same solution without meshDimension and elementOrder in the mesh configuration (largest difference ${solutionDifference})`,
   );
 }
 
@@ -180,7 +193,7 @@ function addNodeTagGaps(meshContent) {
   return output.join("\n");
 }
 
-for (const { meshFile, elementOrder, solverMethods } of meshCases) {
+for (const { meshFile, solverMethods } of meshCases) {
   const meshContent = readMeshFile(meshFile);
   const original = await parseMesh(meshContent);
   const gapped = await parseMesh(addNodeTagGaps(meshContent));
@@ -219,14 +232,10 @@ for (const { meshFile, elementOrder, solverMethods } of meshCases) {
 
   // The simulation modifies the parsed mesh, so each one parses its own copy
   for (const solverMethod of solverMethods) {
-    const originalSolution = runSimulation(
-      await parseMesh(meshContent),
-      elementOrder,
-      solverMethod,
-    ).solutionVector;
+    const originalSolution = runSimulation(await parseMesh(meshContent), {}, solverMethod).solutionVector;
     const gappedSolution = runSimulation(
       await parseMesh(addNodeTagGaps(meshContent)),
-      elementOrder,
+      {},
       solverMethod,
     ).solutionVector;
 

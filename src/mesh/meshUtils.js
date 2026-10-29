@@ -11,32 +11,43 @@
 import { getBoundarySides } from "../elements/basisFunctions.js";
 import { Mesh1D, Mesh2D } from "./meshGeneration.js";
 import { debugLog, errorLog } from "../utilities/logging.js";
+
+/**
+ * Function to fill in the mesh settings that a parsed mesh (e.g., from a Gmsh .msh import) already defines.
+ * The mesh dimension and element order are taken from the mesh itself; a conflicting value in the mesh
+ * configuration is reported as an error
+ * @param {object} meshConfig - Object containing computational mesh details
+ * @returns {object} A copy of the mesh configuration with the settings of the parsed mesh filled in
+ */
+export function resolveMeshConfig(meshConfig) {
+  const { parsedMesh } = meshConfig;
+  if (!parsedMesh) return meshConfig;
+
+  const resolvedMeshConfig = { ...meshConfig };
+  for (const setting of ["meshDimension", "elementOrder"]) {
+    const configValue = meshConfig[setting];
+    const meshValue = parsedMesh[setting];
+    if (meshValue === undefined) continue;
+    if (configValue !== undefined && configValue !== meshValue) {
+      errorLog(
+        `${setting} is '${configValue}' but the imported mesh is '${meshValue}'. Remove ${setting} from the mesh configuration; it is detected from the mesh.`,
+      );
+    }
+    resolvedMeshConfig[setting] = meshValue;
+  }
+  return resolvedMeshConfig;
+}
+
 /**
  * Function to prepare the mesh for finite element analysis
  * @param {object} meshConfig - Object containing computational mesh details
  * @returns {object} An object containing all mesh-related data
  */
 export function prepareMesh(meshConfig) {
-  const {
-    meshDimension,
-    numElementsX,
-    numElementsY,
-    maxX,
-    maxY,
-    elementOrder: configElementOrder,
-    parsedMesh,
-    angleLeft,
-    angleRight,
-  } = meshConfig;
-
-  // For a parsed mesh (e.g., from a Gmsh .msh import) the element order is taken from the mesh itself
-  const parsedElementOrder = parsedMesh?.elementOrder;
-  if (parsedElementOrder && configElementOrder && configElementOrder !== parsedElementOrder) {
-    errorLog(
-      `elementOrder is '${configElementOrder}' but the imported mesh contains ${parsedElementOrder} elements. Remove elementOrder from the mesh configuration; it is detected from the mesh.`,
-    );
-  }
-  const elementOrder = parsedElementOrder ?? configElementOrder ?? "linear";
+  const resolvedMeshConfig = resolveMeshConfig(meshConfig);
+  const { meshDimension, numElementsX, numElementsY, maxX, maxY, parsedMesh, angleLeft, angleRight } =
+    resolvedMeshConfig;
+  const elementOrder = resolvedMeshConfig.elementOrder ?? "linear";
 
   // Create a new instance of the Mesh class
   let mesh;

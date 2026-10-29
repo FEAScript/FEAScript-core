@@ -65,6 +65,7 @@ const importGmshMesh = async (file) => {
   let elementBlocksProcessed = 0;
   let currentElementBlock = { numElements: 0 };
   let elementsProcessedInBlock = 0;
+  let maxElementDimension = 0;
 
   let boundaryElementsByTag = {};
 
@@ -239,6 +240,7 @@ const importGmshMesh = async (file) => {
 
         result.elementTypes[currentElementBlock.elementType] =
           (result.elementTypes[currentElementBlock.elementType] || 0) + currentElementBlock.numElements;
+        maxElementDimension = Math.max(maxElementDimension, currentElementBlock.dim);
 
         elementsProcessedInBlock = 0;
       } else if (elementsProcessedInBlock < currentElementBlock.numElements) {
@@ -290,6 +292,15 @@ const importGmshMesh = async (file) => {
   });
 
   debugLog(`Parsed boundary node pairs by physical tag: ${JSON.stringify(result.boundaryNodePairs)}`);
+
+  // Detect the mesh dimension from the highest-dimensional elements (lower-dimensional ones are boundaries)
+  result.meshDimension = `${maxElementDimension}D`;
+  if (result.meshDimension !== "2D") {
+    errorLog(
+      `The Gmsh mesh is ${result.meshDimension}; only 2D meshes (triangles and quadrilaterals) are supported yet.`,
+    );
+  }
+  debugLog(`Detected mesh dimension from Gmsh mesh: ${result.meshDimension}`);
 
   // Detect the element order from the Gmsh element types (2/3: linear, 9/10: quadratic triangles/quads)
   const hasLinearElements = Boolean(result.elementTypes[2] || result.elementTypes[3]);

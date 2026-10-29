@@ -11,7 +11,7 @@
 import { newtonRaphson } from "./solvers/newtonRaphson.js";
 import { solveLinearSystem } from "./solvers/linearSystemSolver.js";
 import { solveLinearSystemAsync } from "./solvers/linearSystemSolver.js";
-import { prepareMesh } from "./mesh/meshUtils.js";
+import { prepareMesh, resolveMeshConfig } from "./mesh/meshUtils.js";
 import { assembleFrontPropagationMat, assembleFrontPropagationFront } from "./physics/frontPropagation.js";
 import { assembleGeneralFormPDEMat, assembleGeneralFormPDENonlinearMat } from "./physics/generalFormPDE.js";
 import { assembleHeatConductionMat, assembleHeatConductionFront } from "./physics/heatConduction.js";
@@ -74,8 +74,9 @@ export class FEAScriptModel {
   }
 
   setMeshConfig(meshConfig) {
-    this.meshConfig = meshConfig;
-    debugLog(`meshConfig set with dimensions: ${meshConfig.meshDimension}`);
+    // Settings that a parsed mesh defines (dimension, element order) are filled in from the mesh
+    this.meshConfig = resolveMeshConfig(meshConfig);
+    debugLog(`meshConfig set with dimensions: ${this.meshConfig.meshDimension}`);
   }
 
   addBoundaryCondition(boundaryKey, condition) {
