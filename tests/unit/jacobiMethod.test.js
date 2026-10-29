@@ -17,7 +17,7 @@
  * Run: node tests/unit/jacobiMethod.test.js (or npm test)
  */
 
-import { jacobiSolver } from "../../src/solvers/index.js";
+import { jacobiSolver } from "../../src/solvers/jacobiSolver.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
 
 basicLog("");

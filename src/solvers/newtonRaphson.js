@@ -8,7 +8,7 @@
  */
 
 // Internal imports
-import { euclideanNorm, axpy } from "../linalg/index.js";
+import { euclideanNorm, axpy } from "../linalg/blasUtilities.js";
 import { solveLinearSystem } from "./linearSystemSolver.js";
 import { basicLog, errorLog } from "../utilities/logging.js";
 import { runFrontalSolver } from "./frontalSolver.js";

@@ -20,7 +20,8 @@
  */
 
 import { SparseMatrix } from "../../src/linalg/sparseMatrix.js";
-import { jacobiSolver, mathjsLUSolver } from "../../src/solvers/index.js";
+import { jacobiSolver } from "../../src/solvers/jacobiSolver.js";
+import { mathjsLUSolver } from "../../src/solvers/mathjsLUSolver.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
 
 basicLog("");

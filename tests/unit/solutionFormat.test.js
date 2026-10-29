@@ -20,7 +20,7 @@
  */
 
 import { FEAScriptModel } from "../../src/FEAScript.js";
-import { mathjsLUSolver } from "../../src/solvers/index.js";
+import { mathjsLUSolver } from "../../src/solvers/mathjsLUSolver.js";
 import { plotInterpolatedSolution } from "../../src/visualization/plotlyPlot.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
 
