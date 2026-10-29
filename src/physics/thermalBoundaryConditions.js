@@ -8,8 +8,8 @@
  */
 
 // Internal imports
-import { triangleBoundarySides } from "../mesh/basisFunctions.js";
-import { NumericalIntegration } from "../numerics/numericalIntegration.js";
+import { triangleBoundarySides, getBoundarySides } from "../elements/basisFunctions.js";
+import { NumericalIntegration } from "../elements/numericalIntegration.js";
 import { debugLog } from "../utilities/logging.js";
 
 /**
@@ -118,6 +118,138 @@ export class ThermalBoundaryConditions {
   }
 
   /**
+   * Function to compute the convection contributions on one side of an element (1D, quadrilateral or triangle)
+   * @param {number} elementIndex - Index of the element
+   * @param {number} side - Side of the reference element
+   * @param {number} convectionHeatTransferCoefficient - Convection heat transfer coefficient
+   * @param {number} externalTemperature - External temperature
+   * @param {array} nodesXCoordinates - Array of x-coordinates of nodes
+   * @param {array} nodesYCoordinates - Array of y-coordinates of nodes
+   * @param {array} gaussPoints - Array of Gauss points for numerical integration
+   * @param {array} gaussWeights - Array of Gauss weights for numerical integration
+   * @param {object} basisFunctions - Object containing basis functions and their derivatives
+   * @returns {object} An object containing:
+   *  - sideNodeIndices: Local node indices on the side
+   *  - localJacobianMatrix: Contributions indexed by local node indices
+   *  - localResidualVector: Contributions indexed by local node indices
+   */
+  computeConvectionContributions(
+    elementIndex,
+    side,
+    convectionHeatTransferCoefficient,
+    externalTemperature,
+    nodesXCoordinates,
+    nodesYCoordinates,
+    gaussPoints,
+    gaussWeights,
+    basisFunctions,
+  ) {
+    if (this.meshDimension === "2D" && this.elementShape === "triangle") {
+      return this.computeTriangleConvectionContributions(
+        elementIndex,
+        side,
+        convectionHeatTransferCoefficient,
+        externalTemperature,
+        nodesXCoordinates,
+        nodesYCoordinates,
+        basisFunctions,
+      );
+    }
+
+    const nodesPerElement = this.nop[elementIndex].length;
+    const sideNodeIndices = getBoundarySides(this.meshDimension, this.elementOrder, this.elementShape)[side];
+    const localJacobianMatrix = Array(nodesPerElement)
+      .fill()
+      .map(() => Array(nodesPerElement).fill(0));
+    const localResidualVector = Array(nodesPerElement).fill(0);
+
+    if (this.meshDimension === "1D") {
+      // The boundary is a single node
+      const nodeIndex = sideNodeIndices[0];
+      localResidualVector[nodeIndex] += -convectionHeatTransferCoefficient * externalTemperature;
+      localJacobianMatrix[nodeIndex][nodeIndex] += convectionHeatTransferCoefficient;
+      return { sideNodeIndices, localJacobianMatrix, localResidualVector };
+    }
+
+    // Quadrilateral: integrate along the side with the 1D Gauss rule
+    for (let gaussPointIndex = 0; gaussPointIndex < gaussPoints.length; gaussPointIndex++) {
+      // Reference coordinates of the Gauss point on the side
+      const gaussPoint = gaussPoints[gaussPointIndex];
+      const sideCoordinates = {
+        0: [gaussPoint, 0], // Bottom side (eta = 0)
+        1: [0, gaussPoint], // Left side (ksi = 0)
+        2: [gaussPoint, 1], // Top side (eta = 1)
+        3: [1, gaussPoint], // Right side (ksi = 1)
+      };
+      const [ksi, eta] = sideCoordinates[side];
+      const { basisFunction, basisFunctionDerivKsi, basisFunctionDerivEta } =
+        basisFunctions.getBasisFunctions(ksi, eta);
+
+      // Tangent vector of the side: along ksi for the bottom/top sides, along eta for the left/right sides
+      const isKsiSide = side === 0 || side === 2;
+      let tangentX = 0;
+      let tangentY = 0;
+      for (let nodeIndex = 0; nodeIndex < nodesPerElement; nodeIndex++) {
+        const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+        const basisFunctionDerivT = isKsiSide
+          ? basisFunctionDerivKsi[nodeIndex]
+          : basisFunctionDerivEta[nodeIndex];
+        tangentX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivT;
+        tangentY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivT;
+      }
+      const tangentVectorLength = Math.sqrt(tangentX ** 2 + tangentY ** 2);
+
+      for (const localNodeIndex of sideNodeIndices) {
+        localResidualVector[localNodeIndex] +=
+          -gaussWeights[gaussPointIndex] *
+          tangentVectorLength *
+          basisFunction[localNodeIndex] *
+          convectionHeatTransferCoefficient *
+          externalTemperature;
+
+        for (const localNodeIndex2 of sideNodeIndices) {
+          localJacobianMatrix[localNodeIndex][localNodeIndex2] +=
+            -gaussWeights[gaussPointIndex] *
+            tangentVectorLength *
+            basisFunction[localNodeIndex] *
+            basisFunction[localNodeIndex2] *
+            convectionHeatTransferCoefficient;
+        }
+      }
+    }
+
+    return { sideNodeIndices, localJacobianMatrix, localResidualVector };
+  }
+
+  /**
+   * Function to visit every node on a constant temperature boundary
+   * @param {function} callback - Called with (globalNodeIndex, constantTemperatureValue) for each node
+   */
+  forEachConstantTemperatureNode(callback) {
+    const boundarySides = getBoundarySides(this.meshDimension, this.elementOrder, this.elementShape);
+    Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
+      if (this.boundaryConditions[boundaryKey][0] === "constantTemperature") {
+        const constantTemperatureValue = this.boundaryConditions[boundaryKey][1];
+        debugLog(
+          `Boundary ${boundaryKey}: Applying constant temperature of ${constantTemperatureValue} K (Dirichlet condition)`,
+        );
+
+        this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
+          boundarySides[side].forEach((nodeIndex) => {
+            const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+            debugLog(
+              `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
+                elementIndex + 1
+              }, local node ${nodeIndex + 1})`,
+            );
+            callback(globalNodeIndex, constantTemperatureValue);
+          });
+        });
+      }
+    });
+  }
+
+  /**
    * Function to impose constant temperature boundary conditions (Dirichlet type)
    * @param {array} residualVector - The residual vector to be modified
    * @param {SparseMatrix} jacobianMatrix - The Jacobian matrix to be modified
@@ -131,126 +263,14 @@ export class ThermalBoundaryConditions {
    * corresponds to the traditional load (RHS) vector.
    */
   imposeConstantTempBoundaryConditions(residualVector, jacobianMatrix) {
-    if (this.meshDimension === "1D") {
-      Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
-        if (this.boundaryConditions[boundaryKey][0] === "constantTemperature") {
-          const constantTemperatureValue = this.boundaryConditions[boundaryKey][1];
-          debugLog(
-            `Boundary ${boundaryKey}: Applying constant temperature of ${constantTemperatureValue} K (Dirichlet condition)`,
-          );
-          this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
-            if (this.elementOrder === "linear") {
-              const boundarySides = {
-                0: [0], // Node at the left side of the reference element
-                1: [1], // Node at the right side of the reference element
-              };
-              boundarySides[side].forEach((nodeIndex) => {
-                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-                debugLog(
-                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
-                    elementIndex + 1
-                  }, local node ${nodeIndex + 1})`,
-                );
-                // Set the residual vector to the ConstantTemp value
-                residualVector[globalNodeIndex] = constantTemperatureValue;
-                // Set the Jacobian matrix row to zero
-                jacobianMatrix.clearRow(globalNodeIndex);
-                // Set the diagonal entry of the Jacobian matrix to one
-                jacobianMatrix.setValue(globalNodeIndex, globalNodeIndex, 1);
-              });
-            } else if (this.elementOrder === "quadratic") {
-              const boundarySides = {
-                0: [0], // Node at the left side of the reference element
-                1: [2], // Node at the right side of the reference element
-              };
-              boundarySides[side].forEach((nodeIndex) => {
-                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-                debugLog(
-                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
-                    elementIndex + 1
-                  }, local node ${nodeIndex + 1})`,
-                );
-                // Set the residual vector to the ConstantTemp value
-                residualVector[globalNodeIndex] = constantTemperatureValue;
-                // Set the Jacobian matrix row to zero
-                jacobianMatrix.clearRow(globalNodeIndex);
-                // Set the diagonal entry of the Jacobian matrix to one
-                jacobianMatrix.setValue(globalNodeIndex, globalNodeIndex, 1);
-              });
-            }
-          });
-        }
-      });
-    } else if (this.meshDimension === "2D") {
-      Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
-        if (this.boundaryConditions[boundaryKey][0] === "constantTemperature") {
-          const constantTemperatureValue = this.boundaryConditions[boundaryKey][1];
-          debugLog(
-            `Boundary ${boundaryKey}: Applying constant temperature of ${constantTemperatureValue} K (Dirichlet condition)`,
-          );
-          this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
-            if (this.elementShape === "triangle") {
-              triangleBoundarySides[this.elementOrder][side].forEach((nodeIndex) => {
-                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-                debugLog(
-                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
-                    elementIndex + 1
-                  }, local node ${nodeIndex + 1})`,
-                );
-                // Set the residual vector to the ConstantTemp value
-                residualVector[globalNodeIndex] = constantTemperatureValue;
-                // Set the Jacobian matrix row to zero
-                jacobianMatrix.clearRow(globalNodeIndex);
-                // Set the diagonal entry of the Jacobian matrix to one
-                jacobianMatrix.setValue(globalNodeIndex, globalNodeIndex, 1);
-              });
-            } else if (this.elementOrder === "linear") {
-              const boundarySides = {
-                0: [0, 2], // Nodes at the bottom side of the reference element
-                1: [0, 1], // Nodes at the left side of the reference element
-                2: [1, 3], // Nodes at the top side of the reference element
-                3: [2, 3], // Nodes at the right side of the reference element
-              };
-              boundarySides[side].forEach((nodeIndex) => {
-                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-                debugLog(
-                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
-                    elementIndex + 1
-                  }, local node ${nodeIndex + 1})`,
-                );
-                // Set the residual vector to the ConstantTemp value
-                residualVector[globalNodeIndex] = constantTemperatureValue;
-                // Set the Jacobian matrix row to zero
-                jacobianMatrix.clearRow(globalNodeIndex);
-                // Set the diagonal entry of the Jacobian matrix to one
-                jacobianMatrix.setValue(globalNodeIndex, globalNodeIndex, 1);
-              });
-            } else if (this.elementOrder === "quadratic") {
-              const boundarySides = {
-                0: [0, 3, 6], // Nodes at the bottom side of the reference element
-                1: [0, 1, 2], // Nodes at the left side of the reference element
-                2: [2, 5, 8], // Nodes at the top side of the reference element
-                3: [6, 7, 8], // Nodes at the right side of the reference element
-              };
-              boundarySides[side].forEach((nodeIndex) => {
-                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-                debugLog(
-                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
-                    elementIndex + 1
-                  }, local node ${nodeIndex + 1})`,
-                );
-                // Set the residual vector to the ConstantTemp value
-                residualVector[globalNodeIndex] = constantTemperatureValue;
-                // Set the Jacobian matrix row to zero
-                jacobianMatrix.clearRow(globalNodeIndex);
-                // Set the diagonal entry of the Jacobian matrix to one
-                jacobianMatrix.setValue(globalNodeIndex, globalNodeIndex, 1);
-              });
-            }
-          });
-        }
-      });
-    }
+    this.forEachConstantTemperatureNode((globalNodeIndex, constantTemperatureValue) => {
+      // Set the residual vector to the constant temperature value
+      residualVector[globalNodeIndex] = constantTemperatureValue;
+      // Set the Jacobian matrix row to zero
+      jacobianMatrix.clearRow(globalNodeIndex);
+      // Set the diagonal entry of the Jacobian matrix to one
+      jacobianMatrix.setValue(globalNodeIndex, globalNodeIndex, 1);
+    });
   }
 
   /**
@@ -258,123 +278,12 @@ export class ThermalBoundaryConditions {
    * @param {array} nodeConstraintCode - Array indicating boundary condition code for each node
    * @param {array} boundaryValues - Array containing boundary condition values
    */
-  imposeConstantTempBoundaryConditionsFront(nodeConstraintCode, boundaryValues) {
-    if (this.meshDimension === "1D") {
-      Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
-        if (this.boundaryConditions[boundaryKey][0] === "constantTemperature") {
-          const constantTemperatureValue = this.boundaryConditions[boundaryKey][1];
-          debugLog(
-            `Boundary ${boundaryKey}: Applying constant temperature of ${constantTemperatureValue} K (Dirichlet condition)`,
-          );
-
-          this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
-            if (this.elementOrder === "linear") {
-              const boundarySides = {
-                0: [0], // Node at the left side of the reference element
-                1: [1], // Node at the right side of the reference element
-              };
-
-              boundarySides[side].forEach((nodeIndex) => {
-                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-                debugLog(
-                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
-                    elementIndex + 1
-                  }, local node ${nodeIndex + 1})`,
-                );
-
-                // Set boundary condition code and value
-                nodeConstraintCode[globalNodeIndex] = 1;
-                boundaryValues[globalNodeIndex] = constantTemperatureValue;
-              });
-            } else if (this.elementOrder === "quadratic") {
-              const boundarySides = {
-                0: [0], // Node at the left side of the reference element
-                1: [2], // Node at the right side of the reference element
-              };
-
-              boundarySides[side].forEach((nodeIndex) => {
-                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-                debugLog(
-                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
-                    elementIndex + 1
-                  }, local node ${nodeIndex + 1})`,
-                );
-
-                // Set boundary condition code and value
-                nodeConstraintCode[globalNodeIndex] = 1;
-                boundaryValues[globalNodeIndex] = constantTemperatureValue;
-              });
-            }
-          });
-        }
-      });
-    } else if (this.meshDimension === "2D") {
-      Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
-        if (this.boundaryConditions[boundaryKey][0] === "constantTemperature") {
-          const constantTemperatureValue = this.boundaryConditions[boundaryKey][1];
-          debugLog(
-            `Boundary ${boundaryKey}: Applying constant temperature of ${constantTemperatureValue} K (Dirichlet condition)`,
-          );
-
-          this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
-            if (this.elementShape === "triangle") {
-              triangleBoundarySides[this.elementOrder][side].forEach((nodeIndex) => {
-                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-                debugLog(
-                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
-                    elementIndex + 1
-                  }, local node ${nodeIndex + 1})`,
-                );
-
-                // Set boundary condition code and value
-                nodeConstraintCode[globalNodeIndex] = 1;
-                boundaryValues[globalNodeIndex] = constantTemperatureValue;
-              });
-            } else if (this.elementOrder === "linear") {
-              const boundarySides = {
-                0: [0, 2], // Nodes at the bottom side of the reference element
-                1: [0, 1], // Nodes at the left side of the reference element
-                2: [1, 3], // Nodes at the top side of the reference element
-                3: [2, 3], // Nodes at the right side of the reference element
-              };
-
-              boundarySides[side].forEach((nodeIndex) => {
-                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-                debugLog(
-                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
-                    elementIndex + 1
-                  }, local node ${nodeIndex + 1})`,
-                );
-
-                // Set boundary condition code and value
-                nodeConstraintCode[globalNodeIndex] = 1;
-                boundaryValues[globalNodeIndex] = constantTemperatureValue;
-              });
-            } else if (this.elementOrder === "quadratic") {
-              const boundarySides = {
-                0: [0, 3, 6], // Nodes at the bottom side of the reference element
-                1: [0, 1, 2], // Nodes at the left side of the reference element
-                2: [2, 5, 8], // Nodes at the top side of the reference element
-                3: [6, 7, 8], // Nodes at the right side of the reference element
-              };
-
-              boundarySides[side].forEach((nodeIndex) => {
-                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-                debugLog(
-                  `  - Applied constant temperature to node ${globalNodeIndex + 1} (element ${
-                    elementIndex + 1
-                  }, local node ${nodeIndex + 1})`,
-                );
-
-                // Set boundary condition code and value
-                nodeConstraintCode[globalNodeIndex] = 1;
-                boundaryValues[globalNodeIndex] = constantTemperatureValue;
-              });
-            }
-          });
-        }
-      });
-    }
+  imposeDirichletBoundaryConditionsFront(nodeConstraintCode, boundaryValues) {
+    this.forEachConstantTemperatureNode((globalNodeIndex, constantTemperatureValue) => {
+      // Set boundary condition code and value
+      nodeConstraintCode[globalNodeIndex] = 1;
+      boundaryValues[globalNodeIndex] = constantTemperatureValue;
+    });
   }
 
   /**
@@ -396,305 +305,50 @@ export class ThermalBoundaryConditions {
     nodesYCoordinates,
     basisFunctions,
   ) {
-    // Extract convection parameters from boundary conditions
-    let convectionHeatTransferCoefficients = [];
-    let convectionExternalTemperatures = [];
-    Object.keys(this.boundaryConditions).forEach((key) => {
-      const boundaryCondition = this.boundaryConditions[key];
-      if (boundaryCondition[0] === "convection") {
-        convectionHeatTransferCoefficients[key] = boundaryCondition[1];
-        convectionExternalTemperatures[key] = boundaryCondition[2];
-      }
-    });
+    Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
+      if (this.boundaryConditions[boundaryKey][0] === "convection") {
+        const [, convectionHeatTransferCoefficient, externalTemperature] =
+          this.boundaryConditions[boundaryKey];
+        debugLog(
+          `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionHeatTransferCoefficient} W/(m²·K) and external temperature T∞=${externalTemperature} K`,
+        );
 
-    if (this.meshDimension === "1D") {
-      Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
-        if (this.boundaryConditions[boundaryKey][0] === "convection") {
-          const convectionHeatTransferCoefficient = convectionHeatTransferCoefficients[boundaryKey];
-          const externalTemperature = convectionExternalTemperatures[boundaryKey];
-          debugLog(
-            `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionHeatTransferCoefficient} W/(m²·K) and external temperature T∞=${externalTemperature} K`,
-          );
-          this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
-            let nodeIndex;
-            if (this.elementOrder === "linear") {
-              if (side === 0) {
-                // Node at the left side of the reference element
-                nodeIndex = 0;
-              } else {
-                // Node at the right side of the reference element
-                nodeIndex = 1;
-              }
-            } else if (this.elementOrder === "quadratic") {
-              if (side === 0) {
-                // Node at the left side of the reference element
-                nodeIndex = 0;
-              } else {
-                // Node at the right side of the reference element
-                nodeIndex = 2;
-              }
-            }
+        this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
+          const { sideNodeIndices, localJacobianMatrix, localResidualVector } =
+            this.computeConvectionContributions(
+              elementIndex,
+              side,
+              convectionHeatTransferCoefficient,
+              externalTemperature,
+              nodesXCoordinates,
+              nodesYCoordinates,
+              gaussPoints,
+              gaussWeights,
+              basisFunctions,
+            );
 
-            const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
+          // Add the side contributions to the global system
+          for (const localNodeIndex of sideNodeIndices) {
+            const globalNodeIndex = this.nop[elementIndex][localNodeIndex] - 1;
             debugLog(
               `  - Applied convection boundary condition to node ${globalNodeIndex + 1} (element ${
                 elementIndex + 1
-              }, local node ${nodeIndex + 1})`,
+              }, local node ${localNodeIndex + 1})`,
             );
-            residualVector[globalNodeIndex] += -convectionHeatTransferCoefficient * externalTemperature;
-            jacobianMatrix.addValue(globalNodeIndex, globalNodeIndex, convectionHeatTransferCoefficient);
-          });
-        }
-      });
-    } else if (this.meshDimension === "2D") {
-      Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
-        if (this.boundaryConditions[boundaryKey][0] === "convection") {
-          const convectionHeatTransferCoefficient = convectionHeatTransferCoefficients[boundaryKey];
-          const externalTemperature = convectionExternalTemperatures[boundaryKey];
-          debugLog(
-            `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionHeatTransferCoefficient} W/(m²·K) and external temperature T∞=${externalTemperature} K`,
-          );
-          this.boundaryElements[boundaryKey].forEach(([elementIndex, side]) => {
-            if (this.elementShape === "triangle") {
-              const { sideNodeIndices, localJacobianMatrix, localResidualVector } =
-                this.computeTriangleConvectionContributions(
-                  elementIndex,
-                  side,
-                  convectionHeatTransferCoefficient,
-                  externalTemperature,
-                  nodesXCoordinates,
-                  nodesYCoordinates,
-                  basisFunctions,
-                );
+            residualVector[globalNodeIndex] += localResidualVector[localNodeIndex];
 
-              for (const localNodeIndex of sideNodeIndices) {
-                const globalNodeIndex = this.nop[elementIndex][localNodeIndex] - 1;
-                debugLog(
-                  `  - Applied convection boundary condition to node ${globalNodeIndex + 1} (element ${
-                    elementIndex + 1
-                  }, local node ${localNodeIndex + 1})`,
-                );
-                residualVector[globalNodeIndex] += localResidualVector[localNodeIndex];
-
-                for (const localNodeIndex2 of sideNodeIndices) {
-                  const globalNodeIndex2 = this.nop[elementIndex][localNodeIndex2] - 1;
-                  jacobianMatrix.addValue(
-                    globalNodeIndex,
-                    globalNodeIndex2,
-                    localJacobianMatrix[localNodeIndex][localNodeIndex2],
-                  );
-                }
-              }
-            } else if (this.elementOrder === "linear") {
-              let gaussPoint1, gaussPoint2, firstNodeIndex, lastNodeIndex, nodeIncrement;
-              if (side === 0) {
-                // Nodes at the bottom side of the reference element
-                gaussPoint1 = gaussPoints[0];
-                gaussPoint2 = 0;
-                firstNodeIndex = 0;
-                lastNodeIndex = 3;
-                nodeIncrement = 2;
-              } else if (side === 1) {
-                // Nodes at the left side of the reference element
-                gaussPoint1 = 0;
-                gaussPoint2 = gaussPoints[0];
-                firstNodeIndex = 0;
-                lastNodeIndex = 2;
-                nodeIncrement = 1;
-              } else if (side === 2) {
-                // Nodes at the top side of the reference element
-                gaussPoint1 = gaussPoints[0];
-                gaussPoint2 = 1;
-                firstNodeIndex = 1;
-                lastNodeIndex = 4;
-                nodeIncrement = 2;
-              } else if (side === 3) {
-                // Nodes at the right side of the reference element
-                gaussPoint1 = 1;
-                gaussPoint2 = gaussPoints[0];
-                firstNodeIndex = 2;
-                lastNodeIndex = 4;
-                nodeIncrement = 1;
-              }
-
-              let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoint1, gaussPoint2);
-              let basisFunction = basisFunctionsAndDerivatives.basisFunction;
-              let basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
-              let basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
-
-              let ksiDerivX = 0;
-              let ksiDerivY = 0;
-              let etaDerivX = 0;
-              let etaDerivY = 0;
-              const nodesPerElement = this.nop[elementIndex].length;
-              for (let nodeIndex = 0; nodeIndex < nodesPerElement; nodeIndex++) {
-                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-
-                // For boundaries along Ksi (horizontal), use Ksi derivatives
-                if (side === 0 || side === 2) {
-                  ksiDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
-                  ksiDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
-                }
-                // For boundaries along Eta (vertical), use Eta derivatives
-                else if (side === 1 || side === 3) {
-                  etaDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
-                  etaDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
-                }
-              }
-
-              // Compute the length of tangent vector
-              let tangentVectorLength;
-              if (side === 0 || side === 2) {
-                tangentVectorLength = Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2);
-              } else {
-                tangentVectorLength = Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
-              }
-
-              for (
-                let localNodeIndex = firstNodeIndex;
-                localNodeIndex < lastNodeIndex;
-                localNodeIndex += nodeIncrement
-              ) {
-                let globalNodeIndex = this.nop[elementIndex][localNodeIndex] - 1;
-                debugLog(
-                  `  - Applied convection boundary condition to node ${globalNodeIndex + 1} (element ${
-                    elementIndex + 1
-                  }, local node ${localNodeIndex + 1})`,
-                );
-
-                // Apply boundary condition with proper Jacobian for all sides
-                residualVector[globalNodeIndex] +=
-                  -gaussWeights[0] *
-                  tangentVectorLength *
-                  basisFunction[localNodeIndex] *
-                  convectionHeatTransferCoefficient *
-                  externalTemperature;
-
-                for (
-                  let localNodeIndex2 = firstNodeIndex;
-                  localNodeIndex2 < lastNodeIndex;
-                  localNodeIndex2 += nodeIncrement
-                ) {
-                  let globalNodeIndex2 = this.nop[elementIndex][localNodeIndex2] - 1;
-                  jacobianMatrix.addValue(
-                    globalNodeIndex,
-                    globalNodeIndex2,
-                    -gaussWeights[0] *
-                      tangentVectorLength *
-                      basisFunction[localNodeIndex] *
-                      basisFunction[localNodeIndex2] *
-                      convectionHeatTransferCoefficient,
-                  );
-                }
-              }
-            } else if (this.elementOrder === "quadratic") {
-              for (let gaussPointIndex = 0; gaussPointIndex < 3; gaussPointIndex++) {
-                let gaussPoint1, gaussPoint2, firstNodeIndex, lastNodeIndex, nodeIncrement;
-                if (side === 0) {
-                  // Nodes at the bottom side of the reference element
-                  gaussPoint1 = gaussPoints[gaussPointIndex];
-                  gaussPoint2 = 0;
-                  firstNodeIndex = 0;
-                  lastNodeIndex = 7;
-                  nodeIncrement = 3;
-                } else if (side === 1) {
-                  // Nodes at the left side of the reference element
-                  gaussPoint1 = 0;
-                  gaussPoint2 = gaussPoints[gaussPointIndex];
-                  firstNodeIndex = 0;
-                  lastNodeIndex = 3;
-                  nodeIncrement = 1;
-                } else if (side === 2) {
-                  // Nodes at the top side of the reference element
-                  gaussPoint1 = gaussPoints[gaussPointIndex];
-                  gaussPoint2 = 1;
-                  firstNodeIndex = 2;
-                  lastNodeIndex = 9;
-                  nodeIncrement = 3;
-                } else if (side === 3) {
-                  // Nodes at the right side of the reference element
-                  gaussPoint1 = 1;
-                  gaussPoint2 = gaussPoints[gaussPointIndex];
-                  firstNodeIndex = 6;
-                  lastNodeIndex = 9;
-                  nodeIncrement = 1;
-                }
-                let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoint1, gaussPoint2);
-                let basisFunction = basisFunctionsAndDerivatives.basisFunction;
-                let basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
-                let basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
-
-                let ksiDerivX = 0;
-                let ksiDerivY = 0;
-                let etaDerivX = 0;
-                let etaDerivY = 0;
-                const nodesPerElement = this.nop[elementIndex].length;
-                for (let nodeIndex = 0; nodeIndex < nodesPerElement; nodeIndex++) {
-                  const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-
-                  // For boundaries along Ksi (horizontal), use Ksi derivatives
-                  if (side === 0 || side === 2) {
-                    ksiDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
-                    ksiDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
-                  }
-                  // For boundaries along Eta (vertical), use Eta derivatives
-                  else if (side === 1 || side === 3) {
-                    etaDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
-                    etaDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
-                  }
-                }
-
-                // Compute the length of tangent vector
-                let tangentVectorLength;
-                if (side === 0 || side === 2) {
-                  tangentVectorLength = Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2);
-                } else {
-                  tangentVectorLength = Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
-                }
-
-                for (
-                  let localNodeIndex = firstNodeIndex;
-                  localNodeIndex < lastNodeIndex;
-                  localNodeIndex += nodeIncrement
-                ) {
-                  let globalNodeIndex = this.nop[elementIndex][localNodeIndex] - 1;
-                  debugLog(
-                    `  - Applied convection boundary condition to node ${globalNodeIndex + 1} (element ${
-                      elementIndex + 1
-                    }, local node ${localNodeIndex + 1})`,
-                  );
-
-                  // Apply boundary condition with proper Jacobian for all sides
-                  residualVector[globalNodeIndex] +=
-                    -gaussWeights[gaussPointIndex] *
-                    tangentVectorLength *
-                    basisFunction[localNodeIndex] *
-                    convectionHeatTransferCoefficient *
-                    externalTemperature;
-
-                  for (
-                    let localNodeIndex2 = firstNodeIndex;
-                    localNodeIndex2 < lastNodeIndex;
-                    localNodeIndex2 += nodeIncrement
-                  ) {
-                    let globalNodeIndex2 = this.nop[elementIndex][localNodeIndex2] - 1;
-                    jacobianMatrix.addValue(
-                      globalNodeIndex,
-                      globalNodeIndex2,
-                      -gaussWeights[gaussPointIndex] *
-                        tangentVectorLength *
-                        basisFunction[localNodeIndex] *
-                        basisFunction[localNodeIndex2] *
-                        convectionHeatTransferCoefficient,
-                    );
-                  }
-                }
-              }
+            for (const localNodeIndex2 of sideNodeIndices) {
+              const globalNodeIndex2 = this.nop[elementIndex][localNodeIndex2] - 1;
+              jacobianMatrix.addValue(
+                globalNodeIndex,
+                globalNodeIndex2,
+                localJacobianMatrix[localNodeIndex][localNodeIndex2],
+              );
             }
-          });
-        }
-      });
-    }
+          }
+        });
+      }
+    });
   }
 
   /**
@@ -705,11 +359,11 @@ export class ThermalBoundaryConditions {
    * @param {array} gaussPoints - Array of Gauss points for numerical integration
    * @param {array} gaussWeights - Array of Gauss weights for numerical integration
    * @param {object} basisFunctions - Object containing basis functions and their derivatives
-   * @returns {object} An object containing:
+   * @returns {object|null} An object containing the following, or null when the element is not on a convection boundary:
    *  - localJacobianMatrix: Local Jacobian matrix with convection contributions
    *  - localResidualVector: Residual vector with convection contributions
    */
-  imposeConvectionBoundaryConditionsFront(
+  imposeRobinBoundaryConditionsFront(
     elementIndex,
     nodesXCoordinates,
     nodesYCoordinates,
@@ -717,273 +371,55 @@ export class ThermalBoundaryConditions {
     gaussWeights,
     basisFunctions,
   ) {
-    // Extract convection parameters from boundary conditions
-    let convectionHeatTransferCoefficients = [];
-    let convectionExternalTemperatures = [];
-    Object.keys(this.boundaryConditions).forEach((key) => {
-      const boundaryCondition = this.boundaryConditions[key];
-      if (boundaryCondition[0] === "convection") {
-        convectionHeatTransferCoefficients[key] = boundaryCondition[1];
-        convectionExternalTemperatures[key] = boundaryCondition[2];
-      }
-    });
+    let localJacobianMatrix = null;
+    let localResidualVector = null;
 
-    // Initialize local Jacobian matrix and local residual vector
-    const nodesPerElement = this.nop[elementIndex].length;
-    const localJacobianMatrix = Array(nodesPerElement)
-      .fill()
-      .map(() => Array(nodesPerElement).fill(0));
-    const localResidualVector = Array(nodesPerElement).fill(0);
-
-    // Check if this element is on a convection boundary
     for (const boundaryKey in this.boundaryElements) {
-      if (this.boundaryConditions[boundaryKey]?.[0] === "convection") {
-        const convectionHeatTransferCoefficient = convectionHeatTransferCoefficients[boundaryKey];
-        const externalTemperature = convectionExternalTemperatures[boundaryKey];
-        debugLog(
-          `Boundary ${boundaryKey}: Applying convection with heat transfer coefficient h=${convectionHeatTransferCoefficient} W/(m²·K) and external temperature T∞=${externalTemperature} K`,
-        );
+      if (this.boundaryConditions[boundaryKey]?.[0] !== "convection") continue;
+      const [, convectionHeatTransferCoefficient, externalTemperature] = this.boundaryConditions[boundaryKey];
 
-        // Find if this element is on this boundary and which side
-        const boundaryElement = this.boundaryElements[boundaryKey].find(
-          ([boundaryElementIndex]) => boundaryElementIndex === elementIndex,
-        );
+      // An element may have more than one side on the same boundary, so all of its sides are processed
+      this.boundaryElements[boundaryKey]
+        .filter(([boundaryElementIndex]) => boundaryElementIndex === elementIndex)
+        .forEach(([, side]) => {
+          debugLog(
+            `Boundary ${boundaryKey}: Applying convection to element ${
+              elementIndex + 1
+            }, side ${side} with heat transfer coefficient h=${convectionHeatTransferCoefficient} W/(m²·K) and external temperature T∞=${externalTemperature} K`,
+          );
 
-        if (boundaryElement && this.meshDimension === "2D" && this.elementShape === "triangle") {
-          // A triangle may have more than one side on the same boundary, so all of its sides are processed
-          this.boundaryElements[boundaryKey]
-            .filter(([boundaryElementIndex]) => boundaryElementIndex === elementIndex)
-            .forEach(([, side]) => {
-              const triangleContributions = this.computeTriangleConvectionContributions(
-                elementIndex,
-                side,
-                convectionHeatTransferCoefficient,
-                externalTemperature,
-                nodesXCoordinates,
-                nodesYCoordinates,
-                basisFunctions,
-              );
-              for (const localNodeIndex of triangleContributions.sideNodeIndices) {
-                localResidualVector[localNodeIndex] +=
-                  triangleContributions.localResidualVector[localNodeIndex];
-                for (const localNodeIndex2 of triangleContributions.sideNodeIndices) {
-                  localJacobianMatrix[localNodeIndex][localNodeIndex2] +=
-                    triangleContributions.localJacobianMatrix[localNodeIndex][localNodeIndex2];
-                }
-              }
-            });
-        } else if (boundaryElement) {
-          const side = boundaryElement[1];
+          // Initialize local Jacobian matrix and local residual vector on the first convection side
+          if (!localJacobianMatrix) {
+            const nodesPerElement = this.nop[elementIndex].length;
+            localJacobianMatrix = Array(nodesPerElement)
+              .fill()
+              .map(() => Array(nodesPerElement).fill(0));
+            localResidualVector = Array(nodesPerElement).fill(0);
+          }
 
-          if (this.meshDimension === "1D") {
-            // Handle 1D case
-            let nodeIndex;
-            if (this.elementOrder === "linear") {
-              nodeIndex = side === 0 ? 0 : 1;
-            } else if (this.elementOrder === "quadratic") {
-              nodeIndex = side === 0 ? 0 : 2;
-            }
-
-            // Add contribution to local Jacobian matrix and local residual vector
-            debugLog(
-              `  - Applied convection boundary condition to node ${nodeIndex + 1} (element ${
-                elementIndex + 1
-              }, local node ${nodeIndex + 1})`,
-            );
-            localResidualVector[nodeIndex] += -convectionHeatTransferCoefficient * externalTemperature;
-            localJacobianMatrix[nodeIndex][nodeIndex] += convectionHeatTransferCoefficient;
-          } else if (this.meshDimension === "2D") {
-            // Handle 2D case
-            if (this.elementOrder === "linear") {
-              let gaussPoint1, gaussPoint2, firstNodeIndex, lastNodeIndex, nodeIncrement;
-
-              if (side === 0) {
-                // Nodes at the bottom side of the reference element
-                gaussPoint1 = gaussPoints[0];
-                gaussPoint2 = 0;
-                firstNodeIndex = 0;
-                lastNodeIndex = 3;
-                nodeIncrement = 2;
-              } else if (side === 1) {
-                // Nodes at the left side of the reference element
-                gaussPoint1 = 0;
-                gaussPoint2 = gaussPoints[0];
-                firstNodeIndex = 0;
-                lastNodeIndex = 2;
-                nodeIncrement = 1;
-              } else if (side === 2) {
-                // Nodes at the top side of the reference element
-                gaussPoint1 = gaussPoints[0];
-                gaussPoint2 = 1;
-                firstNodeIndex = 1;
-                lastNodeIndex = 4;
-                nodeIncrement = 2;
-              } else if (side === 3) {
-                // Nodes at the right side of the reference element
-                gaussPoint1 = 1;
-                gaussPoint2 = gaussPoints[0];
-                firstNodeIndex = 2;
-                lastNodeIndex = 4;
-                nodeIncrement = 1;
-              }
-
-              // Get basis functions
-              const basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoint1, gaussPoint2);
-              const basisFunction = basisFunctionsAndDerivatives.basisFunction;
-              const basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
-              const basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
-
-              // Calculate tangent vector components
-              let ksiDerivX = 0,
-                ksiDerivY = 0,
-                etaDerivX = 0,
-                etaDerivY = 0;
-              for (let nodeIndex = 0; nodeIndex < nodesPerElement; nodeIndex++) {
-                const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-
-                if (side === 0 || side === 2) {
-                  ksiDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
-                  ksiDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
-                } else if (side === 1 || side === 3) {
-                  etaDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
-                  etaDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
-                }
-              }
-
-              // Compute tangent vector length
-              let tangentVectorLength;
-              if (side === 0 || side === 2) {
-                tangentVectorLength = Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2);
-              } else {
-                tangentVectorLength = Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
-              }
-
-              // Apply boundary conditions to local matrices
-              for (
-                let localNodeIndex = firstNodeIndex;
-                localNodeIndex < lastNodeIndex;
-                localNodeIndex += nodeIncrement
-              ) {
-                localResidualVector[localNodeIndex] +=
-                  -gaussWeights[0] *
-                  tangentVectorLength *
-                  basisFunction[localNodeIndex] *
-                  convectionHeatTransferCoefficient *
-                  externalTemperature;
-
-                for (
-                  let localNodeIndex2 = firstNodeIndex;
-                  localNodeIndex2 < lastNodeIndex;
-                  localNodeIndex2 += nodeIncrement
-                ) {
-                  localJacobianMatrix[localNodeIndex][localNodeIndex2] +=
-                    -gaussWeights[0] *
-                    tangentVectorLength *
-                    basisFunction[localNodeIndex] *
-                    basisFunction[localNodeIndex2] *
-                    convectionHeatTransferCoefficient;
-                }
-              }
-            } else if (this.elementOrder === "quadratic") {
-              // Handle quadratic elements (similar pattern but with more Gauss points)
-              for (let gaussPointIndex = 0; gaussPointIndex < 3; gaussPointIndex++) {
-                let gaussPoint1, gaussPoint2, firstNodeIndex, lastNodeIndex, nodeIncrement;
-
-                if (side === 0) {
-                  // Nodes at the bottom side of the reference element
-                  gaussPoint1 = gaussPoints[gaussPointIndex];
-                  gaussPoint2 = 0;
-                  firstNodeIndex = 0;
-                  lastNodeIndex = 7;
-                  nodeIncrement = 3;
-                } else if (side === 1) {
-                  // Nodes at the left side of the reference element
-                  gaussPoint1 = 0;
-                  gaussPoint2 = gaussPoints[gaussPointIndex];
-                  firstNodeIndex = 0;
-                  lastNodeIndex = 3;
-                  nodeIncrement = 1;
-                } else if (side === 2) {
-                  // Nodes at the top side of the reference element
-                  gaussPoint1 = gaussPoints[gaussPointIndex];
-                  gaussPoint2 = 1;
-                  firstNodeIndex = 2;
-                  lastNodeIndex = 9;
-                  nodeIncrement = 3;
-                } else if (side === 3) {
-                  // Nodes at the right side of the reference element
-                  gaussPoint1 = 1;
-                  gaussPoint2 = gaussPoints[gaussPointIndex];
-                  firstNodeIndex = 6;
-                  lastNodeIndex = 9;
-                  nodeIncrement = 1;
-                }
-                let basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(gaussPoint1, gaussPoint2);
-                let basisFunction = basisFunctionsAndDerivatives.basisFunction;
-                let basisFunctionDerivKsi = basisFunctionsAndDerivatives.basisFunctionDerivKsi;
-                let basisFunctionDerivEta = basisFunctionsAndDerivatives.basisFunctionDerivEta;
-
-                let ksiDerivX = 0;
-                let ksiDerivY = 0;
-                let etaDerivX = 0;
-                let etaDerivY = 0;
-                const nodesPerElement = this.nop[elementIndex].length;
-                for (let nodeIndex = 0; nodeIndex < nodesPerElement; nodeIndex++) {
-                  const globalNodeIndex = this.nop[elementIndex][nodeIndex] - 1;
-
-                  // For boundaries along Ksi (horizontal), use Ksi derivatives
-                  if (side === 0 || side === 2) {
-                    ksiDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
-                    ksiDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivKsi[nodeIndex];
-                  }
-                  // For boundaries along Eta (vertical), use Eta derivatives
-                  else if (side === 1 || side === 3) {
-                    etaDerivX += nodesXCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
-                    etaDerivY += nodesYCoordinates[globalNodeIndex] * basisFunctionDerivEta[nodeIndex];
-                  }
-                }
-
-                // Compute the length of tangent vector
-                let tangentVectorLength;
-                if (side === 0 || side === 2) {
-                  tangentVectorLength = Math.sqrt(ksiDerivX ** 2 + ksiDerivY ** 2);
-                } else {
-                  tangentVectorLength = Math.sqrt(etaDerivX ** 2 + etaDerivY ** 2);
-                }
-
-                // Apply boundary conditions to local matrices
-                for (
-                  let localNodeIndex = firstNodeIndex;
-                  localNodeIndex < lastNodeIndex;
-                  localNodeIndex += nodeIncrement
-                ) {
-                  localResidualVector[localNodeIndex] +=
-                    -gaussWeights[gaussPointIndex] *
-                    tangentVectorLength *
-                    basisFunction[localNodeIndex] *
-                    convectionHeatTransferCoefficient *
-                    externalTemperature;
-
-                  for (
-                    let localNodeIndex2 = firstNodeIndex;
-                    localNodeIndex2 < lastNodeIndex;
-                    localNodeIndex2 += nodeIncrement
-                  ) {
-                    localJacobianMatrix[localNodeIndex][localNodeIndex2] +=
-                      -gaussWeights[gaussPointIndex] *
-                      tangentVectorLength *
-                      basisFunction[localNodeIndex] *
-                      basisFunction[localNodeIndex2] *
-                      convectionHeatTransferCoefficient;
-                  }
-                }
-              }
+          const sideContributions = this.computeConvectionContributions(
+            elementIndex,
+            side,
+            convectionHeatTransferCoefficient,
+            externalTemperature,
+            nodesXCoordinates,
+            nodesYCoordinates,
+            gaussPoints,
+            gaussWeights,
+            basisFunctions,
+          );
+          for (const localNodeIndex of sideContributions.sideNodeIndices) {
+            localResidualVector[localNodeIndex] += sideContributions.localResidualVector[localNodeIndex];
+            for (const localNodeIndex2 of sideContributions.sideNodeIndices) {
+              localJacobianMatrix[localNodeIndex][localNodeIndex2] +=
+                sideContributions.localJacobianMatrix[localNodeIndex][localNodeIndex2];
             }
           }
-        }
-      }
+        });
     }
 
+    // Elements that are not on a convection boundary have no Robin-type contributions
+    if (!localJacobianMatrix) return null;
     return { localJacobianMatrix, localResidualVector };
   }
 }

@@ -8,8 +8,9 @@
  */
 
 // Internal imports
-import { jacobiSolver, mathjsLUSolver } from "./index.js";
-import { SparseMatrix } from "../numerics/sparseMatrix.js";
+import { jacobiSolver } from "./jacobiSolver.js";
+import { mathjsLUSolver } from "./mathjsLUSolver.js";
+import { SparseMatrix } from "../linalg/sparseMatrix.js";
 import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 import * as Comlink from "../vendor/comlink.mjs";
 

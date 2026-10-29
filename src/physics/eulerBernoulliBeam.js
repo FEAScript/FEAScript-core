@@ -8,9 +8,9 @@
  */
 
 // Internal imports
-import { BasisFunctions } from "../mesh/basisFunctions.js";
-import { NumericalIntegration } from "../numerics/numericalIntegration.js";
-import { SparseMatrix } from "../numerics/sparseMatrix.js";
+import { BasisFunctions } from "../elements/basisFunctions.js";
+import { NumericalIntegration } from "../elements/numericalIntegration.js";
+import { SparseMatrix } from "../linalg/sparseMatrix.js";
 import { BeamBoundaryConditions } from "./beamBoundaryConditions.js";
 import { basicLog, errorLog } from "../utilities/logging.js";
 

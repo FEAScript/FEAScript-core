@@ -9,7 +9,8 @@
 
 // Internal imports
 import { GenericBoundaryConditions } from "./genericBoundaryConditions.js";
-import { initializeFEA, performIsoparametricMapping2D } from "../mesh/meshUtils.js";
+import { initializeFEA } from "../elements/feaInitialization.js";
+import { performIsoparametricMapping2D } from "../elements/isoparametricMapping.js";
 import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 
 // Base viscous term that remains when eikonal equation is fully activated

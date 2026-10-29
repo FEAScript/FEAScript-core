@@ -29,6 +29,53 @@ export const triangleBoundarySides = {
 };
 
 /**
+ * Local node indices on each side of the 1D reference element
+ */
+const lineBoundarySides = {
+  linear: {
+    0: [0], // Node at the left side of the reference element
+    1: [1], // Node at the right side of the reference element
+  },
+  quadratic: {
+    0: [0], // Node at the left side of the reference element
+    1: [2], // Node at the right side of the reference element
+  },
+};
+
+/**
+ * Local node indices on each side of the reference quadrilateral
+ * (side 0: bottom, eta = 0; side 1: left, ksi = 0; side 2: top, eta = 1; side 3: right, ksi = 1)
+ * Nodes are listed in order along each side
+ */
+const quadBoundarySides = {
+  linear: {
+    0: [0, 2], // Nodes at the bottom side of the reference element
+    1: [0, 1], // Nodes at the left side of the reference element
+    2: [1, 3], // Nodes at the top side of the reference element
+    3: [2, 3], // Nodes at the right side of the reference element
+  },
+  quadratic: {
+    0: [0, 3, 6], // Nodes at the bottom side of the reference element
+    1: [0, 1, 2], // Nodes at the left side of the reference element
+    2: [2, 5, 8], // Nodes at the top side of the reference element
+    3: [6, 7, 8], // Nodes at the right side of the reference element
+  },
+};
+
+/**
+ * Function to get the local node indices on each side of the reference element
+ * @param {string} meshDimension - The dimension of the mesh, either '1D' or '2D'
+ * @param {string} elementOrder - The order of elements, either 'linear' or 'quadratic'
+ * @param {string} [elementShape='quad'] - The 2D element shape, either 'quad' or 'triangle'
+ * @returns {object} Map from side index to the local node indices on that side
+ */
+export function getBoundarySides(meshDimension, elementOrder, elementShape = "quad") {
+  if (meshDimension === "1D") return lineBoundarySides[elementOrder];
+  if (elementShape === "triangle") return triangleBoundarySides[elementOrder];
+  return quadBoundarySides[elementOrder];
+}
+
+/**
  * Class to handle basis functions and their derivatives based on element configuration
  */
 export class BasisFunctions {

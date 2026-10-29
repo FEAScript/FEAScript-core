@@ -8,16 +8,18 @@
  */
 
 // Internal imports
-import { euclideanNorm, axpy } from "../numerics/index.js";
+import { euclideanNorm, axpy } from "../linalg/index.js";
 import { solveLinearSystem } from "./linearSystemSolver.js";
 import { basicLog, errorLog } from "../utilities/logging.js";
 import { runFrontalSolver } from "./frontalSolver.js";
-import { assembleFrontPropagationFront } from "../models/frontPropagation.js";
 
 /**
  * Function to solve a system of non-linear equations using the Newton-Raphson method
  * @param {function} assembleMat - Matrix assembler based on the physical model
- * @param {object} context - Context object containing simulation data and options
+ * @param {object} context - Context object containing simulation data and options. When
+ *  `solverMethod` is "frontal", it must also contain `assembleFront` (element assembler, which
+ *  receives the current iterate as `solutionVector`) and `boundaryConditionsHandler`
+ *  (see runFrontalSolver)
  * @returns {object} An object containing:
  *  - solutionVector: The solution vector (Float64Array)
  *  - iterations: The number of iterations performed
@@ -53,10 +55,9 @@ export function newtonRaphson(assembleMat, context = {}) {
     // Check if using frontal solver
     if (context.solverMethod === "frontal") {
       const frontalResult = runFrontalSolver(
-        assembleFrontPropagationFront,
+        (elementArgs) => context.assembleFront({ ...elementArgs, solutionVector }),
         context.meshData,
-        context.boundaryConditions,
-        { solutionVector, eikonalActivationFlag: context.eikonalActivationFlag },
+        context.boundaryConditionsHandler,
       );
       deltaX = frontalResult.solutionVector;
     } else {

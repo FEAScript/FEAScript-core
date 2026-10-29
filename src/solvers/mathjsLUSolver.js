@@ -12,7 +12,7 @@ import { create, all } from "mathjs";
 const math = create(all);
 
 // Internal imports
-import { SparseMatrix } from "../numerics/sparseMatrix.js";
+import { SparseMatrix } from "../linalg/sparseMatrix.js";
 
 /**
  * Function to solve a system of linear equations using LU decomposition (mathjs)

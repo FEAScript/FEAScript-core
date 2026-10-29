@@ -19,7 +19,7 @@
  * Run: node tests/unit/sparseMatrix.test.js (or npm test)
  */
 
-import { SparseMatrix } from "../../src/numerics/sparseMatrix.js";
+import { SparseMatrix } from "../../src/linalg/sparseMatrix.js";
 import { jacobiSolver, mathjsLUSolver } from "../../src/solvers/index.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
 

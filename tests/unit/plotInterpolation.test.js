@@ -25,7 +25,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { prepareMesh } from "../../src/mesh/meshUtils.js";
-import { importGmshMesh } from "../../src/readers/gmshReader.js";
+import { importGmshMesh } from "../../src/io/gmshReader.js";
 import { plotInterpolatedSolution } from "../../src/visualization/plotlyPlot.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
 

@@ -26,7 +26,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { FEAScriptModel } from "../../src/FEAScript.js";
-import { importGmshMesh } from "../../src/readers/gmshReader.js";
+import { importGmshMesh } from "../../src/io/gmshReader.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

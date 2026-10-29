@@ -8,8 +8,8 @@
  */
 
 // Internal imports
-import { copyVector, euclideanNorm } from "../numerics/blasUtilities.js";
-import { SparseMatrix } from "../numerics/sparseMatrix.js";
+import { copyVector, euclideanNorm } from "../linalg/blasUtilities.js";
+import { SparseMatrix } from "../linalg/sparseMatrix.js";
 
 /**
  * Function to solve a system of linear equations using the Jacobi iterative method (CPU synchronous version)
