@@ -27,12 +27,12 @@ for linear and quadratic elements and every applicable solver method, and assert
 | Boundary 0 (x = 0) | `constantValue`, u = 1      |
 | Boundary 1 (x = 1) | `zeroGradient`              |
 
-| Element order | Solver methods      |
-| ------------- | ------------------- |
-| Linear        | `lusolve`, `jacobi` |
-| Quadratic     | `lusolve`           |
+| Element order | Solver methods                 |
+| ------------- | ------------------------------ |
+| Linear        | `lusolve`, `jacobi`, `frontal` |
+| Quadratic     | `lusolve`, `frontal`           |
 
-The frontal solver is not supported for `generalFormPDEScript`. The Jacobi method requires a
+The Jacobi method requires a
 diagonally dominant matrix, which quadratic elements do not give, so it is used with linear
 elements only (with `maxIterations: 200000`, `tolerance: 1e-8`).
 

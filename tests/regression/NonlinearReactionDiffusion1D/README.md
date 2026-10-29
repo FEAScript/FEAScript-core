@@ -28,7 +28,7 @@ for linear and quadratic elements, and asserts known good values.
 | Boundary 1 (x = 10) | `zeroGradient`                         |
 | Solver              | Newton-Raphson with `lusolve`          |
 
-The frontal solver is not supported for `generalFormPDEScript`.
+The frontal solver is not yet supported for nonlinear `generalFormPDEScript`.
 
 ## Expected values
 

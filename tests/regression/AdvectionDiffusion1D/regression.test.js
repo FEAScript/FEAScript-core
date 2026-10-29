@@ -11,7 +11,7 @@
  * Regression test for AdvectionDiffusion1D
  *
  * Replicates the physical setup from advectionDiffusion1D.js for linear and quadratic elements
- * and every applicable solver method (lusolve, jacobi), and asserts the solution at x=0.5 and x=1
+ * and every applicable solver method (lusolve, jacobi, frontal), and asserts the solution at x=0.5 and x=1
  * against known good values
  *
  * Run: node tests/regression/AdvectionDiffusion1D/regression.test.js (or npm test)
@@ -22,12 +22,11 @@ import { basicLog, errorLog } from "../../../src/utilities/logging.js";
 
 const TOLERANCE = 1e-4;
 
-// The frontal solver is not supported for generalFormPDEScript, and the Jacobi method requires
-// diagonally dominant matrices, so it is used with linear elements only
+// The Jacobi method requires diagonally dominant matrices, so it is used with linear elements only
 const cases = [
   {
     elementOrder: "linear",
-    solverMethods: ["lusolve", "jacobi"],
+    solverMethods: ["lusolve", "jacobi", "frontal"],
     expected: [
       { x: 0.5, u: 0.89448 },
       { x: 1, u: 0.87556 },
@@ -35,7 +34,7 @@ const cases = [
   },
   {
     elementOrder: "quadratic",
-    solverMethods: ["lusolve"],
+    solverMethods: ["lusolve", "frontal"],
     expected: [
       { x: 0.5, u: 0.89447 },
       { x: 1, u: 0.87563 },

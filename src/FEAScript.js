@@ -13,7 +13,11 @@ import { solveLinearSystem } from "./solvers/linearSystemSolver.js";
 import { solveLinearSystemAsync } from "./solvers/linearSystemSolver.js";
 import { prepareMesh, resolveMeshConfig } from "./mesh/meshUtils.js";
 import { assembleFrontPropagationMat, assembleFrontPropagationFront } from "./physics/frontPropagation.js";
-import { assembleGeneralFormPDEMat, assembleGeneralFormPDENonlinearMat } from "./physics/generalFormPDE.js";
+import {
+  assembleGeneralFormPDEMat,
+  assembleGeneralFormPDEFront,
+  assembleGeneralFormPDENonlinearMat,
+} from "./physics/generalFormPDE.js";
 import { assembleHeatConductionMat, assembleHeatConductionFront } from "./physics/heatConduction.js";
 import { ThermalBoundaryConditions } from "./physics/thermalBoundaryConditions.js";
 import { GenericBoundaryConditions } from "./physics/genericBoundaryConditions.js";
@@ -237,10 +241,29 @@ export class FEAScriptModel {
       }
     } else if (this.solverConfig === "generalFormPDEScript") {
       // Check if using frontal solver
-      if (this.solverMethod === "frontal") {
+      if (this.solverMethod === "frontal" && this.nonlinear) {
         errorLog(
-          "Frontal solver is not yet supported for generalFormPDEScript. Please use 'lusolve' or 'jacobi'.",
+          "Frontal solver is not yet supported for nonlinear generalFormPDEScript. Please use 'lusolve' or 'jacobi'.",
         );
+      } else if (this.solverMethod === "frontal") {
+        const genericBoundaryConditions = new GenericBoundaryConditions(
+          this.boundaryConditions,
+          meshData.boundaryElements,
+          meshData.nop,
+          meshData.meshDimension,
+          meshData.elementOrder,
+          meshData.elementShape,
+        );
+        const frontalResult = runFrontalSolver(
+          (elementArgs) =>
+            assembleGeneralFormPDEFront({
+              ...elementArgs,
+              coefficientFunctions: this.coefficientFunctions,
+            }),
+          meshData,
+          genericBoundaryConditions,
+        );
+        solutionVector = frontalResult.solutionVector;
       } else if (this.nonlinear) {
         // Solve the nonlinear PDE with the Newton-Raphson method
         const context = {
