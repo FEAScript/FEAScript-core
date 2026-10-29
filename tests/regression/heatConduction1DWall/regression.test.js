@@ -14,7 +14,7 @@
  * and every applicable solver method (lusolve, frontal, jacobi), and asserts that the temperature
  * at x=0 remains 7.60870 and at x=0.075 remains 6.30435
  *
- * Run: node tests/regression/HeatConduction1DWall/regression.test.js (or npm test)
+ * Run: node tests/regression/heatConduction1DWall/regression.test.js (or npm test)
  */
 
 import { FEAScriptModel } from "../../../src/FEAScript.js";

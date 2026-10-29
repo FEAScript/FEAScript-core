@@ -49,7 +49,7 @@ Tolerance used in the assertions: `1e-4`.
 From the repository root:
 
 ```bash
-node tests/regression/HeatConduction1DWall/regression.test.js
+node tests/regression/heatConduction1DWall/regression.test.js
 ```
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.

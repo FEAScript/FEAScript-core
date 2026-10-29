@@ -15,7 +15,7 @@
  * flow (minimum x-velocity), the nodal mean x-velocity and y-velocity and the number of pressure
  * nodes against known good values
  *
- * Run: node tests/regression/LidDrivenCavity2DCreepingFlow/regression.test.js (or npm test)
+ * Run: node tests/regression/lidDrivenCavity2DCreepingFlow/regression.test.js (or npm test)
  */
 
 import fs from "fs";

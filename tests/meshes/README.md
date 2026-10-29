@@ -55,9 +55,9 @@ like the sides of FEAScript structured meshes.
 
 ## Used by
 
-- [`regression/HeatConduction2DFin`](../regression/HeatConduction2DFin/README.md)
-- [`regression/SolidificationFront2D`](../regression/SolidificationFront2D/README.md)
-- [`regression/LidDrivenCavity2DCreepingFlow`](../regression/LidDrivenCavity2DCreepingFlow/README.md)
+- [`regression/heatConduction2DFin`](../regression/heatConduction2DFin/README.md)
+- [`regression/solidificationFront2D`](../regression/solidificationFront2D/README.md)
+- [`regression/lidDrivenCavity2DCreepingFlow`](../regression/lidDrivenCavity2DCreepingFlow/README.md)
 - [`verification/analytical/creepingFlow2DCouette`](../verification/analytical/creepingFlow2DCouette/README.md)
 - [`verification/analytical/frontPropagation2DPlanarFront`](../verification/analytical/frontPropagation2DPlanarFront/README.md)
 - [`unit/plotInterpolation.test.js`](../unit/plotInterpolation.test.js)

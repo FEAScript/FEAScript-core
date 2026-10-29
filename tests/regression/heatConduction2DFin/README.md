@@ -73,7 +73,7 @@ used by the convection boundary condition.
 From the repository root:
 
 ```bash
-node tests/regression/HeatConduction2DFin/regression.test.js
+node tests/regression/heatConduction2DFin/regression.test.js
 ```
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.
