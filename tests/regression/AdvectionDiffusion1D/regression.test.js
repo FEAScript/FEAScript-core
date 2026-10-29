@@ -61,7 +61,7 @@ function runSimulation(elementOrder, solverMethod) {
   });
 
   model.addBoundaryCondition("0", ["constantValue", 1]);
-  model.addBoundaryCondition("1", "zeroGradient");
+  model.addBoundaryCondition("1", ["zeroGradient"]);
   model.setSolverMethod(solverMethod);
 
   return model.solve({ maxIterations: 200000, tolerance: 1e-8 });

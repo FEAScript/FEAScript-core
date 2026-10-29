@@ -32,10 +32,11 @@ Domain `x ∈ [0, 2]`, 20 elements.
 
 ## Expected values
 
-| Check                 | Expected                              |
-| --------------------- | ------------------------------------- |
-| Nodal values vs u = x | Largest deviation below `5e-2`        |
-| Frontal vs `lusolve`  | Largest nodal difference below `1e-8` |
+| Check                 | Expected                                                               |
+| --------------------- | ---------------------------------------------------------------------- |
+| Nodal values vs u = x | Largest deviation below `5e-2`                                         |
+| Frontal vs `lusolve`  | Largest nodal difference below `1e-8`                                  |
+| Left value `u = 1`    | Largest deviation from `u = 1 + x` below `5e-2`, `lusolve` and frontal |
 
 Observed largest deviations from `u = x` are about `1e-2` for both linear and quadratic elements.
 

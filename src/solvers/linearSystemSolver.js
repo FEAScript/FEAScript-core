@@ -87,7 +87,8 @@ async function createDefaultComputeEngine() {
  * @param {string} solverMethod - The solver method to use (e.g., "jacobi-gpu")
  * @param {SparseMatrix|array} jacobianMatrix - The coefficient matrix
  * @param {array} residualVector - The right-hand side vector
- * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance`
+ * @param {object} [options] - Optional parameters for the solver, such as `maxIterations`, `tolerance` and
+ *  `computeEngine` (an initialized WebGPU compute engine to reuse; when omitted, a temporary one is created)
  * @returns {Promise<object>} A promise that resolves to an object containing:
  *  - solutionVector: The solution vector (Float64Array)
  *  - converged: Boolean indicating whether the method converged (for iterative methods)
@@ -119,9 +120,13 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
   let iterations;
 
   if (solverMethod === "jacobi-gpu") {
-    // Spin up a worker-backed compute engine
-    created = await createDefaultComputeEngine();
-    computeEngine = created.computeEngine;
+    // Reuse the caller's compute engine, or spin up a temporary worker-backed one
+    if (options.computeEngine) {
+      computeEngine = options.computeEngine;
+    } else {
+      created = await createDefaultComputeEngine();
+      computeEngine = created.computeEngine;
+    }
 
     const initialGuess = new Array(rightHandSideVector.length).fill(0);
     let result;

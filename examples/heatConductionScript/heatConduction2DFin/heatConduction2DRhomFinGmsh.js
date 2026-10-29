@@ -46,8 +46,8 @@ async function main() {
   });
 
   // Define boundary conditions
-  model.addBoundaryCondition("0", ["constantTemp", 200]); // Bottom boundary
-  model.addBoundaryCondition("1", ["constantTemp", 200]); // Right boundary
+  model.addBoundaryCondition("0", ["constantTemperature", 200]); // Bottom boundary
+  model.addBoundaryCondition("1", ["constantTemperature", 200]); // Right boundary
   model.addBoundaryCondition("2", ["convection", 1, 20]); // Top boundary
   model.addBoundaryCondition("3", ["symmetry"]); // Left boundary
 

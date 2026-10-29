@@ -23,14 +23,14 @@ import { basicLog, errorLog } from "../../../../src/utilities/logging.js";
 const TOLERANCE = 5e-2;
 const SOLVER_TOLERANCE = 1e-8;
 
-function runSimulation(elementOrder, solverMethod) {
+function runSimulation(elementOrder, solverMethod, frontValue = 0) {
   const model = new FEAScriptModel();
 
   model.setModelConfig("frontPropagationScript");
   model.setMeshConfig({ meshDimension: "1D", elementOrder, numElementsX: 20, maxX: 2 });
 
   // Front starts at the left boundary
-  model.addBoundaryCondition("0", ["constantValue", 0]);
+  model.addBoundaryCondition("0", ["constantValue", frontValue]);
   model.addBoundaryCondition("1", ["zeroGradient"]);
   model.setSolverMethod(solverMethod);
 
@@ -80,6 +80,22 @@ for (const elementOrder of ["linear", "quadratic"]) {
       3,
     )} (tolerance ${SOLVER_TOLERANCE})`,
   );
+
+  // A non-zero prescribed value shifts the solution: the front starts at time 1, so u = 1 + x
+  for (const solverMethod of ["lusolve", "frontal"]) {
+    const shiftedResult = runSimulation(elementOrder, solverMethod, 1);
+    const shiftedError = Math.max(
+      ...shiftedResult.solution.map((value, nodeIndex) =>
+        Math.abs(value - (1 + shiftedResult.nodesXCoordinates[nodeIndex])),
+      ),
+    );
+    assert(
+      shiftedError < TOLERANCE,
+      `${elementOrder} elements, ${solverMethod}: u(0) = 1 gives u = 1 + x, largest nodal deviation ${shiftedError.toExponential(
+        3,
+      )} (tolerance ${TOLERANCE})`,
+    );
+  }
 }
 
 basicLog("");

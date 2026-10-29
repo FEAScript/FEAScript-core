@@ -45,6 +45,8 @@ You can run simulations with FEAScript by calling its functions from JavaScript 
 2. **[In JavaScript playgrounds](#use-feascript-in-javascript-playgrounds)** – Try FEAScript in interactive JavaScript playgrounds such as [CodePen](https://codepen.io/FEAScript) or [Scribbler](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples).
 3. **[With Node.js](#use-feascript-with-nodejs)** – Use FEAScript in server-side JavaScript applications.
 
+📖 The **[FEAScript documentation](https://docs.feascript.com)** covers installation, the physical models and their equations, meshes, boundary conditions, solvers and the full API reference.
+
 #### Use FEAScript in the Browser
 
 You can use FEAScript in browser environments in three ways:
@@ -153,7 +155,7 @@ Here is a minimal browser-based example using the FEAScript API. Adapt paths, ph
 **Note:** The code above uses placeholder values that you should replace with appropriate options, e.g.:
 
 - "physicsModel" should be replaced with an actual solver type such as "heatConductionScript" for heat conduction problems
-- "conditionType" should be replaced with an actual boundary condition type such as "constantTemp"
+- "conditionType" should be replaced with an actual boundary condition type such as "constantTemperature"
 - "boundaryIndex" should be replaced with a string identifying the boundary
 
 Furthermore, the scripts under `examples/` contain Node.js examples. You can run them from the `FEAScript-core/` directory as follows:

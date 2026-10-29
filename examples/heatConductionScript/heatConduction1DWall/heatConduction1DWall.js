@@ -28,7 +28,7 @@ model.setMeshConfig({
 
 // Define boundary conditions
 model.addBoundaryCondition("0", ["convection", 1, 25]); // Left boundary
-model.addBoundaryCondition("1", ["constantTemp", 5]); // Right boundary
+model.addBoundaryCondition("1", ["constantTemperature", 5]); // Right boundary
 
 // Set solver method (optional)
 model.setSolverMethod("jacobi");

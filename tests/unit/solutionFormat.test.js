@@ -127,7 +127,7 @@ const cases = [
       },
     ],
     meshConfig: mesh1D,
-    boundaryConditions: { 0: ["constantValue", 1], 1: "zeroGradient" },
+    boundaryConditions: { 0: ["constantValue", 1], 1: ["zeroGradient"] },
     solverMethods: ["lusolve"],
     degreesOfFreedom: 5,
   },

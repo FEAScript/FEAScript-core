@@ -316,8 +316,8 @@ export function assembleFrontPropagationMat(
     elementShape,
   );
 
-  // Impose Dirichlet boundary conditions
-  genericBoundaryConditions.imposeDirichletBoundaryConditions(residualVector, jacobianMatrix);
+  // Impose Dirichlet boundary conditions (as a Newton-Raphson increment, since solutionVector is passed)
+  genericBoundaryConditions.imposeDirichletBoundaryConditions(residualVector, jacobianMatrix, solutionVector);
   basicLog("Front propagation matrix assembly completed");
 
   return {

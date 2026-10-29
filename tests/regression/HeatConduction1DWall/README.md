@@ -37,10 +37,10 @@ so it is used with linear elements only (with `maxIterations: 200000`, `toleranc
 
 The exact solution is linear, so every case gives the same nodal values.
 
-| Quantity                   | Value           |
-| -------------------------- | --------------- |
-| Temperature at x = 0       | **10.29412 °C** |
-| Temperature at x = 0.075 m | **7.64706 °C**  |
+| Quantity                   | Value          |
+| -------------------------- | -------------- |
+| Temperature at x = 0       | **7.60870 °C** |
+| Temperature at x = 0.075 m | **6.30435 °C** |
 
 Tolerance used in the assertions: `1e-4`.
 
@@ -57,7 +57,7 @@ The `test` script in `package.json` also runs this file, so `npm test` works too
 A passing run prints a `PASS:` line for each check, followed by a summary line:
 
 ```
-PASS: linear elements, lusolve: temperature at x=0: expected 10.29412, got 10.294117647058822 (tolerance 0.0001)
+PASS: linear elements, lusolve: temperature at x=0: expected 7.6087, got 7.608695652173906 (tolerance 0.0001)
 ...
 10 passed, 0 failed.
 ```

@@ -12,7 +12,7 @@
  *
  * Replicates the physical setup from heatConduction1DWall.js for linear and quadratic elements
  * and every applicable solver method (lusolve, frontal, jacobi), and asserts that the temperature
- * at x=0 remains 10.29412 and at x=0.075 remains 7.64706
+ * at x=0 remains 7.60870 and at x=0.075 remains 6.30435
  *
  * Run: node tests/regression/HeatConduction1DWall/regression.test.js (or npm test)
  */
@@ -24,8 +24,8 @@ const TOLERANCE = 1e-4;
 
 // The exact solution is linear, so both element orders give the same nodal values
 const EXPECTED = [
-  { x: 0, T: 10.29412 },
-  { x: 0.075, T: 7.64706 },
+  { x: 0, T: 7.6087 },
+  { x: 0.075, T: 6.30435 },
 ];
 
 // The Jacobi method requires diagonally dominant matrices, so it is used with linear elements only

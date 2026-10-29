@@ -167,7 +167,7 @@ export class ThermalBoundaryConditions {
       // The boundary is a single node
       const nodeIndex = sideNodeIndices[0];
       localResidualVector[nodeIndex] += -convectionHeatTransferCoefficient * externalTemperature;
-      localJacobianMatrix[nodeIndex][nodeIndex] += convectionHeatTransferCoefficient;
+      localJacobianMatrix[nodeIndex][nodeIndex] += -convectionHeatTransferCoefficient;
       return { sideNodeIndices, localJacobianMatrix, localResidualVector };
     }
 

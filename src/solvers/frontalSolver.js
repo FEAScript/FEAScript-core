@@ -31,13 +31,15 @@ let basisFunctions;
  *  `{ localJacobianMatrix, localResidualVector, ngl }`
  * @param {object} meshData - Object containing mesh data
  * @param {object} boundaryConditionsHandler - Boundary conditions object of the physical model, implementing:
- *  - imposeDirichletBoundaryConditionsFront(nodeConstraintCode, boundaryValues)
+ *  - imposeDirichletBoundaryConditionsFront(nodeConstraintCode, boundaryValues, solutionVector)
  *  - imposeRobinBoundaryConditionsFront(elementIndex, nodesXCoordinates, nodesYCoordinates, gaussPoints,
  *    gaussWeights, basisFunctions) (optional) - returns `{ localJacobianMatrix, localResidualVector }`,
  *    or null when the element is not on a Robin-type boundary
+ * @param {array} [solutionVector] - Current Newton-Raphson iterate, passed to the Dirichlet handler so that
+ *  prescribed values are imposed as increments (omit for linear problems)
  * @returns {object} An object containing the solution vector (Float64Array) and node coordinates
  */
-export function runFrontalSolver(assembleFront, meshData, boundaryConditionsHandler) {
+export function runFrontalSolver(assembleFront, meshData, boundaryConditionsHandler, solutionVector) {
   // Initialize FEA components
   const FEAData = initializeFEA(meshData);
   const totalNodes = meshData.nodesXCoordinates.length;
@@ -75,6 +77,7 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditionsHand
   boundaryConditionsHandler.imposeDirichletBoundaryConditionsFront(
     frontalData.nodeConstraintCode,
     frontalData.boundaryValues,
+    solutionVector,
   );
 
   // Initialize global residual vector

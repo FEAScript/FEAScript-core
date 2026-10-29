@@ -26,6 +26,14 @@ import { assembleEulerBernoulliBeamMat } from "./physics/eulerBernoulliBeam.js";
 import { runFrontalSolver } from "./solvers/frontalSolver.js";
 import { basicLog, debugLog, warnLog, errorLog } from "./utilities/logging.js";
 
+// Boundary condition types of each model (the Euler-Bernoulli beam model validates its own conditions)
+const supportedBoundaryConditionTypes = {
+  heatConductionScript: ["constantTemperature", "convection", "symmetry"],
+  generalFormPDEScript: ["constantValue", "zeroGradient"],
+  frontPropagationScript: ["constantValue", "zeroGradient"],
+  creepingFlowScript: ["constantVelocity", "stressFree"],
+};
+
 /**
  * Class to implement finite element analysis in JavaScript
  * @param {string} solverConfig - Parameter specifying the type of solver
@@ -84,6 +92,20 @@ export class FEAScriptModel {
   }
 
   addBoundaryCondition(boundaryKey, condition) {
+    // A condition without parameters may be given as a plain string, e.g. "zeroGradient" instead of ["zeroGradient"]
+    if (typeof condition === "string") {
+      warnLog(
+        `Boundary condition for boundary ${boundaryKey} should be an array: use ["${condition}"] instead of "${condition}".`,
+      );
+      condition = [condition];
+    }
+    if (!Array.isArray(condition)) {
+      errorLog(
+        `Boundary condition for boundary ${boundaryKey} must be an array with the condition type first, e.g. ["constantValue", 0].`,
+      );
+      return;
+    }
+
     // Normalize deprecated boundary condition type strings and emit deprecation warnings
     const deprecatedBoundaryConditionTypes = {
       constantTemp: "constantTemperature",
@@ -101,6 +123,37 @@ export class FEAScriptModel {
     debugLog(`boundaryConditions added for boundary: ${boundaryKey}, type: ${condition[0]}`);
   }
 
+  /**
+   * Method to report boundary conditions that the selected model does not recognize, which would otherwise
+   * be ignored (a boundary without a recognized condition gets the natural condition of the model)
+   */
+  validateBoundaryConditions() {
+    if (this.solverConfig === "eulerBernoulliBeamScript") {
+      Object.keys(this.boundaryConditions).forEach((nodeKey) => {
+        const conditions = this.boundaryConditions[nodeKey];
+        if (!conditions.every(Array.isArray)) {
+          errorLog(
+            `Boundary conditions of node ${nodeKey} must be an array of conditions, e.g. [["fixed"]] or [["pinned"], ["moment", 1250]].`,
+          );
+        }
+      });
+      return;
+    }
+
+    const supportedTypes = supportedBoundaryConditionTypes[this.solverConfig];
+    if (!supportedTypes) return;
+    Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
+      const boundaryConditionType = this.boundaryConditions[boundaryKey][0];
+      if (!supportedTypes.includes(boundaryConditionType)) {
+        errorLog(
+          `Unknown boundary condition type "${boundaryConditionType}" on boundary ${boundaryKey} for ${
+            this.solverConfig
+          }; it is ignored. Supported types: ${supportedTypes.join(", ")}.`,
+        );
+      }
+    });
+  }
+
   setSolverMethod(solverMethod) {
     this.solverMethod = solverMethod;
     debugLog(`solverMethod set to: ${solverMethod}`);
@@ -115,6 +168,7 @@ export class FEAScriptModel {
     if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
       errorLog("solverConfig, meshConfig and boundaryConditions must be set before solving");
     }
+    this.validateBoundaryConditions();
     /**
      * For consistency across both linear and nonlinear formulations,
      * we always refer to the assembled right-hand side vector as
@@ -351,7 +405,9 @@ export class FEAScriptModel {
 
   /**
    * Method to solve the finite element problem asynchronously
-   * @param {object} computeEngine - The compute engine to use for the asynchronous solver (e.g., a worker or a WebGPU context)
+   * @param {object} [computeEngine] - An initialized WebGPU compute engine to reuse across solves; when omitted
+   *  or null, a temporary one is created for this solve and terminated afterwards. A provided engine is not
+   *  terminated, so the caller remains responsible for it
    * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
    * @returns {Promise<object>} A promise that resolves to an object containing the solution vector (Float64Array) and the coordinates of the mesh nodes
    */
@@ -359,6 +415,7 @@ export class FEAScriptModel {
     if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
       errorLog("Solver config, mesh config, and boundary conditions must be set before solving.");
     }
+    this.validateBoundaryConditions();
 
     let jacobianMatrix = [];
     let residualVector = [];

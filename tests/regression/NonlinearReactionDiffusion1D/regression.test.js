@@ -63,7 +63,7 @@ function runSimulation(elementOrder) {
   });
 
   model.addBoundaryCondition("0", ["constantValue", 1]);
-  model.addBoundaryCondition("1", "zeroGradient");
+  model.addBoundaryCondition("1", ["zeroGradient"]);
   model.setSolverMethod("lusolve");
 
   return model.solve();

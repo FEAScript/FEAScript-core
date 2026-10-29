@@ -46,7 +46,7 @@ model.setMeshConfig({
 
 // Define boundary conditions
 model.addBoundaryCondition("0", ["convection", 25, 5]); // Left boundary: convection
-model.addBoundaryCondition("1", ["constantTemp", 20]); // Right boundary: fixed temperature
+model.addBoundaryCondition("1", ["constantTemperature", 20]); // Right boundary: fixed temperature
 
 // Solve the problem
 const { solutionVector, nodesCoordinates } = model.solve();

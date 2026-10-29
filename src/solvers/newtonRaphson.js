@@ -58,6 +58,7 @@ export function newtonRaphson(assembleMat, context = {}) {
         (elementArgs) => context.assembleFront({ ...elementArgs, solutionVector }),
         context.meshData,
         context.boundaryConditionsHandler,
+        solutionVector, // Dirichlet values are imposed as increments to the current iterate
       );
       deltaX = frontalResult.solutionVector;
     } else {

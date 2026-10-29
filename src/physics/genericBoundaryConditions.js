@@ -89,11 +89,13 @@ export class GenericBoundaryConditions {
    * Function to impose constant value (Dirichlet) boundary conditions for the frontal solver
    * @param {array} nodeConstraintCode - Array indicating boundary condition code for each node
    * @param {array} boundaryValues - Array containing boundary condition values
+   * @param {array} [solutionVector] - Current solution (Newton-Raphson iterate); when provided, the
+   *  boundary value is the increment needed to reach the prescribed value instead of the value itself
    */
-  imposeDirichletBoundaryConditionsFront(nodeConstraintCode, boundaryValues) {
+  imposeDirichletBoundaryConditionsFront(nodeConstraintCode, boundaryValues, solutionVector) {
     this.forEachConstantValueNode((globalNodeIndex, value) => {
       nodeConstraintCode[globalNodeIndex] = 1;
-      boundaryValues[globalNodeIndex] = value;
+      boundaryValues[globalNodeIndex] = solutionVector ? value - solutionVector[globalNodeIndex] : value;
     });
   }
 }
