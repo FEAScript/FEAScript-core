@@ -12,13 +12,11 @@ import { FEAScriptModel, printVersion } from "feascript";
 
 console.log("FEAScript Version:", printVersion);
 
-// Create a new FEAScript model
-const model = new FEAScriptModel();
-
 // Reaction rate coefficient for the nonlinear source term
 const Da = 1;
 
-// Select physics/PDE
+// 1. Create the model and select the physics
+const model = new FEAScriptModel();
 model.setModelConfig("generalFormPDEScript", {
   nonlinear: true, // Solve with the Newton-Raphson method
   coefficientFunctions: {
@@ -31,7 +29,7 @@ model.setModelConfig("generalFormPDEScript", {
   },
 });
 
-// Define mesh configuration
+// 2. Define the mesh
 model.setMeshConfig({
   meshDimension: "1D",
   elementOrder: "linear",
@@ -39,20 +37,18 @@ model.setMeshConfig({
   maxX: 10.0,
 });
 
-// Define boundary conditions
-model.addBoundaryCondition("0", ["constantValue", 1]); // Left boundary
-model.addBoundaryCondition("1", ["zeroGradient"]); // Right boundary
+// 3. Apply the boundary conditions
+model.addBoundaryCondition("0", ["constantValue", 1]); // Left
+model.addBoundaryCondition("1", ["zeroGradient"]); // Right
 
-// Set solver method
+// 4. Solve
 model.setSolverMethod("lusolve");
-
-// Solve the problem
 const { solutionVector, nodesCoordinates } = model.solve({
   maxIterations: 100,
   tolerance: 1e-5,
 });
 
-// Print results
+// 5. Print the results
 console.log(`Number of nodes in mesh: ${nodesCoordinates.nodesXCoordinates.length}`);
 console.log("Node coordinates:", nodesCoordinates);
 console.log("Solution vector:", solutionVector);

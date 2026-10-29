@@ -24,10 +24,8 @@ import { FEAScriptModel, printVersion } from "feascript";
 
 console.log("FEAScript Version:", printVersion);
 
-// Create a new FEAScript model
+// 1. Create the model and select the physics
 const model = new FEAScriptModel();
-
-// Select physics/PDE
 model.setModelConfig("heatConductionScript", {
   coefficientFunctions: {
     // Bi-material: high-conductivity concrete | low-conductivity insulation
@@ -36,7 +34,7 @@ model.setModelConfig("heatConductionScript", {
   },
 });
 
-// Define mesh configuration
+// 2. Define the mesh
 model.setMeshConfig({
   meshDimension: "1D",
   elementOrder: "linear",
@@ -44,14 +42,14 @@ model.setMeshConfig({
   maxX: 0.15,
 });
 
-// Define boundary conditions
-model.addBoundaryCondition("0", ["convection", 25, 5]); // Left boundary: convection
-model.addBoundaryCondition("1", ["constantTemperature", 20]); // Right boundary: fixed temperature
+// 3. Apply the boundary conditions
+model.addBoundaryCondition("0", ["convection", 25, 5]); // Left: convection
+model.addBoundaryCondition("1", ["constantTemperature", 20]); // Right: fixed temperature
 
-// Solve the problem
+// 4. Solve
 const { solutionVector, nodesCoordinates } = model.solve();
 
-// Print results
+// 5. Print the results
 console.log(`Number of nodes: ${nodesCoordinates.nodesXCoordinates.length}`);
 console.log("Node coordinates (x):", nodesCoordinates.nodesXCoordinates);
 console.log("Temperature solution:", solutionVector);

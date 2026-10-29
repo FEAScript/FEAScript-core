@@ -12,13 +12,11 @@ import { FEAScriptModel, printVersion } from "feascript";
 
 console.log("FEAScript Version:", printVersion);
 
-// Create a new FEAScript model
+// 1. Create the model and select the physics
 const model = new FEAScriptModel();
-
-// Select physics/PDE
 model.setModelConfig("creepingFlowScript");
 
-// Define mesh configuration
+// 2. Define the mesh
 model.setMeshConfig({
   meshDimension: "2D",
   elementOrder: "quadratic",
@@ -28,19 +26,17 @@ model.setMeshConfig({
   maxY: 2,
 });
 
-// Define boundary conditions
-model.addBoundaryCondition("0", ["constantVelocity", 0, 0]); // Bottom boundary
-model.addBoundaryCondition("1", ["constantVelocity", 0, 0]); // Left boundary
-model.addBoundaryCondition("2", ["constantVelocity", 1, 0]); // Top boundary
-model.addBoundaryCondition("3", ["constantVelocity", 0, 0]); // Right boundary
+// 3. Apply the boundary conditions
+model.addBoundaryCondition("0", ["constantVelocity", 0, 0]); // Bottom
+model.addBoundaryCondition("1", ["constantVelocity", 0, 0]); // Left
+model.addBoundaryCondition("2", ["constantVelocity", 1, 0]); // Top
+model.addBoundaryCondition("3", ["constantVelocity", 0, 0]); // Right
 
-// Set solver method (optional)
+// 4. Solve
 model.setSolverMethod("lusolve");
-
-// Solve the problem
 const { solutionVector, nodesCoordinates } = model.solve();
 
-// Print results
+// 5. Print the results
 console.log(`Number of nodes in mesh: ${nodesCoordinates.nodesXCoordinates.length}`);
 console.log("Node coordinates:", nodesCoordinates);
 console.log("Solution vector:", solutionVector);

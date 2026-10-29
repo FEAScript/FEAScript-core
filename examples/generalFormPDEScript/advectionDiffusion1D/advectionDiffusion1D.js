@@ -12,10 +12,8 @@ import { FEAScriptModel, printVersion } from "feascript";
 
 console.log("FEAScript Version:", printVersion);
 
-// Create a new FEAScript model
+// 1. Create the model and select the physics
 const model = new FEAScriptModel();
-
-// Select physics/PDE
 model.setModelConfig("generalFormPDEScript", {
   coefficientFunctions: {
     // Equation d²u/dx² - 10 du/dx = 10 * exp(-200 * (x - 0.5)²)
@@ -26,7 +24,7 @@ model.setModelConfig("generalFormPDEScript", {
   },
 });
 
-// Define mesh configuration
+// 2. Define the mesh
 model.setMeshConfig({
   meshDimension: "1D",
   elementOrder: "quadratic",
@@ -34,17 +32,15 @@ model.setMeshConfig({
   maxX: 1.0,
 });
 
-// Define boundary conditions
-model.addBoundaryCondition("0", ["constantValue", 1]); // Left boundary
-model.addBoundaryCondition("1", ["zeroGradient"]); // Right boundary
+// 3. Apply the boundary conditions
+model.addBoundaryCondition("0", ["constantValue", 1]); // Left
+model.addBoundaryCondition("1", ["zeroGradient"]); // Right
 
-// Set solver method
+// 4. Solve
 model.setSolverMethod("lusolve");
-
-// Solve the problem
 const { solutionVector, nodesCoordinates } = model.solve();
 
-// Print results
+// 5. Print the results
 console.log(`Number of nodes in mesh: ${nodesCoordinates.nodesXCoordinates.length}`);
 console.log("Node coordinates:", nodesCoordinates);
 console.log("Solution vector:", solutionVector);

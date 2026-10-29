@@ -12,13 +12,11 @@ import { FEAScriptModel, printVersion } from "feascript";
 
 console.log("FEAScript Version:", printVersion);
 
-// Create a new FEAScript model
+// 1. Create the model and select the physics
 const model = new FEAScriptModel();
-
-// Select physics/PDE
 model.setModelConfig("heatConductionScript");
 
-// Define mesh configuration
+// 2. Define the mesh
 model.setMeshConfig({
   meshDimension: "2D",
   elementOrder: "quadratic",
@@ -28,19 +26,17 @@ model.setMeshConfig({
   maxY: 2,
 });
 
-// Define boundary conditions
-model.addBoundaryCondition("0", ["constantTemperature", 200]); // Bottom boundary
-model.addBoundaryCondition("1", ["symmetry"]); // Left boundary
-model.addBoundaryCondition("2", ["convection", 1, 20]); // Top boundary
-model.addBoundaryCondition("3", ["constantTemperature", 200]); // Right boundary
+// 3. Apply the boundary conditions
+model.addBoundaryCondition("0", ["constantTemperature", 200]); // Bottom
+model.addBoundaryCondition("1", ["symmetry"]); // Left
+model.addBoundaryCondition("2", ["convection", 1, 20]); // Top
+model.addBoundaryCondition("3", ["constantTemperature", 200]); // Right
 
-// Set solver method (optional)
+// 4. Solve
 model.setSolverMethod("frontal");
-
-// Solve the problem
 const { solutionVector, nodesCoordinates } = model.solve();
 
-// Print results
+// 5. Print the results
 console.log(`Number of nodes in mesh: ${nodesCoordinates.nodesXCoordinates.length}`);
 console.log("Node coordinates:", nodesCoordinates);
 console.log("Solution vector:", solutionVector);

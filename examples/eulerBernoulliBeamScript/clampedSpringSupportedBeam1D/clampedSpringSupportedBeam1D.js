@@ -12,10 +12,8 @@ import { FEAScriptModel, printVersion } from "feascript";
 
 console.log("FEAScript Version:", printVersion);
 
-// Create a new FEAScript model
+// 1. Create the model and select the physics
 const model = new FEAScriptModel();
-
-// Select physics/PDE
 model.setModelConfig("eulerBernoulliBeamScript", {
   coefficientFunctions: {
     EI: (x) => 2.0e6, // Bending stiffness
@@ -23,7 +21,7 @@ model.setModelConfig("eulerBernoulliBeamScript", {
   },
 });
 
-// Define mesh configuration
+// 2. Define the mesh
 model.setMeshConfig({
   meshDimension: "1D",
   elementOrder: "linear",
@@ -31,7 +29,7 @@ model.setMeshConfig({
   maxX: 10,
 });
 
-// Define boundary conditions
+// 3. Apply the boundary conditions
 model.addBoundaryCondition("1", [["fixed"]]); // Clamped support
 model.addBoundaryCondition("2", [["pinned"], ["moment", 1250]]); // Roller + applied moment
 model.addBoundaryCondition("3", [
@@ -39,13 +37,11 @@ model.addBoundaryCondition("3", [
   ["force", -2500],
 ]); // Spring support + point load
 
-// Set solver method
+// 4. Solve
 model.setSolverMethod("lusolve");
-
-// Solve the problem
 const { solutionVector } = model.solve();
 
-// Print results
+// 5. Print the results
 const flatSolution = solutionVector.map((entry) => (Array.isArray(entry) ? entry[0] : entry));
 
 const nodeXCoordinates = [0, 5, 10];

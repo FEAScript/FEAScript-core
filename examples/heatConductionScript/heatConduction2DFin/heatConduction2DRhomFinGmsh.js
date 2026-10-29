@@ -25,37 +25,25 @@ const meshFilePath = path.join(__dirname, "rhom_quad.msh");
 const meshContent = fs.readFileSync(meshFilePath, "utf8");
 
 async function main() {
-  // Create a new FEAScript model
+  // 1. Create the model and select the physics
   const model = new FEAScriptModel();
-
-  // Select physics/PDE
   model.setModelConfig("heatConductionScript");
 
-  // Create a mock File object for Node.js environment
-  const mockFile = {
-    text: async () => meshContent,
-    name: "rhom_quad.msh",
-  };
+  // 2. Load the Gmsh mesh (in Node.js, any object with an async text() method replaces a File)
+  const mesh = await importGmshMesh({ text: async () => meshContent });
+  model.setMeshConfig({ parsedMesh: mesh });
 
-  // Parse the mesh data
-  const result = await importGmshMesh(mockFile);
+  // 3. Apply the boundary conditions (key = Gmsh physical group tag - 1)
+  model.addBoundaryCondition("0", ["constantTemperature", 200]); // Bottom
+  model.addBoundaryCondition("1", ["symmetry"]); // Left
+  model.addBoundaryCondition("2", ["convection", 1, 20]); // Top
+  model.addBoundaryCondition("3", ["constantTemperature", 200]); // Right
 
-  // Define mesh configuration with the parsed result
-  model.setMeshConfig({
-    parsedMesh: result,
-  });
-
-  // Define boundary conditions
-  model.addBoundaryCondition("0", ["constantTemperature", 200]); // Bottom boundary
-  model.addBoundaryCondition("1", ["symmetry"]); // Left boundary
-  model.addBoundaryCondition("2", ["convection", 1, 20]); // Top boundary
-  model.addBoundaryCondition("3", ["constantTemperature", 200]); // Right boundary
-
-  // Solve the problem
+  // 4. Solve
   model.setSolverMethod("lusolve");
   const { solutionVector, nodesCoordinates } = model.solve();
 
-  // Print results
+  // 5. Print the results
   console.log(`Number of nodes in mesh: ${nodesCoordinates.nodesXCoordinates.length}`);
   console.log("Node coordinates:", nodesCoordinates);
   console.log("Solution vector:", solutionVector);
