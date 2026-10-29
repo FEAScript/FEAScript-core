@@ -20,7 +20,7 @@
  *      holds regardless of the specific numeric baseline and independently
  *      confirms the assembled system is physically consistent
  *
- * Run: node tests/regression/EulerBernoulliBeam/regression.test.js (or npm test)
+ * Run: node tests/regression/eulerBernoulliBeam/regression.test.js (or npm test)
  */
 
 import { FEAScriptModel } from "../../../src/FEAScript.js";

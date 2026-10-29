@@ -10,6 +10,9 @@
 // External imports
 import * as Comlink from "../vendor/comlink.mjs";
 
+// Internal imports
+import { serializeFunctions } from "./functionSerialization.js";
+
 /**
  * Class to facilitate communication with web workers for FEAScript operations
  */
@@ -93,11 +96,13 @@ export class FEAScriptWorker {
   /**
    * Function to set the model configuration in the worker
    * @param {string} modelConfig - The model configuration to set
+   * @param {object} [options] - Optional additional configuration, as in FEAScriptModel.setModelConfig. The
+   *  coefficient functions are sent to the worker as source code, so they must be self-contained (no outer variables)
    * @returns {Promise<boolean>} Resolves when the configuration is set
    */
-  async setModelConfig(modelConfig) {
+  async setModelConfig(modelConfig, options = {}) {
     await this._ensureReady();
-    return this.feaWorker.setModelConfig(modelConfig);
+    return this.feaWorker.setModelConfig(modelConfig, serializeFunctions(options));
   }
 
   /**
@@ -133,11 +138,12 @@ export class FEAScriptWorker {
 
   /**
    * Function to request the worker to solve the problem
+   * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
    * @returns {Promise<object>} Resolves with the solution result
    */
-  async solve() {
+  async solve(options = {}) {
     await this._ensureReady();
-    return this.feaWorker.solve();
+    return this.feaWorker.solve(options);
   }
 
   /**

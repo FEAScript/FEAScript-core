@@ -59,7 +59,7 @@ exact value. Every solver method must give the same values. Tolerance used in th
 From the repository root:
 
 ```bash
-node tests/regression/SolidificationFront2D/regression.test.js
+node tests/regression/solidificationFront2D/regression.test.js
 ```
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.

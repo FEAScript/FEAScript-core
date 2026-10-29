@@ -44,7 +44,7 @@ Tolerance used in the assertions: `1e-4`.
 From the repository root:
 
 ```bash
-node tests/regression/NonlinearReactionDiffusion1D/regression.test.js
+node tests/regression/nonlinearReactionDiffusion1D/regression.test.js
 ```
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.

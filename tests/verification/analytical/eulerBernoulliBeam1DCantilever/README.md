@@ -15,7 +15,7 @@ cantilever solution.
 
 It differs from the tests under `tests/regression` in that no stored reference value is used. Both
 checks have exact closed-form answers, which the cubic Hermite element reproduces, so a tight
-tolerance is used. The regression test in `tests/regression/EulerBernoulliBeam` relies on these
+tolerance is used. The regression test in `tests/regression/eulerBernoulliBeam` relies on these
 checks to cross-validate its own baseline values.
 
 ## Problem setup

@@ -19,7 +19,7 @@
  *  - Patch test on the Gmsh meshes: 1D conduction with convection, reproduced exactly (T = 200 - 60y)
  *    by the direct solvers
  *
- * Run: node tests/regression/HeatConduction2DFin/regression.test.js (or npm test)
+ * Run: node tests/regression/heatConduction2DFin/regression.test.js (or npm test)
  */
 
 import fs from "fs";

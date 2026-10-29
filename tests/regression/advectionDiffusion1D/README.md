@@ -50,7 +50,7 @@ Every solver method must give the same values. Tolerance used in the assertions:
 From the repository root:
 
 ```bash
-node tests/regression/AdvectionDiffusion1D/regression.test.js
+node tests/regression/advectionDiffusion1D/regression.test.js
 ```
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.

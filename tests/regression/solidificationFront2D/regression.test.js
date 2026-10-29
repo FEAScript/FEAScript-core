@@ -15,7 +15,7 @@
  * solver method (lusolve, frontal), and asserts the value at (x=2, y=2) and the nodal mean value
  * against known good values
  *
- * Run: node tests/regression/SolidificationFront2D/regression.test.js (or npm test)
+ * Run: node tests/regression/solidificationFront2D/regression.test.js (or npm test)
  */
 
 import fs from "fs";

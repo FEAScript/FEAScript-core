@@ -12,6 +12,7 @@ import * as Comlink from "../vendor/comlink.mjs";
 
 // Internal imports
 import { FEAScriptModel } from "../FEAScript.js";
+import { deserializeFunctions } from "./functionSerialization.js";
 
 /**
  * Class to wrap the FEAScriptModel for use in a web worker context
@@ -34,12 +35,13 @@ class workerWrapper {
   /**
    * Function to set the model configuration in the FEAScriptModel
    * @param {string} modelConfig - The model configuration to set
+   * @param {object} [options] - Optional additional configuration, with the functions serialized by serializeFunctions
    * @returns {boolean} Returns true if the configuration is set successfully
    * @throws Will throw an error if the configuration fails to set
    */
-  setModelConfig(modelConfig) {
+  setModelConfig(modelConfig, options = {}) {
     try {
-      this.model.setModelConfig(modelConfig);
+      this.model.setModelConfig(modelConfig, deserializeFunctions(options));
       return true;
     } catch (error) {
       console.error("FEA Worker: Error in setModelConfig", error);
@@ -98,12 +100,13 @@ class workerWrapper {
 
   /**
    * Function to solve the problem using the FEAScriptModel
+   * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
    * @returns {object} Returns the solution result, including the solution vector, node coordinates, solver configuration, and mesh dimension
    * @throws Will throw an error if the solve operation fails
    */
-  solve() {
+  solve(options = {}) {
     try {
-      const result = this.model.solve();
+      const result = this.model.solve(options);
 
       return {
         solutionVector: result.solutionVector,

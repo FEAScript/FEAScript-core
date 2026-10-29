@@ -52,7 +52,7 @@ Tolerance used in the assertions: `1e-4`.
 From the repository root:
 
 ```bash
-node tests/regression/LidDrivenCavity2DCreepingFlow/regression.test.js
+node tests/regression/lidDrivenCavity2DCreepingFlow/regression.test.js
 ```
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.

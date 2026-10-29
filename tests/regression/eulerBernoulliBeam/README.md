@@ -79,7 +79,7 @@ Tolerance used for the equilibrium assertions: `1e-6`.
 From the repository root:
 
 ```bash
-node tests/regression/EulerBernoulliBeam/regression.test.js
+node tests/regression/eulerBernoulliBeam/regression.test.js
 ```
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.
