@@ -580,7 +580,7 @@ async function buildInterpolatedGridValues(model, result, meshData) {
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const basisFunctions = new BasisFunctions({
     meshDimension: model.meshConfig.meshDimension,
-    elementOrder: model.meshConfig.elementOrder,
+    elementOrder: meshData.elementOrder,
     elementShape: meshData.elementShape,
   });
 

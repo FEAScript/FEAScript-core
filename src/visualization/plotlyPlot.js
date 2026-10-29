@@ -124,7 +124,7 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
   // Initialize BasisFunctions once here to avoid creating it inside the loop
   const basisFunctions = new BasisFunctions({
     meshDimension: model.meshConfig.meshDimension,
-    elementOrder: model.meshConfig.elementOrder,
+    elementOrder: meshData.elementOrder,
     elementShape: meshData.elementShape,
   });
 

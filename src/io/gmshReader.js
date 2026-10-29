@@ -291,6 +291,15 @@ const importGmshMesh = async (file) => {
 
   debugLog(`Parsed boundary node pairs by physical tag: ${JSON.stringify(result.boundaryNodePairs)}`);
 
+  // Detect the element order from the Gmsh element types (2/3: linear, 9/10: quadratic triangles/quads)
+  const hasLinearElements = Boolean(result.elementTypes[2] || result.elementTypes[3]);
+  const hasQuadraticElements = Boolean(result.elementTypes[9] || result.elementTypes[10]);
+  if (hasLinearElements && hasQuadraticElements) {
+    errorLog("Mixed linear and quadratic elements in the same Gmsh mesh are not supported.");
+  }
+  result.elementOrder = hasQuadraticElements ? "quadratic" : "linear";
+  debugLog(`Detected element order from Gmsh mesh: ${result.elementOrder}`);
+
   return result;
 };
 
@@ -300,10 +309,9 @@ export { importGmshMesh };
  * Function to convert a mesh imported with importGmshMesh to the FEAScript format. The nodal numbering is
  * mapped in place to the FEAScript node ordering, and boundary node pairs are converted to element sides
  * @param {object} parsedMesh - Mesh data returned by importGmshMesh (modified in place)
- * @param {string} elementOrder - The order of elements, either 'linear' or 'quadratic'
  * @returns {boolean} True when the boundary elements have been processed
  */
-export function mapGmshMeshToFEAScript(parsedMesh, elementOrder) {
+export function mapGmshMeshToFEAScript(parsedMesh) {
   let boundaryElementsProcessed = false;
 
   if (!parsedMesh.nodalNumbering) {
@@ -422,13 +430,6 @@ export function mapGmshMeshToFEAScript(parsedMesh, elementOrder) {
       }
 
       parsedMesh.nodalNumbering = mappedNodalNumbering;
-
-      const expectedNodesPerTriangle = elementOrder === "quadratic" ? 6 : 3;
-      if (triangleElements[0].length !== expectedNodesPerTriangle) {
-        errorLog(
-          `The Gmsh mesh contains ${triangleElements[0].length}-node triangles, but elementOrder is '${elementOrder}' (expects ${expectedNodesPerTriangle}-node triangles). Use 'linear' for first-order and 'quadratic' for second-order meshes.`,
-        );
-      }
     } else {
       errorLog("Element type is neither triangle nor quad; mapping for this type is not implemented yet.");
     }

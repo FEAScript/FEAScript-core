@@ -23,11 +23,20 @@ export function prepareMesh(meshConfig) {
     numElementsY,
     maxX,
     maxY,
-    elementOrder,
+    elementOrder: configElementOrder,
     parsedMesh,
     angleLeft,
     angleRight,
   } = meshConfig;
+
+  // For a parsed mesh (e.g., from a Gmsh .msh import) the element order is taken from the mesh itself
+  const parsedElementOrder = parsedMesh?.elementOrder;
+  if (parsedElementOrder && configElementOrder && configElementOrder !== parsedElementOrder) {
+    errorLog(
+      `elementOrder is '${configElementOrder}' but the imported mesh contains ${parsedElementOrder} elements. Remove elementOrder from the mesh configuration; it is detected from the mesh.`,
+    );
+  }
+  const elementOrder = parsedElementOrder ?? configElementOrder ?? "linear";
 
   // Create a new instance of the Mesh class
   let mesh;

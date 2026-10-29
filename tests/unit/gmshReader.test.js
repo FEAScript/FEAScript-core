@@ -13,6 +13,8 @@
  * Uses the test meshes of linear and quadratic quadrilaterals and triangles
  *
  * Covers:
+ *  - Element order detection: the element order is read from the Gmsh element types, so a mesh
+ *    configuration without elementOrder gives the same solution as one that sets it
  *  - Non-contiguous node tags: each mesh is copied with gaps in its node tags (same geometry and
  *    connectivity) and compared against the original
  *    - No extra (disconnected) nodes are created by the gaps
@@ -104,6 +106,29 @@ function runSimulation(parsedMesh, elementOrder, solverMethod) {
   });
   model.setSolverMethod(solverMethod);
   return model.solve({ maxIterations: 200000, tolerance: 1e-10 });
+}
+
+// ─── Element order detection ────────────────────────────────────
+
+for (const { meshFile, elementOrder } of meshCases) {
+  const meshContent = readMeshFile(meshFile);
+  const parsed = await parseMesh(meshContent);
+  assert(
+    parsed.elementOrder === elementOrder,
+    `${meshFile}: detected element order '${elementOrder}' (got '${parsed.elementOrder}')`,
+  );
+
+  const configuredSolution = runSimulation(
+    await parseMesh(meshContent),
+    elementOrder,
+    "lusolve",
+  ).solutionVector;
+  const detectedSolution = runSimulation(await parseMesh(meshContent), undefined, "lusolve").solutionVector;
+  const solutionDifference = largestDifference(Array.from(detectedSolution), Array.from(configuredSolution));
+  assert(
+    solutionDifference === 0,
+    `${meshFile}: same solution without elementOrder in the mesh configuration (largest difference ${solutionDifference})`,
+  );
 }
 
 // ─── Non-contiguous node tags ───────────────────────────────────

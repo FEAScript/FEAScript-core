@@ -44,7 +44,6 @@ async function main() {
   model.setMeshConfig({
     parsedMesh: result,
     meshDimension: "2D",
-    elementOrder: "quadratic",
   });
 
   // Define boundary conditions

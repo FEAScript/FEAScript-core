@@ -55,7 +55,7 @@ export class Mesh {
    * Method to parse the mesh from the Gmsh format to the FEAScript format
    */
   parseMeshFromGmsh() {
-    this.boundaryElementsProcessed = mapGmshMeshToFEAScript(this.parsedMesh, this.elementOrder);
+    this.boundaryElementsProcessed = mapGmshMeshToFEAScript(this.parsedMesh);
     return this.parsedMesh;
   }
 }
