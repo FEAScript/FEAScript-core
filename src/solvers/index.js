@@ -9,3 +9,8 @@
 
 export { jacobiSolver } from "./jacobiSolver.js";
 export { mathjsLUSolver } from "./mathjsLUSolver.js";
+export { solveLinearSystem, solveLinearSystemAsync } from "./linearSystemSolver.js";
+export { runFrontalSolver } from "./frontalSolver.js";
+export { newtonRaphson } from "./newtonRaphson.js";
+// WebGPUComputeEngine (webgpuJacobiSolver.js) is not re-exported, since importing it loads taichi.js;
+// it is used only by the WebGPU worker

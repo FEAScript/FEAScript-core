@@ -8,14 +8,9 @@
  */
 
 // Internal imports
-import {
-  prepareMesh,
-  pointInsideQuadrilateral,
-  pointInsideTriangularElement,
-  computeNodeNeighbors,
-  getBoundarySegments,
-} from "../mesh/meshUtils.js";
-import { BasisFunctions } from "../mesh/basisFunctions.js";
+import { prepareMesh, computeNodeNeighbors, getBoundarySegments } from "../mesh/meshUtils.js";
+import { pointInsideQuadrilateral, pointInsideTriangularElement } from "../elements/elementGeometry.js";
+import { BasisFunctions } from "../elements/basisFunctions.js";
 import { errorLog } from "../utilities/logging.js";
 
 let _vtkModules = null;

@@ -24,7 +24,7 @@
  */
 
 import { FEAScriptModel } from "../../../src/FEAScript.js";
-import { assembleEulerBernoulliBeamMat } from "../../../src/models/eulerBernoulliBeam.js";
+import { assembleEulerBernoulliBeamMat } from "../../../src/physics/eulerBernoulliBeam.js";
 import { basicLog, errorLog } from "../../../src/utilities/logging.js";
 
 // Baseline values (see README.md for derivation and verification)

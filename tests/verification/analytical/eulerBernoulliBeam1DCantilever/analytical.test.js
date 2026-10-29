@@ -23,7 +23,7 @@
  * Run: node tests/verification/analytical/eulerBernoulliBeam1DCantilever/analytical.test.js (or npm test)
  */
 
-import { assembleEulerBernoulliBeamMat } from "../../../../src/models/eulerBernoulliBeam.js";
+import { assembleEulerBernoulliBeamMat } from "../../../../src/physics/eulerBernoulliBeam.js";
 import { prepareMesh } from "../../../../src/mesh/meshUtils.js";
 import { solveLinearSystem } from "../../../../src/solvers/linearSystemSolver.js";
 import { basicLog, errorLog } from "../../../../src/utilities/logging.js";

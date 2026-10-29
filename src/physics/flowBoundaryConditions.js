@@ -8,7 +8,7 @@
  */
 
 // Internal imports
-import { triangleBoundarySides } from "../mesh/basisFunctions.js";
+import { triangleBoundarySides } from "../elements/basisFunctions.js";
 import { debugLog } from "../utilities/logging.js";
 
 /**

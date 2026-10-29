@@ -12,11 +12,13 @@ import { newtonRaphson } from "./solvers/newtonRaphson.js";
 import { solveLinearSystem } from "./solvers/linearSystemSolver.js";
 import { solveLinearSystemAsync } from "./solvers/linearSystemSolver.js";
 import { prepareMesh } from "./mesh/meshUtils.js";
-import { assembleFrontPropagationMat } from "./models/frontPropagation.js";
-import { assembleGeneralFormPDEMat, assembleGeneralFormPDENonlinearMat } from "./models/generalFormPDE.js";
-import { assembleHeatConductionMat, assembleHeatConductionFront } from "./models/heatConduction.js";
-import { assembleCreepingFlowMatrix } from "./models/creepingFlow.js";
-import { assembleEulerBernoulliBeamMat } from "./models/eulerBernoulliBeam.js";
+import { assembleFrontPropagationMat, assembleFrontPropagationFront } from "./physics/frontPropagation.js";
+import { assembleGeneralFormPDEMat, assembleGeneralFormPDENonlinearMat } from "./physics/generalFormPDE.js";
+import { assembleHeatConductionMat, assembleHeatConductionFront } from "./physics/heatConduction.js";
+import { ThermalBoundaryConditions } from "./physics/thermalBoundaryConditions.js";
+import { GenericBoundaryConditions } from "./physics/genericBoundaryConditions.js";
+import { assembleCreepingFlowMatrix } from "./physics/creepingFlow.js";
+import { assembleEulerBernoulliBeamMat } from "./physics/eulerBernoulliBeam.js";
 import { runFrontalSolver } from "./solvers/frontalSolver.js";
 import { basicLog, debugLog, warnLog, errorLog } from "./utilities/logging.js";
 
@@ -141,11 +143,22 @@ export class FEAScriptModel {
     if (this.solverConfig === "heatConductionScript") {
       // Check if using frontal solver
       if (this.solverMethod === "frontal") {
-        const frontalResult = runFrontalSolver(
-          assembleHeatConductionFront,
-          meshData,
+        const thermalBoundaryConditions = new ThermalBoundaryConditions(
           this.boundaryConditions,
-          { coefficientFunctions: this.coefficientFunctions },
+          meshData.boundaryElements,
+          meshData.nop,
+          meshData.meshDimension,
+          meshData.elementOrder,
+          meshData.elementShape,
+        );
+        const frontalResult = runFrontalSolver(
+          (elementArgs) =>
+            assembleHeatConductionFront({
+              ...elementArgs,
+              coefficientFunctions: this.coefficientFunctions,
+            }),
+          meshData,
+          thermalBoundaryConditions,
         );
         solutionVector = frontalResult.solutionVector;
       } else {
@@ -176,6 +189,20 @@ export class FEAScriptModel {
         // TODO: Consider using different maxIterations/tolerance for Newton-Raphson and linear solver
         maxIterations: options.maxIterations ?? this.maxIterations,
         tolerance: options.tolerance ?? this.tolerance,
+        // Used only by the frontal solver
+        assembleFront: (elementArgs) =>
+          assembleFrontPropagationFront({
+            ...elementArgs,
+            eikonalActivationFlag: context.eikonalActivationFlag,
+          }),
+        boundaryConditionsHandler: new GenericBoundaryConditions(
+          this.boundaryConditions,
+          meshData.boundaryElements,
+          meshData.nop,
+          meshData.meshDimension,
+          meshData.elementOrder,
+          meshData.elementShape,
+        ),
       };
 
       // Count the incremental steps with an integer, so that the last step activates the eikonal equation

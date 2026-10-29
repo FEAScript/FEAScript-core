@@ -8,11 +8,8 @@
  */
 
 // Internal imports
-import {
-  initializeFEA,
-  performIsoparametricMapping1D,
-  performIsoparametricMapping2D,
-} from "../mesh/meshUtils.js";
+import { initializeFEA } from "../elements/feaInitialization.js";
+import { performIsoparametricMapping1D, performIsoparametricMapping2D } from "../elements/isoparametricMapping.js";
 import { ThermalBoundaryConditions } from "./thermalBoundaryConditions.js";
 import { basicLog } from "../utilities/logging.js";
 

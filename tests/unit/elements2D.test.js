@@ -19,9 +19,9 @@
  * Run: node tests/unit/elements2D.test.js (or npm test)
  */
 
-import { BasisFunctions } from "../../src/mesh/basisFunctions.js";
-import { getIntegrationPoints2D } from "../../src/mesh/meshUtils.js";
-import { NumericalIntegration } from "../../src/numerics/numericalIntegration.js";
+import { BasisFunctions } from "../../src/elements/basisFunctions.js";
+import { getIntegrationPoints2D } from "../../src/elements/isoparametricMapping.js";
+import { NumericalIntegration } from "../../src/elements/numericalIntegration.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
 
 basicLog("");

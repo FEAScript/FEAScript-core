@@ -8,7 +8,8 @@
  */
 
 // Internal imports
-import { initializeFEA, performIsoparametricMapping1D } from "../mesh/meshUtils.js";
+import { initializeFEA } from "../elements/feaInitialization.js";
+import { performIsoparametricMapping1D } from "../elements/isoparametricMapping.js";
 import { GenericBoundaryConditions } from "./genericBoundaryConditions.js";
 import { basicLog, errorLog } from "../utilities/logging.js";
 

@@ -8,10 +8,10 @@
  */
 
 // Internal imports
-import { getIntegrationPoints2D, performIsoparametricMapping2D } from "../mesh/meshUtils.js";
-import { BasisFunctions } from "../mesh/basisFunctions.js";
-import { NumericalIntegration } from "../numerics/numericalIntegration.js";
-import { SparseMatrix } from "../numerics/sparseMatrix.js";
+import { getIntegrationPoints2D, performIsoparametricMapping2D } from "../elements/isoparametricMapping.js";
+import { BasisFunctions } from "../elements/basisFunctions.js";
+import { NumericalIntegration } from "../elements/numericalIntegration.js";
+import { SparseMatrix } from "../linalg/sparseMatrix.js";
 import { FlowBoundaryConditions } from "./flowBoundaryConditions.js";
 import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 

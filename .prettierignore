@@ -1,0 +1,5 @@
+# Build output
+dist/
+
+# Third-party bundles
+src/vendor/
