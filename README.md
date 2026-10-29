@@ -13,7 +13,7 @@
 src="https://feascript.com/assets/favicon.ico"
 alt="FEAScript Icon"
 style="vertical-align: middle; margin-right: 5px; height: 1em; width: auto"
-/> **[FEAScript](https://feascript.com/) is a finite element simulation library developed in JavaScript**. It enables engineering simulations across both browser-based and server-side environments without the overhead of traditional desktop software. <br>🎯 **Our goal is to provide the most powerful JavaScript API for FEM**. We are closing the gap between complex computational mechanics and the accessibility of the web, empowering developers to build professional-grade simulation tools that work on any device, anywhere. This is the core library of the FEAScript project.
+/> **[FEAScript](https://feascript.com/) is a finite element simulation library developed in JavaScript**. It enables engineering simulations across both browser-based and server-side environments without the overhead of traditional desktop software. <br>🎯 **Our goal is to provide a powerful JavaScript API for FEM**. We are closing the gap between complex computational mechanics and the accessibility of the web, empowering developers to build professional-grade simulation tools that work on any device, anywhere. This is the core library of the FEAScript project.
 
 <img src="https://feascript.github.io/FEAScript-website/assets/cold-plate-logo-results-and-mesh.gif" width="300" alt="Results of heat conduction around the FEAScript logo"> <br/>
 
