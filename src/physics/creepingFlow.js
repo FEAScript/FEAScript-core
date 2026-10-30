@@ -25,6 +25,8 @@ import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
  *
  * @param {object} meshData - Object containing prepared mesh data (must use quadratic elements)
  * @param {object} boundaryConditions - Object containing boundary conditions for the finite element analysis
+ * @param {object} [coefficientFunctions] - Coefficients of the creeping flow model:
+ *  - viscosity: Dynamic viscosity μ, a number or a function of (x, y) (optional, defaults to 1)
  * @returns {object} An object containing:
  *  - jacobianMatrix: The assembled (sparse) Jacobian matrix
  *  - residualVector: The assembled residual vector
@@ -40,7 +42,7 @@ import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
  * classic stiffness/conductivity matrix and `residualVector`
  * corresponds to the traditional load (RHS) vector.
  */
-export function assembleCreepingFlowMatrix(meshData, boundaryConditions) {
+export function assembleCreepingFlowMatrix(meshData, boundaryConditions, coefficientFunctions) {
   basicLog("Starting creeping flow matrix assembly...");
 
   // Extract mesh data
@@ -144,8 +146,12 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions) {
     pressureBasisFunctions.getBasisFunctions(ksi, eta),
   );
 
-  // Viscosity coefficient
-  const mu = 1.0;
+  // Dynamic viscosity, constant or a function of position
+  const viscosity = coefficientFunctions?.viscosity ?? 1;
+  const viscosityAt = typeof viscosity === "function" ? viscosity : () => viscosity;
+  if (typeof viscosity !== "function" && !(viscosity > 0)) {
+    errorLog(`Creeping flow viscosity must be a positive number or a function of (x, y); got ${viscosity}.`);
+  }
 
   // Local DOF ordering in the element matrix: [u_0 … u_{n_2−1}, v_0 … v_{n_2−1}, p_0 … p_{n_1−1}]
   const localDOFs = 2 * nodesPerVelocityElement + nodesPerPressureElement;
@@ -188,7 +194,7 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions) {
       const pressureBasisFunction = pressureReferenceBasisFunctions[pointIndex].basisFunction;
 
       // Perform isoparametric mapping using Q2/P2 velocity basis functions
-      const { detJacobian } = performIsoparametricMapping2D({
+      const { xCoordinates, yCoordinates, detJacobian } = performIsoparametricMapping2D({
         basisFunction,
         basisFunctionDerivKsi,
         basisFunctionDerivEta,
@@ -202,6 +208,7 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions) {
 
       // Gauss integration weight factors
       const weightFactor = integrationWeight * detJacobian;
+      const mu = viscosityAt(xCoordinates, yCoordinates); // Viscosity at this integration point
       const viscousFactor = -weightFactor * mu;
 
       // Assemble viscous stiffness terms (K block)

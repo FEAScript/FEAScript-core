@@ -13,7 +13,9 @@
  * Replicates the physical setup from lidDrivenCavity2DCreepingFlow.js with Q2-Q1 quadrilaterals
  * (structured and Gmsh meshes) and P2-P1 triangles (Gmsh mesh), and asserts the strongest return
  * flow (minimum x-velocity), the nodal mean x-velocity and y-velocity and the number of pressure
- * nodes against known good values
+ * nodes against known good values. It also checks that a viscosity μ (constant or a function of
+ * position) leaves the velocity unchanged and scales the pressure by μ, as the Stokes equations
+ * with velocity boundary conditions require
  *
  * Run: node tests/regression/lidDrivenCavity2DCreepingFlow/regression.test.js (or npm test)
  */
@@ -74,10 +76,10 @@ async function getMeshConfig({ mesh, meshFile }) {
   return { parsedMesh, meshDimension: "2D", elementOrder: "quadratic" };
 }
 
-function runSimulation(meshConfig) {
+function runSimulation(meshConfig, modelOptions = {}) {
   const model = new FEAScriptModel();
 
-  model.setModelConfig("creepingFlowScript");
+  model.setModelConfig("creepingFlowScript", modelOptions);
   model.setMeshConfig(meshConfig);
   ["0", "1", "2", "3"].forEach((boundaryKey) => {
     model.addBoundaryCondition(
@@ -152,6 +154,24 @@ for (const testCase of cases) {
       pressureNodesInField >= testCase.expectedPressureNodes,
     `${label}: field p has a finite value at every node and holds the solved corner pressures`,
   );
+
+  // A viscosity μ leaves the velocity unchanged and scales the pressure by μ
+  const meshConfig = await getMeshConfig(testCase);
+  const maxPressure = Math.max(...fields.p.map(Math.abs));
+  for (const [viscosityLabel, viscosity] of [
+    ["viscosity 2.5", 2.5],
+    ["viscosity (x, y) => 2.5", (x, y) => 2.5],
+  ]) {
+    const { fields: scaledFields } = runSimulation(meshConfig, { coefficientFunctions: { viscosity } });
+    const velocityUnchanged = scaledFields.u.every((u, i) => Math.abs(u - fields.u[i]) < 1e-10);
+    const pressureScaled = scaledFields.p.every(
+      (p, i) => Math.abs(p - 2.5 * fields.p[i]) < 1e-10 * 2.5 * maxPressure,
+    );
+    assert(
+      velocityUnchanged && pressureScaled,
+      `${label}: ${viscosityLabel} leaves the velocity unchanged and scales the pressure by 2.5`,
+    );
+  }
 }
 
 basicLog("");

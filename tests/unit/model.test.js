@@ -482,6 +482,29 @@ function assert(condition, message) {
         3: ["constantTemperature", 200],
       },
     },
+    {
+      label: "Creeping flow (varying viscosity)",
+      modelConfig: "creepingFlowScript",
+      options: {
+        coefficientFunctions: {
+          viscosity: (x, y) => 1 + x * y,
+        },
+      },
+      meshConfig: {
+        meshDimension: "2D",
+        elementOrder: "quadratic",
+        numElementsX: 4,
+        numElementsY: 2,
+        maxX: 4,
+        maxY: 2,
+      },
+      boundaryConditions: {
+        0: ["constantVelocity", 0, 0],
+        1: ["constantVelocity", 0, 0],
+        2: ["constantVelocity", 1, 0],
+        3: ["constantVelocity", 0, 0],
+      },
+    },
   ];
 
   for (const testCase of testCases) {

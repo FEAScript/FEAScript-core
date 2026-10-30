@@ -364,7 +364,11 @@ export class FEAScriptModel {
       }
     } else if (this.solverConfig === "creepingFlowScript") {
       // Use regular linear solver methods for steady creeping flow
-      const creepingFlowResult = assembleCreepingFlowMatrix(meshData, this.boundaryConditions);
+      const creepingFlowResult = assembleCreepingFlowMatrix(
+        meshData,
+        this.boundaryConditions,
+        this.coefficientFunctions,
+      );
       jacobianMatrix = creepingFlowResult.jacobianMatrix;
       residualVector = creepingFlowResult.residualVector;
 

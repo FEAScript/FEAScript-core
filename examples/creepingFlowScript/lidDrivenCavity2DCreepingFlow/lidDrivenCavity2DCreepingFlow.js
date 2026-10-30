@@ -14,7 +14,11 @@ console.log("FEAScript Version:", printVersion);
 
 // 1. Create the model and select the physics
 const model = new FEAScriptModel();
-model.setModelConfig("creepingFlowScript");
+model.setModelConfig("creepingFlowScript", {
+  coefficientFunctions: {
+    viscosity: 1, // μ
+  },
+});
 
 // 2. Define the mesh
 model.setMeshConfig({
