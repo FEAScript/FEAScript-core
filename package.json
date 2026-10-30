@@ -1,6 +1,6 @@
 {
   "name": "feascript",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Finite element simulation library built in JavaScript",
   "main": "dist/feascript.cjs",
   "module": "dist/feascript.esm.js",
