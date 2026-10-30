@@ -1,9 +1,4 @@
-<img
-src="https://feascript.github.io/FEAScript-website/assets/feascript-heat-transfer.png"
-width="80"
-alt="FEAScript heat conduction logo"
-
->
+<img src="https://feascript.github.io/FEAScript-website/assets/feascript-heat-transfer.png" width="80" alt="FEAScript heat conduction logo">
 
 # Regression Test — Heat Conduction in a 1D Wall
 

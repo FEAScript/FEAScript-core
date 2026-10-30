@@ -1,9 +1,4 @@
-<img
-src="https://feascript.github.io/FEAScript-website/assets/feascript-structural-mechanics.png"
-width="80"
-alt="FEAScript Euler-Bernoulli beam logo"
-
->
+<img src="https://feascript.github.io/FEAScript-website/assets/feascript-structural-mechanics.png" width="80" alt="FEAScript Euler-Bernoulli beam logo">
 
 # Analytical Test — Euler-Bernoulli Beam in 1D (Cantilever)
 

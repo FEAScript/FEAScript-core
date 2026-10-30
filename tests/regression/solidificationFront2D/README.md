@@ -1,9 +1,4 @@
-<img
-src="https://feascript.github.io/FEAScript-website/assets/feascript-front-propagation.png"
-width="80"
-alt="FEAScript front propagation logo"
-
->
+<img src="https://feascript.github.io/FEAScript-website/assets/feascript-front-propagation.png" width="80" alt="FEAScript front propagation logo">
 
 # Regression Test — Solidification Front in 2D
 
