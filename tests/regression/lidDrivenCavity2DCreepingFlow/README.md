@@ -47,6 +47,10 @@ The minimum x-velocity is the strongest return flow of the recirculation below t
 pressure nodes are the element corners (13 × 7 for the structured mesh) or the triangle vertices.
 Tolerance used in the assertions: `1e-4`.
 
+The test also solves each case with a viscosity of 2.5, given as a number and as a function of
+(x, y). The Stokes equations with velocity boundary conditions are linear in μ, so the velocity
+must be unchanged and the pressure scaled by 2.5 (relative tolerance `1e-10`).
+
 ## How to run
 
 From the repository root:
