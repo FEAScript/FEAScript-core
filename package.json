@@ -2,12 +2,12 @@
   "name": "feascript",
   "version": "0.3.0",
   "description": "Finite element simulation library built in JavaScript",
-  "main": "dist/feascript.cjs.js",
+  "main": "dist/feascript.cjs",
   "module": "dist/feascript.esm.js",
   "browser": "dist/feascript.umd.js",
   "exports": {
     "import": "./dist/feascript.esm.js",
-    "require": "./dist/feascript.cjs.js"
+    "require": "./dist/feascript.cjs"
   },
   "files": [
     "dist",
