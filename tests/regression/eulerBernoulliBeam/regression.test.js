@@ -89,7 +89,7 @@ basicLog("");
 basicLog("================================");
 basicLog("Starting regression test for the 1D Euler-Bernoulli beam model...");
 
-const { solutionVector } = runSimulation();
+const { solutionVector, fields } = runSimulation();
 const flatSolution = Array.from(solutionVector);
 const [w1, theta1, w2, theta2, w3, theta3] = flatSolution;
 
@@ -102,6 +102,21 @@ assert(Math.abs(w2 - EXPECTED.w2) < TOLERANCE, `w2: expected ~${EXPECTED.w2}, go
 assert(Math.abs(theta2 - EXPECTED.theta2) < TOLERANCE, `theta2: expected ${EXPECTED.theta2}, got ${theta2}`);
 assert(Math.abs(w3 - EXPECTED.w3) < TOLERANCE, `w3: expected ${EXPECTED.w3}, got ${w3}`);
 assert(Math.abs(theta3 - EXPECTED.theta3) < TOLERANCE, `theta3: expected ${EXPECTED.theta3}, got ${theta3}`);
+
+basicLog("");
+basicLog("[1b] Named fields w and theta");
+
+assert(
+  fields.w.length === 3 && fields.w[0] === w1 && fields.w[1] === w2 && fields.w[2] === w3,
+  `field w: expected [${w1}, ${w2}, ${w3}], got [${Array.from(fields.w)}]`,
+);
+assert(
+  fields.theta.length === 3 &&
+    fields.theta[0] === theta1 &&
+    fields.theta[1] === theta2 &&
+    fields.theta[2] === theta3,
+  `field theta: expected [${theta1}, ${theta2}, ${theta3}], got [${Array.from(fields.theta)}]`,
+);
 
 // Reassemble without boundary conditions to recover reactions for the equilibrium checks
 basicLog("");

@@ -39,20 +39,16 @@ model.addBoundaryCondition("3", [
 
 // 4. Solve
 model.setSolverMethod("lusolve");
-const { solutionVector } = model.solve();
+const { nodesCoordinates, fields } = model.solve();
 
 // 5. Print the results
-const flatSolution = solutionVector.map((entry) => (Array.isArray(entry) ? entry[0] : entry));
-
-const nodeXCoordinates = [0, 5, 10];
+const { nodesXCoordinates } = nodesCoordinates;
 console.log("\nNode |    x (m) | Deflection w (m) | Rotation theta (rad)");
 console.log("-----|----------|-------------------|----------------------");
-for (let nodeIndex = 0; nodeIndex < nodeXCoordinates.length; nodeIndex++) {
-  const w = flatSolution[2 * nodeIndex];
-  const theta = flatSolution[2 * nodeIndex + 1];
+for (let nodeIndex = 0; nodeIndex < nodesXCoordinates.length; nodeIndex++) {
   console.log(
-    `  ${nodeIndex + 1}  | ${nodeXCoordinates[nodeIndex].toFixed(2).padStart(8)} | ${w
+    `  ${nodeIndex + 1}  | ${nodesXCoordinates[nodeIndex].toFixed(2).padStart(8)} | ${fields.w[nodeIndex]
       .toExponential(4)
-      .padStart(17)} | ${theta.toExponential(4).padStart(20)}`,
+      .padStart(17)} | ${fields.theta[nodeIndex].toExponential(4).padStart(20)}`,
   );
 }

@@ -174,3 +174,17 @@ export function assembleEulerBernoulliBeamMat(meshData, boundaryConditions, coef
     totalDOFs,
   };
 }
+
+/**
+ * Function to split the Euler-Bernoulli beam solution vector into named nodal fields
+ * @param {Float64Array} solutionVector - The solution vector [w_0, theta_0, w_1, theta_1, …]
+ * @param {number} dofsPerNode - Number of degrees of freedom per node (2)
+ * @returns {object} An object containing one Float64Array per field, each with one value per mesh node:
+ *  - w: The deflection
+ *  - theta: The rotation (dw/dx)
+ */
+export function extractEulerBernoulliBeamFields(solutionVector, dofsPerNode) {
+  const w = Float64Array.from(solutionVector.filter((_, dofIndex) => dofIndex % dofsPerNode === 0));
+  const theta = Float64Array.from(solutionVector.filter((_, dofIndex) => dofIndex % dofsPerNode === 1));
+  return { w, theta };
+}

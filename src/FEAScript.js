@@ -21,8 +21,11 @@ import {
 import { assembleHeatConductionMat, assembleHeatConductionFront } from "./physics/heatConduction.js";
 import { ThermalBoundaryConditions } from "./physics/thermalBoundaryConditions.js";
 import { GenericBoundaryConditions } from "./physics/genericBoundaryConditions.js";
-import { assembleCreepingFlowMatrix } from "./physics/creepingFlow.js";
-import { assembleEulerBernoulliBeamMat } from "./physics/eulerBernoulliBeam.js";
+import { assembleCreepingFlowMatrix, extractCreepingFlowFields } from "./physics/creepingFlow.js";
+import {
+  assembleEulerBernoulliBeamMat,
+  extractEulerBernoulliBeamFields,
+} from "./physics/eulerBernoulliBeam.js";
 import { runFrontalSolver } from "./solvers/frontalSolver.js";
 import { basicLog, debugLog, warnLog, errorLog } from "./utilities/logging.js";
 
@@ -162,7 +165,9 @@ export class FEAScriptModel {
   /**
    * Method to solve the finite element problem synchronously
    * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
-   * @returns {object} An object containing the solution vector (Float64Array, the same for every solver method) and mesh information
+   * @returns {object} An object containing the solution vector (Float64Array, the same for every solver method) and mesh information.
+   *  Models with more than one unknown per node (creeping flow, Euler-Bernoulli beam) also return `fields`, an object of
+   *  named nodal fields (one value per mesh node) that can be plotted directly, e.g. `plotSolution(model, result, "contour", id, { field: "u" })`
    */
   solve(options = {}) {
     if (!this.solverConfig || !this.meshConfig || !this.boundaryConditions) {
@@ -183,6 +188,7 @@ export class FEAScriptModel {
     let residualVector = [];
     let solutionVector = new Float64Array(0);
     let initialSolution = [];
+    let fields = null; // Named nodal fields, for models with more than one unknown per node
 
     // Prepare the mesh
     basicLog("Preparing mesh...");
@@ -368,12 +374,8 @@ export class FEAScriptModel {
       });
       solutionVector = linearSystemResult.solutionVector;
 
-      // Store creeping-flow-specific metadata for solution extraction
-      this._creepingFlowMetadata = {
-        totalNodesVelocity: creepingFlowResult.totalNodesVelocity,
-        totalNodesPressure: creepingFlowResult.totalNodesPressure,
-        pressureNodeIndices: creepingFlowResult.pressureNodeIndices,
-      };
+      // Split the solution vector into velocity and pressure fields
+      fields = extractCreepingFlowFields(solutionVector, meshData, creepingFlowResult.pressureNodeIndices);
     } else if (this.solverConfig === "eulerBernoulliBeamScript") {
       // Use regular linear solver methods for the 1D Euler-Bernoulli beam model
       const beamResult = assembleEulerBernoulliBeamMat(
@@ -390,17 +392,14 @@ export class FEAScriptModel {
       });
       solutionVector = linearSystemResult.solutionVector;
 
-      // Store beam-specific metadata for solution extraction (2 DOFs per node: deflection, rotation)
-      this._eulerBernoulliBeamMetadata = {
-        dofsPerNode: beamResult.dofsPerNode,
-        totalNodesX: meshData.totalNodesX,
-      };
+      // Split the solution vector into deflection and rotation fields (2 DOFs per node)
+      fields = extractEulerBernoulliBeamFields(solutionVector, beamResult.dofsPerNode);
     }
 
     console.timeEnd("totalSolvingTime");
     basicLog("Solving process completed");
 
-    return { solutionVector, nodesCoordinates };
+    return fields ? { solutionVector, nodesCoordinates, fields } : { solutionVector, nodesCoordinates };
   }
 
   /**
