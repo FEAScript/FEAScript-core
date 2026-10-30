@@ -118,7 +118,7 @@ basicLog("Starting regression test for the lid-driven cavity creeping flow in 2D
 
 for (const testCase of cases) {
   const { label } = testCase;
-  const { solutionVector, nodesCoordinates } = runSimulation(await getMeshConfig(testCase));
+  const { solutionVector, nodesCoordinates, fields } = runSimulation(await getMeshConfig(testCase));
 
   // DOF ordering: [u_0 … u_{N-1}, v_0 … v_{N-1}, p_0 … p_{M-1}]
   const solution = Array.from(solutionVector);
@@ -134,6 +134,23 @@ for (const testCase of cases) {
   assert(
     pressureNodes === testCase.expectedPressureNodes,
     `${label}: number of pressure nodes: expected ${testCase.expectedPressureNodes}, got ${pressureNodes}`,
+  );
+
+  // Named fields (one value per mesh node) match the solution vector
+  const fieldsMatch =
+    fields.u.every((u, i) => u === xVelocities[i]) &&
+    fields.v.every((v, i) => v === yVelocities[i]) &&
+    fields.velocityMagnitude.every(
+      (magnitude, i) => magnitude === Math.hypot(xVelocities[i], yVelocities[i]),
+    );
+  assert(fieldsMatch, `${label}: fields u, v and velocityMagnitude match the solution vector`);
+  const solvedPressures = new Set(solution.slice(2 * totalNodesVelocity));
+  const pressureNodesInField = Array.from(fields.p).filter((p) => solvedPressures.has(p)).length;
+  assert(
+    fields.p.length === totalNodesVelocity &&
+      fields.p.every(Number.isFinite) &&
+      pressureNodesInField >= testCase.expectedPressureNodes,
+    `${label}: field p has a finite value at every node and holds the solved corner pressures`,
   );
 }
 

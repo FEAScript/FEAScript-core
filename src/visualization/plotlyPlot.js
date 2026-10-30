@@ -11,6 +11,7 @@
 import { prepareMesh, computeNodeNeighbors, getBoundarySegments } from "../mesh/meshUtils.js";
 import { pointInsideQuadrilateral, pointInsideTriangularElement } from "../elements/elementGeometry.js";
 import { BasisFunctions } from "../elements/basisFunctions.js";
+import { selectSolutionField } from "./solutionFields.js";
 
 /**
  * Function to create plots of the solution vector
@@ -18,11 +19,15 @@ import { BasisFunctions } from "../elements/basisFunctions.js";
  * @param {object} model - Object containing model properties
  * @param {string} plotType - The type of plot
  * @param {string} plotDivId - The id of the div where the plot will be rendered
+ * @param {object} [options] - Plot options:
+ *  - field: The named field to plot, for models with more than one unknown per node (e.g. "u", "v", "p" for
+ *    creeping flow, "w", "theta" for the Euler-Bernoulli beam); defaults to the main field of the model
  */
-export function plotSolution(model, result, plotType, plotDivId) {
+export function plotSolution(model, result, plotType, plotDivId, options = {}) {
   console.time("plottingTime");
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
-  const solutionVector = result.solutionVector;
+  const { values: solutionVector, fieldName } = selectSolutionField(model, result, options.field);
+  const solutionLabel = fieldName ?? "Solution";
   const solverConfig = model.solverConfig;
   const meshDimension = model.meshConfig.meshDimension;
 
@@ -35,7 +40,7 @@ export function plotSolution(model, result, plotType, plotDivId) {
       mode: "lines",
       type: "scatter",
       line: { color: "rgb(219, 64, 82)", width: 2 },
-      name: "Solution",
+      name: solutionLabel,
     };
 
     let maxWindowWidth = Math.min(window.innerWidth, 700);
@@ -47,7 +52,7 @@ export function plotSolution(model, result, plotType, plotDivId) {
       width: plotWidth,
       height: plotHeight,
       xaxis: { title: "x" },
-      yaxis: { title: "Solution" },
+      yaxis: { title: solutionLabel },
       margin: { l: 50, r: 50, t: 50, b: 50 },
     };
 
@@ -98,7 +103,7 @@ export function plotSolution(model, result, plotType, plotDivId) {
       },
       //colorscale: 'Viridis',
       colorbar: {
-        title: "Solution",
+        title: solutionLabel,
       },
       name: "Solution Field",
     };
@@ -114,9 +119,13 @@ export function plotSolution(model, result, plotType, plotDivId) {
  * @param {object} model - Object containing model properties
  * @param {string} plotType - The type of plot
  * @param {string} plotDivId - The id of the div where the plot will be rendered
+ * @param {object} [options] - Plot options:
+ *  - field: The named field to plot, for models with more than one unknown per node; defaults to the main field of the model
  */
-export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
+export function plotInterpolatedSolution(model, result, plotType, plotDivId, options = {}) {
   console.time("plottingTime");
+  const { values, fieldName } = selectSolutionField(model, result, options.field);
+  result = { ...result, solutionVector: values, fields: undefined }; // Interpolate the selected field
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates; // TODO: Check if we should place it inside the 2D block
   const meshDimension = model.meshConfig.meshDimension;
   const meshData = prepareMesh(model.meshConfig); // Retrieve mesh connectivity details
@@ -275,7 +284,7 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId) {
       },
       //colorscale: 'Viridis',
       colorbar: {
-        title: "Solution",
+        title: fieldName ?? "Solution",
       },
       name: "Interpolated Solution Field",
     };

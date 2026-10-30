@@ -34,9 +34,11 @@ model.addBoundaryCondition("3", ["constantVelocity", 0, 0]); // Right
 
 // 4. Solve
 model.setSolverMethod("lusolve");
-const { solutionVector, nodesCoordinates } = model.solve();
+const { nodesCoordinates, fields } = model.solve();
 
-// 5. Print the results
+// 5. Print the results (one value per mesh node for each field)
 console.log(`Number of nodes in mesh: ${nodesCoordinates.nodesXCoordinates.length}`);
 console.log("Node coordinates:", nodesCoordinates);
-console.log("Solution vector:", solutionVector);
+console.log("x-velocity u:", fields.u);
+console.log("y-velocity v:", fields.v);
+console.log("Pressure p:", fields.p);

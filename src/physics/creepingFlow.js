@@ -274,3 +274,65 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions) {
     pressureNodeIndices,
   };
 }
+
+/**
+ * Function to split the creeping flow solution vector into named nodal fields
+ *
+ * The pressure is solved only at the corner nodes (Q1/P1). It is interpolated linearly to the
+ * mid-side (and, for quadrilaterals, centre) nodes, so that every field has one value per mesh node
+ *
+ * @param {Float64Array} solutionVector - The solution vector [u_0 … u_{N_2−1}, v_0 … v_{N_2−1}, p_0 … p_{N_1−1}]
+ * @param {object} meshData - Object containing prepared mesh data
+ * @param {number[]} pressureNodeIndices - Array mapping pressure DOF index to global Q2 node index
+ * @returns {object} An object containing one Float64Array per field, each with one value per mesh node:
+ *  - velocityMagnitude: The velocity magnitude sqrt(u² + v²)
+ *  - u: The x-velocity
+ *  - v: The y-velocity
+ *  - p: The pressure
+ */
+export function extractCreepingFlowFields(solutionVector, meshData, pressureNodeIndices) {
+  const { nop, totalNodes, elementShape } = meshData;
+
+  const u = Float64Array.from(solutionVector.slice(0, totalNodes));
+  const v = Float64Array.from(solutionVector.slice(totalNodes, 2 * totalNodes));
+  const velocityMagnitude = u.map((uValue, nodeIndex) => Math.hypot(uValue, v[nodeIndex]));
+
+  // Place the pressure at the corner nodes
+  const p = new Float64Array(totalNodes);
+  pressureNodeIndices.forEach((globalNodeIndex, pressureIndex) => {
+    p[globalNodeIndex] = solutionVector[2 * totalNodes + pressureIndex];
+  });
+
+  // Interpolate the pressure to the remaining nodes as the average of the corner nodes they lie between
+  // Q2 local numbering:    P2 local numbering:
+  //   2 - 5 - 8            2
+  //   |       |            | \
+  //   1   4   7            1   4
+  //   |       |            |     \
+  //   0 - 3 - 6            0 - 3 - 5
+  const interpolatedNodes =
+    elementShape === "triangle"
+      ? [
+          [1, [0, 2]],
+          [3, [0, 5]],
+          [4, [2, 5]],
+        ]
+      : [
+          [1, [0, 2]],
+          [3, [0, 6]],
+          [5, [2, 8]],
+          [7, [6, 8]],
+          [4, [0, 2, 6, 8]],
+        ];
+  for (const elementNodes of nop) {
+    for (const [localNodeIndex, cornerLocalIndices] of interpolatedNodes) {
+      const cornerSum = cornerLocalIndices.reduce(
+        (sum, cornerLocalIndex) => sum + p[elementNodes[cornerLocalIndex] - 1],
+        0,
+      );
+      p[elementNodes[localNodeIndex] - 1] = cornerSum / cornerLocalIndices.length;
+    }
+  }
+
+  return { velocityMagnitude, u, v, p };
+}

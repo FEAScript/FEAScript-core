@@ -12,6 +12,7 @@ import { prepareMesh, computeNodeNeighbors, getBoundarySegments } from "../mesh/
 import { pointInsideQuadrilateral, pointInsideTriangularElement } from "../elements/elementGeometry.js";
 import { BasisFunctions } from "../elements/basisFunctions.js";
 import { errorLog } from "../utilities/logging.js";
+import { selectSolutionField } from "./solutionFields.js";
 
 let _vtkModules = null;
 
@@ -104,7 +105,8 @@ export function createContourLineOptions(options = {}) {
  * @param {object} result - Object containing solution vector and node coordinates
  * @param {string} plotType - The type of plot (e.g., "line", "contour")
  * @param {string} plotDivId - The id of the HTML element for rendering
- * @param {object} [renderOptions={}] - Rendering options including colorScale, contourLines
+ * @param {object} [renderOptions={}] - Rendering options including colorScale, contourLines and field (the named
+ *  field to plot, for models with more than one unknown per node)
  */
 export async function plotSolutionVtk(model, result, plotType, plotDivId, renderOptions = {}) {
   console.time("plottingTime");
@@ -112,6 +114,7 @@ export async function plotSolutionVtk(model, result, plotType, plotDivId, render
   const meshData = prepareMesh(model.meshConfig);
   const vtkData = await transformSolverOutputToVtkData(model, result, meshData, {
     mode: meshDimension === "1D" && plotType === "line" ? "line" : "surface",
+    field: renderOptions.field,
   });
   await renderVtkScene(vtkData, plotDivId, model.solverConfig, plotType, renderOptions);
   console.timeEnd("plottingTime");
@@ -123,10 +126,13 @@ export async function plotSolutionVtk(model, result, plotType, plotDivId, render
  * @param {object} result - Object containing solution vector and node coordinates
  * @param {string} plotType - The type of plot (e.g., "contour")
  * @param {string} plotDivId - The id of the HTML element for rendering
- * @param {object} [renderOptions={}] - Rendering options including colorScale, contourLines
+ * @param {object} [renderOptions={}] - Rendering options including colorScale, contourLines and field (the named
+ *  field to plot, for models with more than one unknown per node)
  */
 export async function plotInterpolatedSolutionVtk(model, result, plotType, plotDivId, renderOptions = {}) {
   console.time("plottingTime");
+  const { values } = selectSolutionField(model, result, renderOptions.field);
+  result = { ...result, solutionVector: values, fields: undefined }; // Plot the selected field
   if (model.meshConfig.meshDimension !== "2D" || plotType !== "contour") {
     // Fallback to non-interpolated for non-2D contour cases
     const meshData = prepareMesh(model.meshConfig);
@@ -154,13 +160,15 @@ export async function plotInterpolatedSolutionVtk(model, result, plotType, plotD
  * @param {object} model - FEAScript model containing mesh and solver configuration
  * @param {object} result - Object containing solution vector and node coordinates
  * @param {object|null} [meshData=null] - Pre-prepared mesh data, or null to auto-prepare
- * @param {object} [options={}] - Options including mode ("surface" or "line")
+ * @param {object} [options={}] - Options including mode ("surface" or "line") and field (the named field to export,
+ *  for models with more than one unknown per node)
  * @returns {Promise<object>} VTK data object with points, scalars, cells, polyData, and metadata
  */
 export async function transformSolverOutputToVtkData(model, result, meshData = null, options = {}) {
   const preparedMesh = meshData ?? prepareMesh(model.meshConfig);
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
-  const solutionArray = extractScalarSolution(result.solutionVector, nodesXCoordinates.length);
+  const { values } = selectSolutionField(model, result, options.field);
+  const solutionArray = extractScalarSolution(values, nodesXCoordinates.length);
   const points = buildPointsArray(nodesXCoordinates, nodesYCoordinates);
 
   const mode = options.mode ?? "surface";
@@ -191,7 +199,7 @@ export async function transformSolverOutputToVtkData(model, result, meshData = n
  * @param {object} model - FEAScript model containing mesh and solver configuration
  * @param {object} result - Object containing solution vector and node coordinates
  * @param {object|null} [meshData=null] - Pre-prepared mesh data, or null to auto-prepare
- * @param {object} [options={}] - Options including mode ("surface" or "line")
+ * @param {object} [options={}] - Options including mode ("surface" or "line") and field (the named field to export)
  * @returns {Promise<string>} VTP XML string
  */
 export async function transformSolverOutputToVTP(model, result, meshData = null, options = {}) {
