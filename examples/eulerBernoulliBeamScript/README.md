@@ -20,6 +20,14 @@ one end, supported by a roller at midspan, and connected to a linear elastic spr
 end. It carries a uniformly distributed load over the clamped span, a concentrated moment at the
 roller, and a point load at the free end.
 
+### 2. Cantilever Beam with a Tip Load (`cantileverBeam1D.js`)
+
+A 4 m cantilever, clamped at x = 0, with a point load P at the free end. The example prints the tip
+deflection and rotation next to the closed-form values w(L) = P L³ / (3 EI) and
+θ(L) = P L² / (2 EI), which the cubic Hermite elements reproduce exactly. For a plotted version, see
+the corresponding [tutorial](https://feascript.com/tutorials/cantilever-beam-1d.html) on the
+FEAScript website.
+
 ## Model overview
 
 The 1D Euler-Bernoulli beam solver (`eulerBernoulliBeamScript`) assembles the fourth-order beam
@@ -108,3 +116,5 @@ npm install feascript
 ```bash
 node clampedSpringSupportedBeam1D/clampedSpringSupportedBeam1D.js
 ```
+
+(or `node cantileverBeam1D/cantileverBeam1D.js`)

@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Finite Element Simulation in JavaScript
- *  Version: 0.3.0 (RC) | https://feascript.com
+ *  Version: 0.3.0 | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -28,7 +28,7 @@ const cases = [
     elementOrder: "linear",
     solverMethods: ["lusolve", "jacobi", "frontal"],
     expected: [
-      { x: 0.5, u: 0.89448 },
+      { x: 0.5, u: 0.89376 },
       { x: 1, u: 0.87556 },
     ],
   },

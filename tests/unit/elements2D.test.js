@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Finite Element Simulation in JavaScript
- *  Version: 0.3.0 (RC) | https://feascript.com
+ *  Version: 0.3.0 | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -65,10 +65,10 @@ const elements = [
       [1, 1],
     ],
     area: 1,
-    // ∫∫ ksi^p eta^q over [0, 1] x [0, 1] = 1 / ((p + 1)(q + 1)), 1-point Gauss rule per direction
+    // ∫∫ ksi^p eta^q over [0, 1] x [0, 1] = 1 / ((p + 1)(q + 1)), 2-point Gauss rule per direction (2 × 2)
     exactIntegral: (p, q) => 1 / ((p + 1) * (q + 1)),
-    isExact: (p, q) => p <= 1 && q <= 1,
-    exactnessLabel: "degree 1 in each direction",
+    isExact: (p, q) => p <= 3 && q <= 3,
+    exactnessLabel: "degree 3 in each direction",
   },
   {
     elementShape: "quad",

@@ -19,6 +19,13 @@ This example solves a 2D lid-driven cavity flow using the creeping flow solver w
 [tutorial](https://feascript.com/tutorials/lid-driven-cavity-2d-creeping-flow.html) on the
 FEAScript website.
 
+### 2. Couette Flow in a 2D Channel (`couetteFlow2DCreepingFlow.js`)
+
+A channel whose top wall moves with velocity U, with a fixed bottom wall and stress-free (open)
+ends. The exact solution is the linear velocity profile u = U y / H with v = 0 and zero pressure,
+which the Taylor-Hood elements reproduce exactly. The example prints the velocity along the left
+end and the largest deviation from the exact solution.
+
 ## Running the Node.js examples
 
 ### 1. Create `package.json` with ES module support
@@ -38,5 +45,7 @@ npm install feascript
 ```bash
 node lidDrivenCavity2DCreepingFlow.js
 ```
+
+(or `node couetteFlow2DCreepingFlow/couetteFlow2DCreepingFlow.js`)
 
 (for the "Creeping Flow on a Lid-Driven 2D Cavity" example)

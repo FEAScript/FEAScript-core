@@ -40,10 +40,14 @@ elements only (with `maxIterations: 200000`, `tolerance: 1e-8`).
 
 | Element order | u at x = 0.5 | u at x = 1  |
 | ------------- | ------------ | ----------- |
-| Linear        | **0.89448**  | **0.87556** |
+| Linear        | **0.89376**  | **0.87555** |
 | Quadratic     | **0.89447**  | **0.87563** |
 
 Every solver method must give the same values. Tolerance used in the assertions: `1e-4`.
+
+The linear values were updated when linear elements moved from a 1-point to a 2-point Gauss rule
+([#105](https://github.com/FEAScript/FEAScript-core/issues/105)), which integrates the Gaussian source term more
+accurately.
 
 ## How to run
 
