@@ -1,9 +1,4 @@
-<img
-src="https://feascript.github.io/FEAScript-website/assets/feascript-creeping-flow.png"
-width="80"
-alt="FEAScript creeping flow logo"
-
->
+<img src="https://feascript.github.io/FEAScript-website/assets/feascript-creeping-flow.png" width="80" alt="FEAScript creeping flow logo">
 
 # Analytical Test — Couette Flow in 2D (Creeping Flow)
 
