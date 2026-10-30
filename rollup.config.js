@@ -13,7 +13,7 @@ const rewriteWorkerUrl = {
   renderChunk(code, chunk) {
     // Replace the source-relative wrapper.js path with the dist-sibling path so the
     // bundle resolves feascript-worker.esm.js correctly from any host path.
-    if (/feascript\.(esm|cjs|umd)\.js$/.test(chunk.fileName)) {
+    if (/feascript\.(esm\.js|cjs|umd\.js)$/.test(chunk.fileName)) {
       return {
         code: code.replace('"./wrapper.js"', '"./feascript-worker.esm.js"'),
         map: null,
@@ -46,7 +46,7 @@ export default [
     input: "src/index.js",
     output: [
       {
-        file: "dist/feascript.cjs.js",
+        file: "dist/feascript.cjs", // .cjs, since the package is "type": "module"
         format: "cjs",
         sourcemap: true,
       },
