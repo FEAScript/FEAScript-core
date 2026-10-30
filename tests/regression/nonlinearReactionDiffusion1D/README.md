@@ -34,10 +34,14 @@ The frontal solver is not yet supported for nonlinear `generalFormPDEScript`.
 
 | Element order | u at x = 1  | u at x = 5  | u at x = 10 |
 | ------------- | ----------- | ----------- | ----------- |
-| Linear        | **0.49653** | **0.10862** | **0.05639** |
+| Linear        | **0.50093** | **0.10962** | **0.05678** |
 | Quadratic     | **0.50436** | **0.11040** | **0.05709** |
 
 Tolerance used in the assertions: `1e-4`.
+
+The linear values were updated when linear elements moved from a 1-point to a 2-point Gauss rule
+([#105](https://github.com/FEAScript/FEAScript-core/issues/105)), which integrates the nonlinear reaction term
+more accurately.
 
 ## How to run
 

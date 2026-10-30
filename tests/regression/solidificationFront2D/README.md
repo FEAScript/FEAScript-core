@@ -42,9 +42,9 @@ mesh uses 0 bottom, 1 left, 2 top, 3 right, and the Gmsh meshes use 0 bottom, 1 
 
 | Mesh                            | Value at (x = 2, y = 2) | Nodal mean value |
 | ------------------------------- | ----------------------- | ---------------- |
-| 12 × 8 linear quadrilaterals    | **1.99824**             | **0.59715**      |
+| 12 × 8 linear quadrilaterals    | **1.96120**             | **0.59658**      |
 | 12 × 8 quadratic quadrilaterals | **1.98119**             | **0.62860**      |
-| `rect_quad_linear.msh`          | **1.77785**             | **0.53030**      |
+| `rect_quad_linear.msh`          | **1.89534**             | **0.53004**      |
 | `rect_quad_quadratic.msh`       | **1.95905**             | **0.59014**      |
 | `rect_triang_linear.msh`        | **1.89210**             | **0.54573**      |
 | `rect_triang_quadratic.msh`     | **1.96578**             | **0.59833**      |
@@ -53,6 +53,10 @@ The point (x = 2, y = 2) is the farthest point from the fixed boundaries, where 
 distance is 2. The viscous term that stabilizes the eikonal equation has a minimum that scales
 with the element size, so the coarse Gmsh meshes (characteristic length 0.7) are further from the
 exact value. Every solver method must give the same values. Tolerance used in the assertions: `1e-4`.
+
+The linear quadrilateral values were updated when linear quadrilaterals moved from a 1-point to a 2 × 2 Gauss
+rule ([#105](https://github.com/FEAScript/FEAScript-core/issues/105)), which no longer under-integrates the
+element matrices.
 
 ## How to run
 

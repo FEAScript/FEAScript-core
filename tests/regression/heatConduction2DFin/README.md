@@ -49,9 +49,9 @@ linear quadrilaterals and the linear triangles only (with `maxIterations: 200000
 
 | Mesh                           | Temperature at (x = 0, y = 2) | Nodal mean temperature |
 | ------------------------------ | ----------------------------- | ---------------------- |
-| 8 × 4 linear quadrilaterals    | **82.07057 °C**               | **154.20475 °C**       |
+| 8 × 4 linear quadrilaterals    | **81.18725 °C**               | **154.46251 °C**       |
 | 8 × 4 quadratic quadrilaterals | **81.31873 °C**               | **153.83640 °C**       |
-| `rect_quad_linear.msh`         | **83.13780 °C**               | **155.41548 °C**       |
+| `rect_quad_linear.msh`         | **81.22583 °C**               | **155.79030 °C**       |
 | `rect_quad_quadratic.msh`      | **81.32071 °C**               | **154.97068 °C**       |
 | `rect_triang_linear.msh`       | **81.19625 °C**               | **154.83616 °C**       |
 | `rect_triang_quadratic.msh`    | **81.32257 °C**               | **154.05011 °C**       |
@@ -60,6 +60,10 @@ The point (x = 0, y = 2) sits at the top-left corner of the fin — on the symme
 the convection boundary — and is sensitive to both the heat transfer coefficient and the thermal
 gradient across the domain. The nodal mean covers the whole field. Every solver method must give
 the same values. Tolerance used in the assertions: `1e-4`.
+
+The linear quadrilateral values were updated when linear quadrilaterals moved from a 1-point to a 2 × 2 Gauss
+rule ([#105](https://github.com/FEAScript/FEAScript-core/issues/105)). The 1-point rule under-integrated the
+stiffness matrix and the convection terms on the element sides.
 
 ## Patch test
 

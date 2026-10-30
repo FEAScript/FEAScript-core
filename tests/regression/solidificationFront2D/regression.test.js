@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Finite Element Simulation in JavaScript
- *  Version: 0.3.0 (RC) | https://feascript.com
+ *  Version: 0.3.0 | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -46,8 +46,8 @@ const cases = [
   {
     label: "12 × 8 linear quadrilaterals",
     mesh: structuredMesh("linear"),
-    expectedU: 1.99824,
-    expectedMeanU: 0.59715,
+    expectedU: 1.9612,
+    expectedMeanU: 0.59658,
   },
   {
     label: "12 × 8 quadratic quadrilaterals",
@@ -59,8 +59,8 @@ const cases = [
     label: "Gmsh linear quadrilaterals (rect_quad_linear.msh)",
     meshFile: "rect_quad_linear.msh",
     elementOrder: "linear",
-    expectedU: 1.77785,
-    expectedMeanU: 0.5303,
+    expectedU: 1.89534,
+    expectedMeanU: 0.53004,
   },
   {
     label: "Gmsh quadratic quadrilaterals (rect_quad_quadratic.msh)",

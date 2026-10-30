@@ -52,6 +52,15 @@ Demonstrates both `thermalConductivity(x, y)` and `heatSource(x, y)` as function
 2D structured mesh. The domain is split into a high-conductivity metal half and a low-conductivity
 ceramic half, with a localised volumetric heat source in the upper strip.
 
+### 7. NAFEMS T4 Benchmark (`heatConduction2DNafemsT4.js`)
+
+Reproduces the NAFEMS T4 benchmark for 2D heat conduction with convection: a 0.6 m × 1.0 m plate with
+a fixed temperature of 100 °C on the bottom edge, an insulated left edge, and convection
+(h = 750 W/(m²·K), ambient 0 °C) on the top and right edges. It prints the temperature at point E
+(x = 0.6 m, y = 0.2 m) next to the published target of 18.3 °C. The 12 × 20 quadratic mesh gives
+18.26 °C, within 0.01 °C of the converged value of 18.25 °C. This is an independent reproduction
+of the benchmark, not sponsored or endorsed by NAFEMS.
+
 ## Spatially varying coefficients
 
 Both `thermalConductivity` and `heatSource` can be provided either as constants (scalars) or as
@@ -99,4 +108,5 @@ npm install feascript
 node heatConduction2DFin.js
 ```
 
-(or `node heatConduction2DFinGmsh.js` / `node heatConduction2DRhomFinGmsh.js`)
+(or `node heatConduction2DFinGmsh.js` / `node heatConduction2DRhomFinGmsh.js` /
+`node heatConduction2DNafemsT4/heatConduction2DNafemsT4.js`)

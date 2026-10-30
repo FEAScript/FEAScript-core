@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Finite Element Simulation in JavaScript
- *  Version: 0.3.0 (RC) | https://feascript.com
+ *  Version: 0.3.0 | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -60,9 +60,12 @@ export class NumericalIntegration {
         gaussWeights = [wa, wa, wa, wb, wb, wb];
       }
     } else if (this.elementOrder === "linear") {
-      // For linear elements, use 1-point Gauss quadrature
-      gaussPoints[0] = 0.5;
-      gaussWeights[0] = 1;
+      // For linear elements, use 2-point Gauss quadrature (exact up to degree 3), so that the
+      // stiffness and mass terms of bilinear quadrilaterals (2×2 points) are integrated exactly
+      gaussPoints[0] = (1 - 1 / Math.sqrt(3)) / 2;
+      gaussPoints[1] = (1 + 1 / Math.sqrt(3)) / 2;
+      gaussWeights[0] = 1 / 2;
+      gaussWeights[1] = 1 / 2;
     } else if (this.elementOrder === "quadratic") {
       // For quadratic elements, use 3-point Gauss quadrature
       gaussPoints[0] = (1 - Math.sqrt(3 / 5)) / 2;
