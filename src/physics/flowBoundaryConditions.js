@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Finite Element Simulation in JavaScript
- *  Version: 0.3.1 | https://feascript.com
+ *  Version: 0.4.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -72,7 +72,20 @@ export class FlowBoundaryConditions {
     let hasStressFree = false;
 
     if (this.meshDimension === "2D") {
-      Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
+      // A node shared by two boundaries takes the condition applied last. Apply moving walls first, so that
+      // zero-velocity (no-slip) conditions win at shared corners: a moving lid then does not leak through the
+      // corner nodes of the side walls, which would break the mass balance
+      const isMovingWall = (boundaryKey) => {
+        const [type, xVelocityValue, yVelocityValue] = this.boundaryConditions[boundaryKey];
+        return type === "constantVelocity" && (xVelocityValue !== 0 || yVelocityValue !== 0);
+      };
+      const boundaryKeys = Object.keys(this.boundaryConditions);
+      const orderedBoundaryKeys = [
+        ...boundaryKeys.filter(isMovingWall),
+        ...boundaryKeys.filter((boundaryKey) => !isMovingWall(boundaryKey)),
+      ];
+
+      orderedBoundaryKeys.forEach((boundaryKey) => {
         const boundaryConditionType = this.boundaryConditions[boundaryKey][0];
 
         if (boundaryConditionType === "stressFree") {

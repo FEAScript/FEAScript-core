@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Finite Element Simulation in JavaScript
- *  Version: 0.3.1 | https://feascript.com
+ *  Version: 0.4.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -31,6 +31,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const meshesDirectory = path.join(__dirname, "../../meshes");
 
 const TOLERANCE = 1e-4;
+const SYMMETRY_TOLERANCE = 1e-10;
 
 // The lid is the top boundary, key 2 for both the structured and the Gmsh meshes
 const LID_BOUNDARY_KEY = "2";
@@ -46,25 +47,25 @@ const cases = [
       maxX: 4,
       maxY: 2,
     },
-    expectedMinU: -0.32956,
-    expectedMeanU: 0.04266,
-    expectedMeanV: -0.01122,
+    expectedMinU: -0.32446,
+    expectedMeanU: 0.03988,
+    expectedMeanV: 0,
     expectedPressureNodes: 91,
   },
   {
     label: "Gmsh Q2-Q1 quadrilaterals (rect_quad_quadratic.msh)",
     meshFile: "rect_quad_quadratic.msh",
-    expectedMinU: -0.26737,
-    expectedMeanU: 0.0561,
-    expectedMeanV: 0.00276,
+    expectedMinU: -0.31898,
+    expectedMeanU: 0.02027,
+    expectedMeanV: -0.00013,
     expectedPressureNodes: 41,
   },
   {
     label: "Gmsh P2-P1 triangles (rect_triang_quadratic.msh)",
     meshFile: "rect_triang_quadratic.msh",
-    expectedMinU: -0.31934,
-    expectedMeanU: 0.05782,
-    expectedMeanV: 0.0115,
+    expectedMinU: -0.31768,
+    expectedMeanU: 0.04319,
+    expectedMeanV: -0.0002,
     expectedPressureNodes: 35,
   },
 ];
@@ -137,6 +138,29 @@ for (const testCase of cases) {
     pressureNodes === testCase.expectedPressureNodes,
     `${label}: number of pressure nodes: expected ${testCase.expectedPressureNodes}, got ${pressureNodes}`,
   );
+
+  // The structured mesh is symmetric about x = maxX / 2, and so is the Stokes flow: u(x, y) = u(maxX - x, y)
+  // and v(x, y) = -v(maxX - x, y). A corner of the lid that leaks through a side wall breaks this symmetry
+  if (testCase.mesh) {
+    const { nodesXCoordinates, nodesYCoordinates } = nodesCoordinates;
+    const nodeKey = (x, y) => `${x.toFixed(9)},${y.toFixed(9)}`;
+    const nodeIndices = new Map(nodesXCoordinates.map((x, i) => [nodeKey(x, nodesYCoordinates[i]), i]));
+    let asymmetry = 0;
+    nodesXCoordinates.forEach((x, i) => {
+      const mirror = nodeIndices.get(nodeKey(testCase.mesh.maxX - x, nodesYCoordinates[i]));
+      asymmetry = Math.max(
+        asymmetry,
+        Math.abs(xVelocities[i] - xVelocities[mirror]),
+        Math.abs(yVelocities[i] + yVelocities[mirror]),
+      );
+    });
+    assert(
+      asymmetry < SYMMETRY_TOLERANCE,
+      `${label}: velocity is mirror-symmetric about x = ${
+        testCase.mesh.maxX / 2
+      }, largest deviation ${asymmetry.toExponential(3)} (tolerance ${SYMMETRY_TOLERANCE})`,
+    );
+  }
 
   // Named fields (one value per mesh node) match the solution vector
   const fieldsMatch =

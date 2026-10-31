@@ -34,13 +34,22 @@ does not converge for saddle-point systems.
 
 | Mesh                               | Minimum u (return flow) | Nodal mean u | Nodal mean v | Pressure nodes |
 | ---------------------------------- | ----------------------- | ------------ | ------------ | -------------- |
-| Q2-Q1, 12 × 6 structured           | **−0.32956**            | **0.04266**  | **−0.01122** | **91**         |
-| Q2-Q1, `rect_quad_quadratic.msh`   | **−0.26737**            | **0.05610**  | **0.00276**  | **41**         |
-| P2-P1, `rect_triang_quadratic.msh` | **−0.31934**            | **0.05782**  | **0.01150**  | **35**         |
+| Q2-Q1, 12 × 6 structured           | **−0.32446**            | **0.03988**  | **0**        | **91**         |
+| Q2-Q1, `rect_quad_quadratic.msh`   | **−0.31898**            | **0.02027**  | **−0.00013** | **41**         |
+| P2-P1, `rect_triang_quadratic.msh` | **−0.31768**            | **0.04319**  | **−0.00020** | **35**         |
 
 The minimum x-velocity is the strongest return flow of the recirculation below the lid. The
 pressure nodes are the element corners (13 × 7 for the structured mesh) or the triangle vertices.
 Tolerance used in the assertions: `1e-4`.
+
+The values were updated when zero-velocity (no-slip) conditions started to take precedence at nodes shared with a
+moving wall. Before, the condition applied last won, so one corner of the lid took the lid velocity and leaked
+mass through a side wall; with the pressure pinned at one node, this produced a spurious flow near that node. The
+structured mesh solution is now mirror-symmetric about x = 2 (nodal mean v is zero), as the Stokes flow in this
+cavity must be.
+
+On the structured mesh the test also checks that the velocity is mirror-symmetric about x = 2,
+u(x, y) = u(4 − x, y) and v(x, y) = −v(4 − x, y), to within `1e-10`, as the Stokes flow in this cavity must be.
 
 The test also solves each case with a viscosity of 2.5, given as a number and as a function of
 (x, y). The Stokes equations with velocity boundary conditions are linear in μ, so the velocity
@@ -55,6 +64,9 @@ node tests/regression/lidDrivenCavity2DCreepingFlow/regression.test.js
 ```
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.
+
+A passing run prints twenty-five `PASS:` lines followed by `25 passed, 0 failed.`. A failing run prints one or
+more `FAIL:` lines, ends with the same summary line format, and exits with code 1.
 
 ## After modifying the code
 
