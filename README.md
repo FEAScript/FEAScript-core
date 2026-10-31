@@ -47,6 +47,14 @@ You can run simulations with FEAScript by calling its functions from JavaScript 
 
 You can use FEAScript in browser environments in three ways:
 
+- **Import from CDN (jsDelivr):**
+
+  ```html
+  <script type="module">
+    import { FEAScriptModel } from "https://cdn.jsdelivr.net/gh/FEAScript/FEAScript-core/dist/feascript.esm.js";
+  </script>
+  ```
+
 - **Import from Hosted ESM Build:**
 
   ```html
@@ -55,13 +63,13 @@ You can use FEAScript in browser environments in three ways:
   </script>
   ```
 
-- **Import from CDN:**
-
-  ```html
-  <script type="module">
-    import { FEAScriptModel } from "https://cdn.jsdelivr.net/gh/FEAScript/FEAScript-core/dist/feascript.esm.js";
-  </script>
-  ```
+  > **Note:** Both URLs above always serve the latest FEAScript release, so your page updates automatically when a new version is published (new versions may include breaking changes). To freeze your page to a specific version, add a version tag to the jsDelivr URL:
+  >
+  > ```html
+  > <script type="module">
+  >   import { FEAScriptModel } from "https://cdn.jsdelivr.net/gh/FEAScript/FEAScript-core@0.3.1/dist/feascript.esm.js";
+  > </script>
+  > ```
 
 - **Download and Use Locally:**
 
