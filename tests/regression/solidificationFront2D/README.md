@@ -1,6 +1,6 @@
 <img src="https://feascript.github.io/FEAScript-website/assets/feascript-front-propagation.png" width="80" alt="FEAScript front propagation logo">
 
-# Regression Test — Solidification Front in 2D
+# Regression Test — Solidification Front in 2D (Front Propagation)
 
 ## Purpose
 
@@ -62,6 +62,9 @@ node tests/regression/solidificationFront2D/regression.test.js
 ```
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.
+
+A passing run prints thirty-six `PASS:` lines followed by `36 passed, 0 failed.`. A failing run prints one or
+more `FAIL:` lines, ends with the same summary line format, and exits with code 1.
 
 ## After modifying the code
 

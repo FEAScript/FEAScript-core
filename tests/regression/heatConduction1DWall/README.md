@@ -49,15 +49,8 @@ node tests/regression/heatConduction1DWall/regression.test.js
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.
 
-A passing run prints a `PASS:` line for each check, followed by a summary line:
-
-```
-PASS: linear elements, lusolve: temperature at x=0: expected 7.6087, got 7.608695652173906 (tolerance 0.0001)
-...
-10 passed, 0 failed.
-```
-
-A failing run prints one or more `FAIL:` lines, ends with the same summary line format, and exits with code 1.
+A passing run prints ten `PASS:` lines followed by `10 passed, 0 failed.`. A failing run prints one or
+more `FAIL:` lines, ends with the same summary line format, and exits with code 1.
 
 ## After modifying the code
 

@@ -1,6 +1,6 @@
 <img src="https://feascript.github.io/FEAScript-website/assets/feascript-structural-mechanics.png" width="80" alt="FEAScript Euler-Bernoulli beam logo">
 
-# Regression Test — Euler-Bernoulli Beam
+# Regression Test — Euler-Bernoulli Beam in 1D (Clamped and Spring-Supported)
 
 ## Purpose
 
@@ -79,13 +79,8 @@ node tests/regression/eulerBernoulliBeam/regression.test.js
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.
 
-A passing run prints a `PASS:` line for each check, followed by a summary line:
-
-```
-8 passed, 0 failed.
-```
-
-A failing run prints one or more `FAIL:` lines, ends with the same summary line format, and exits with code 1.
+A passing run prints ten `PASS:` lines followed by `10 passed, 0 failed.`. A failing run prints one or
+more `FAIL:` lines, ends with the same summary line format, and exits with code 1.
 
 ## After modifying the code
 

@@ -7,7 +7,7 @@ front propagation problems using the eikonal equation.
 
 ## Examples
 
-### 1. Solidification Front Propagation in a 2D Domain (`SolidificationFront2D.js`)
+### 1. Solidification Front Propagation in a 2D Domain (`solidificationFront2D.js`)
 
 This example demonstrates solving an eikonal equation in a 2D domain to track the movement of a
 solidification interface. For detailed information on the model setup, refer to the corresponding
@@ -27,10 +27,10 @@ echo '{"type":"module"}' > package.json
 npm install feascript
 ```
 
-### 3. Run the example
+### 3. Run an example
+
+From this directory, run any of the examples:
 
 ```bash
-node SolidificationFront2D.js
+node solidificationFront2D/solidificationFront2D.js
 ```
-
-(for the "Solidification Front Propagation in a 2D Domain" example)

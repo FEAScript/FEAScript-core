@@ -41,8 +41,8 @@ node tests/verification/analytical/eulerBernoulliBeam1DCantilever/analytical.tes
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.
 
-A passing run prints five `PASS:` lines and `5 passed, 0 failed.`; a failing run prints `FAIL:`
-with the computed and expected values, and exits with code 1.
+A passing run prints five `PASS:` lines followed by `5 passed, 0 failed.`. A failing run prints one or
+more `FAIL:` lines, ends with the same summary line format, and exits with code 1.
 
 ## After modifying the code
 

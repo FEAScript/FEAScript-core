@@ -45,3 +45,14 @@ node tests/verification/analytical/creepingFlow2DCouette/analytical.test.js
 ```
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.
+
+A passing run prints nine `PASS:` lines followed by `9 passed, 0 failed.`. A failing run prints one or
+more `FAIL:` lines, ends with the same summary line format, and exits with code 1.
+
+## After modifying the code
+
+| Situation                                   | Action                                                                                                   |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Bug fix that should not change results      | Run the test — it must still pass.                                                                       |
+| Change to the creeping flow assembler       | The expected values do not move. If a case now fails, the change altered the physics, not the reference. |
+| New element pair or flow boundary condition | Add a case for it here; Couette flow stays exact for any Taylor-Hood pair.                               |

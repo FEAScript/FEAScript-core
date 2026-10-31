@@ -48,6 +48,9 @@ node tests/regression/nonlinearReactionDiffusion1D/regression.test.js
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.
 
+A passing run prints six `PASS:` lines followed by `6 passed, 0 failed.`. A failing run prints one or
+more `FAIL:` lines, ends with the same summary line format, and exits with code 1.
+
 ## After modifying the code
 
 | Situation                              | Action                                                                                               |

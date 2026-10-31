@@ -33,10 +33,11 @@ echo '{"type":"module"}' > package.json
 npm install feascript
 ```
 
-### 3. Run the example
+### 3. Run an example
+
+From this directory, run any of the examples:
 
 ```bash
-node advectionDiffusion1D.js
+node advectionDiffusion1D/advectionDiffusion1D.js
+node nonlinearReactionDiffusion1D/nonlinearReactionDiffusion1D.js
 ```
-
-(for the "Advection-Diffusion with Gaussian Source" example)

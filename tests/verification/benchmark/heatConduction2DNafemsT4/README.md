@@ -44,8 +44,8 @@ node tests/verification/benchmark/heatConduction2DNafemsT4/benchmark.test.js
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.
 
-A passing run prints two `PASS:` lines followed by `2 passed, 0 failed.`. A failing run prints
-one or more `FAIL:` lines, ends with the same summary line format, and exits with code 1.
+A passing run prints two `PASS:` lines followed by `2 passed, 0 failed.`. A failing run prints one or
+more `FAIL:` lines, ends with the same summary line format, and exits with code 1.
 
 ## After modifying the code
 

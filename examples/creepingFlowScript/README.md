@@ -35,12 +35,11 @@ echo '{"type":"module"}' > package.json
 npm install feascript
 ```
 
-### 3. Run the example
+### 3. Run an example
+
+From this directory, run any of the examples:
 
 ```bash
-node lidDrivenCavity2DCreepingFlow.js
+node lidDrivenCavity2DCreepingFlow/lidDrivenCavity2DCreepingFlow.js
+node couetteFlow2DCreepingFlow/couetteFlow2DCreepingFlow.js
 ```
-
-(or `node couetteFlow2DCreepingFlow/couetteFlow2DCreepingFlow.js`)
-
-(for the "Creeping Flow on a Lid-Driven 2D Cavity" example)

@@ -43,8 +43,8 @@ node tests/verification/analytical/heatConduction2DVaryingCoefficients/analytica
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.
 
-A passing run prints two `PASS:` lines and `2 passed, 0 failed.`; a failing run prints `FAIL:`
-with the largest deviation and the node it occurred at, and exits with code 1.
+A passing run prints two `PASS:` lines followed by `2 passed, 0 failed.`. A failing run prints one or
+more `FAIL:` lines, ends with the same summary line format, and exits with code 1.
 
 ## After modifying the code
 
