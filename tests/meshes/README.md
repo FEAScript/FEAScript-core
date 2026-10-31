@@ -1,9 +1,10 @@
-<img src="https://feascript.github.io/FEAScript-website/assets/feascript-general-form-pde.png" width="80" alt="FEAScript general form PDE logo">
+<img src="https://feascript.github.io/FEAScript-website/assets/feascript-logo.png" width="80" alt="FEAScript logo">
 
 # Test Meshes
 
-Gmsh meshes (`.msh` version 4.1, ASCII) shared by the tests, all generated from
-[`rect.geo`](rect.geo) (rectangle x ∈ [0, 4], y ∈ [0, 2], characteristic length 0.7).
+Gmsh meshes (`.msh` version 4.1, ASCII) shared by the tests, generated from
+[`rect.geo`](rect.geo) (rectangle x ∈ [0, 4], y ∈ [0, 2], characteristic length 0.7) and
+[`lshape.geo`](lshape.geo) (L-shaped domain, see [below](#l-shaped-domain-meshes)).
 
 Mesh files are named `<geometry>_<element shape>_<element order>.msh`, with element shape
 `quad` (quadrilaterals) or `triang` (triangles) and element order `linear` or `quadratic`.
@@ -15,7 +16,7 @@ Mesh files are named `<geometry>_<element shape>_<element order>.msh`, with elem
 | `rect_triang_linear.msh`    | 3-node triangles, 2-node lines      | `linear`       |
 | `rect_triang_quadratic.msh` | 6-node triangles, 3-node lines      | `quadratic`    |
 
-Physical groups (stored as boundary keys `tag − 1`), the same in all meshes:
+Physical groups (stored as boundary keys `tag − 1`), the same in all `rect` meshes:
 
 | Physical tag | Name   | Boundary key |
 | ------------ | ------ | ------------ |
@@ -56,3 +57,32 @@ like the sides of FEAScript structured meshes.
 - [`verification/analytical/creepingFlow2DCouette`](../verification/analytical/creepingFlow2DCouette/README.md)
 - [`verification/analytical/frontPropagation2DPlanarFront`](../verification/analytical/frontPropagation2DPlanarFront/README.md)
 - [`unit/plotInterpolation.test.js`](../unit/plotInterpolation.test.js)
+
+## L-shaped domain meshes
+
+[`lshape.geo`](lshape.geo) describes the L-shaped domain of the Code_Aster TPLP01 benchmark: the
+square x, y ∈ [0, 0.8] without the quarter x ∈ [0.4, 0.8], y ∈ [0, 0.4]. The characteristic length
+is 0.05, refined to 0.01 at the re-entrant corner (0.4, 0.4). The boundary is split, and interior
+points are embedded, so that the meshes have nodes at the 13 reference points of TPLP01 (the 0.2 m
+grid inside the domain).
+
+| Mesh file                     | Gmsh element types                  | `elementOrder` |
+| ----------------------------- | ----------------------------------- | -------------- |
+| `lshape_quad_quadratic.msh`   | 9-node quadrilaterals, 3-node lines | `quadratic`    |
+| `lshape_triang_quadratic.msh` | 6-node triangles, 3-node lines      | `quadratic`    |
+
+| Physical tag | Name      | Edges            | Boundary key |
+| ------------ | --------- | ---------------- | ------------ |
+| 1            | left      | x = 0            | 0            |
+| 2            | right     | x = 0.8, y ≥ 0.4 | 1            |
+| 3            | insulated | all other edges  | 2            |
+| 4            | domain    | —                | —            |
+
+`lshape.geo` generates the triangle mesh as is. For the quadrilateral mesh, uncomment
+`Recombine Surface{1};` first. Then run (Gmsh 4.12.1 was used):
+
+```bash
+gmsh lshape.geo -save -format msh41 -o <mesh file>
+```
+
+Used by [`verification/benchmark/heatConduction2DCodeAsterTplp01`](../verification/benchmark/heatConduction2DCodeAsterTplp01/README.md).
