@@ -4,6 +4,32 @@ All notable changes to FEAScript-core are documented in this file. The format is
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 [Semantic Versioning](https://semver.org/) (while in 0.x, minor versions may contain breaking changes).
 
+## [0.4.0] (RC)
+
+### Added
+
+- Benchmark tests for 2D heat conduction from the Code_Aster validation manual: TPLP302 (strip with a
+  Fourier series solution) and TPLP01 (L-shaped domain with a re-entrant corner, on Gmsh triangle and
+  quadrilateral meshes)
+
+### Changed
+
+- The Jacobi solver (`"jacobi"`) stops on the residual relative to the right-hand side, ‖R − J u‖ / ‖R‖, instead
+  of on the size of the update, and its default `tolerance` is `1e-8`. The update size could be small while the
+  solution was still about 1e-3 away, so the method reported convergence too early
+
+### Removed
+
+- The NAFEMS T4 Node.js example: the benchmark is covered by its test
+  (`tests/verification/benchmark/heatConduction2DNafemsT4`) and by the verification pages of the documentation
+
+### Fixed
+
+- Creeping flow with velocity conditions on every boundary: at a node shared by a moving wall and a fixed wall,
+  the condition applied last won, so one corner of a moving lid leaked fluid through a side wall. With the
+  pressure fixed at one node, this gave a spurious flow near that node. Zero-velocity (no-slip) conditions now
+  take precedence at shared nodes, and the lid-driven cavity is now mirror-symmetric
+
 ## [0.3.1] - 2026-10-30
 
 ### Fixed
@@ -115,6 +141,7 @@ All notable changes to FEAScript-core are documented in this file. The format is
 - Initial release: steady heat conduction in 1D and 2D (`solidHeatTransferScript`), structured meshes and
   Gmsh import, Jacobi and LU solvers, Plotly plotting, and a web worker (`FEAScriptWorker`)
 
+[0.4.0]: https://github.com/FEAScript/FEAScript-core/compare/0.3.1...HEAD
 [0.3.1]: https://github.com/FEAScript/FEAScript-core/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/FEAScript/FEAScript-core/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/FEAScript/FEAScript-core/compare/0.1.3...0.2.0
