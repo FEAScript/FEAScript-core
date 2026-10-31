@@ -82,18 +82,36 @@ export class MyClass {
 
 ## Branching & Workflow
 
+FEAScript uses two kinds of long-lived branches:
+
+- `main`: holds the current stable version of FEAScript, i.e., the latest published release. It is only updated when a release is finalized (or by a hotfix)
+- `release/<version>` (e.g., `release/0.4.0-rc`): the active development branch for the upcoming release. All contributions go here
+
+When a release is ready, the `release/<version>` branch is merged into `main` and tagged.
+
 To contribute a new feature or fix:
 
-- Do not commit directly to `main`
-- Instead, create a short‑lived branch:
+- Do not commit to or open pull requests against `main`
+- Instead, create a short‑lived branch from the current `release/<version>` branch (the most recent one listed under [branches](https://github.com/FEAScript/FEAScript-core/branches)):
   - `feature/<topic>` for new functionality
   - `fix/<issue>` for bug fixes
 
 External contributors:
 
 1.  Fork the repo
-2.  Branch from `main` in your fork
-3.  Push and open a PR from your fork’s branch into `main`
+2.  Branch from the current `release/<version>` branch in your fork
+3.  Push and open a PR from your fork’s branch into the same `release/<version>` branch
+
+> **Note:** GitHub selects `main` as the base branch by default when opening a PR. Make sure to change the base to the current `release/<version>` branch.
+
+### Hotfixes
+
+The only exception is an urgent fix to an already published release:
+
+1.  Create a `hotfix/<issue>` branch from `main`
+2.  Open a PR from it into `main`
+
+After the hotfix is merged, maintainers merge `main` back into the active `release/<version>` branch so the fix is not lost in the next release.
 
 ## Local Testing
 
