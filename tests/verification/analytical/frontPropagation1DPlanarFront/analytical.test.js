@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Finite Element Simulation in JavaScript
- *  Version: 0.3.1 | https://feascript.com
+ *  Version: 0.4.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -12,7 +12,11 @@
  *
  * Guards the 1D front propagation (eikonal) assembly for linear and quadratic elements. A front
  * starting at the left boundary has the distance function u = x as exact solution. The viscous term
- * that stabilizes the eikonal equation shifts the solution slightly, so the tolerance is 5e-2.
+ * that stabilizes the eikonal equation conflicts with the zero-gradient condition at the right
+ * boundary, where it bends the solution in a boundary layer whose largest deviation equals the
+ * viscous coefficient (1e-2), so the nodal check uses a tolerance of 5e-2. Away from that boundary
+ * the layer has decayed, so the interior is checked separately with a tight tolerance on meshes that
+ * resolve it.
  *
  * Run: node tests/verification/analytical/frontPropagation1DPlanarFront/analytical.test.js (or npm test)
  */
@@ -22,12 +26,14 @@ import { basicLog, errorLog } from "../../../../src/utilities/logging.js";
 
 const TOLERANCE = 5e-2;
 const SOLVER_TOLERANCE = 1e-8;
+const INTERIOR_TOLERANCE = 1e-8;
+const INTERIOR_LIMIT = 1.5; // x <= 1.5 is 50 boundary layer widths away from the right boundary
 
-function runSimulation(elementOrder, solverMethod, frontValue = 0) {
+function runSimulation(elementOrder, solverMethod, frontValue = 0, numElementsX = 20) {
   const model = new FEAScriptModel();
 
   model.setModelConfig("frontPropagationScript");
-  model.setMeshConfig({ meshDimension: "1D", elementOrder, numElementsX: 20, maxX: 2 });
+  model.setMeshConfig({ meshDimension: "1D", elementOrder, numElementsX, maxX: 2 });
 
   // Front starts at the left boundary
   model.addBoundaryCondition("0", ["constantValue", frontValue]);
@@ -96,6 +102,26 @@ for (const elementOrder of ["linear", "quadratic"]) {
       )} (tolerance ${TOLERANCE})`,
     );
   }
+}
+
+// Interior, away from the boundary layer at the right boundary, on meshes that resolve the layer
+for (const [elementOrder, numElementsX] of [
+  ["linear", 80],
+  ["quadratic", 40],
+]) {
+  const { solution, nodesXCoordinates } = runSimulation(elementOrder, "lusolve", 0, numElementsX);
+  const interiorError = Math.max(
+    ...solution
+      .map((value, nodeIndex) => [value, nodesXCoordinates[nodeIndex]])
+      .filter(([, x]) => x <= INTERIOR_LIMIT)
+      .map(([value, x]) => Math.abs(value - x)),
+  );
+  assert(
+    interiorError < INTERIOR_TOLERANCE,
+    `${numElementsX} ${elementOrder} elements: u = x for x <= ${INTERIOR_LIMIT}, largest nodal deviation ${interiorError.toExponential(
+      3,
+    )} (tolerance ${INTERIOR_TOLERANCE})`,
+  );
 }
 
 basicLog("");
