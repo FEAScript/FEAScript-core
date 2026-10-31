@@ -137,6 +137,20 @@ If you forgot to sign off:
 
 Then force-push your branch to update the PR.
 
+### Author Name (.mailmap)
+
+If your commits appear under different names or emails (e.g., a username in some and your full name in others), you can add an entry to the [`.mailmap`](.mailmap) file so Git tools such as `git log`, `git shortlog` and `git blame` show a single, consistent identity. Existing commits are not modified. Use one line per identity:
+
+```
+# Use this name for all commits made with this email
+Your Full Name <your@email.com>
+
+# Also map commits made with a different email to your preferred name and email
+Your Full Name <your@email.com> <old@email.com>
+```
+
+Include the `.mailmap` change in your PR.
+
 ## Local Testing
 
 Before submitting a pull request, test your modifications by running the FEAScript library from a local directory. For example, you can load the library in your HTML file as follows:
