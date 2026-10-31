@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Finite Element Simulation in JavaScript
- *  Version: 0.3.1 | https://feascript.com
+ *  Version: 0.4.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -26,8 +26,8 @@ import * as Comlink from "../vendor/comlink.mjs";
  *  - iterations: Number of iterations performed (for iterative methods)
  */
 export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, options = {}) {
-  // Extract options
-  const { maxIterations = 10000, tolerance = 1e-4 } = options;
+  // Extract options (the Jacobi tolerance applies to the residual relative to the right-hand side)
+  const { maxIterations = 10000, tolerance = 1e-8 } = options;
 
   let solutionVector = new Float64Array(0);
   let converged = true;

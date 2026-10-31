@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Finite Element Simulation in JavaScript
- *  Version: 0.3.1 | https://feascript.com
+ *  Version: 0.4.0 (RC) | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -45,6 +45,7 @@ export function jacobiSolver(systemMatrix, rightHandSideVector, initialGuess, op
   let solutionVector = new Float64Array(initialGuess);
   let updatedSolutionVector = new Float64Array(n);
   const diff = new Float64Array(n);
+  const rightHandSideNorm = euclideanNorm(rhs) || 1; // An absolute residual for a zero right-hand side
 
   // Jacobi update: xNew[i] = (b[i] - sum over j != i of A[i][j] * x[j]) / A[i][i]
   for (let iter = 0; iter < maxIterations; iter++) {
@@ -57,9 +58,11 @@ export function jacobiSolver(systemMatrix, rightHandSideVector, initialGuess, op
       updatedSolutionVector[i] = (rhs[i] - offDiagonalSum) / diagonal[i];
     }
 
-    // Compute diff and copy updatedSolutionVector into solutionVector
-    for (let i = 0; i < n; i++) diff[i] = updatedSolutionVector[i] - solutionVector[i];
-    const residual = euclideanNorm(diff);
+    // Residual of the current iterate, r = b - A x = D (xNew - x), relative to the right-hand side. The size of
+    // the update alone is not a convergence measure: Jacobi converges slowly, so small updates can remain far
+    // from the solution
+    for (let i = 0; i < n; i++) diff[i] = diagonal[i] * (updatedSolutionVector[i] - solutionVector[i]);
+    const residual = euclideanNorm(diff) / rightHandSideNorm;
     copyVector(updatedSolutionVector, solutionVector);
 
     if (residual < tolerance) {
