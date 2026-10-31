@@ -8,6 +8,7 @@ Thank you for your interest in contributing! FEAScript is in early development, 
 - [Variable & File Naming](#variable--file-naming)
 - [File Structure](#file-structure)
 - [Branching & Workflow](#branching--workflow)
+- [Signing Off Commits (DCO)](#signing-off-commits-dco)
 - [Local Testing](#local-testing)
 - [Running the Node.js Examples](#running-the-nodejs-examples)
 - [Verifying Your Changes](#verifying-your-changes)
@@ -112,6 +113,29 @@ The only exception is an urgent fix to an already published release:
 2.  Open a PR from it into `main`
 
 After the hotfix is merged, maintainers merge `main` back into the active `release/<version>` branch so the fix is not lost in the next release.
+
+## Signing Off Commits (DCO)
+
+All commits must be signed off under the [Developer Certificate of Origin (DCO)](https://developercertificate.org). By signing off, you certify that you wrote the code or otherwise have the right to submit it under the project's license.
+
+To sign off, add the `-s` flag when committing:
+
+```bash
+git commit -s -m "Your commit message"
+```
+
+This appends a line like the following to your commit message, using your `user.name` and `user.email` from Git config:
+
+```
+Signed-off-by: Jane Doe <jane@example.com>
+```
+
+If you forgot to sign off:
+
+- Last commit only: `git commit --amend -s --no-edit`
+- Several commits: `git rebase --signoff HEAD~N` (where `N` is the number of commits)
+
+Then force-push your branch to update the PR.
 
 ## Local Testing
 
