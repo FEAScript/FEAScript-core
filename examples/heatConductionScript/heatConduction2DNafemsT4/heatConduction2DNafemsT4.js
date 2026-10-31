@@ -9,7 +9,7 @@
 
 // NAFEMS T4 benchmark: a 0.6 m × 1.0 m plate with a fixed temperature on the bottom edge, an
 // insulated left edge, and convection to 0 °C on the top and right edges. The published target
-// temperature at point E (x = 0.6 m, y = 0.2 m) is 18.3 °C (18.25 °C before rounding)
+// temperature at point E (x = 0.6 m, y = 0.2 m) is 18.3 °C (FEAScript mesh-converged value ≈ 18.25 °C)
 
 // Import FEAScript library
 import { FEAScriptModel, printVersion } from "feascript";
@@ -50,4 +50,4 @@ const pointE = nodesXCoordinates.findIndex(
   (x, i) => Math.abs(x - 0.6) < 1e-10 && Math.abs(nodesYCoordinates[i] - 0.2) < 1e-10,
 );
 console.log(`Temperature at point E (x = 0.6 m, y = 0.2 m): ${solutionVector[pointE].toFixed(2)} °C`);
-console.log("NAFEMS target temperature at point E: 18.3 °C (converged value 18.25 °C)");
+console.log("NAFEMS target temperature at point E: 18.3 °C (FEAScript mesh-converged value ≈ 18.25 °C)");
