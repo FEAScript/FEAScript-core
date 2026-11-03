@@ -11,29 +11,29 @@
 
 <img src="https://feascript.com/assets/favicon.ico" alt="FEAScript Icon" width="18" height="18"> **[FEAScript](https://feascript.com/) is a finite element simulation library developed in JavaScript**. It enables engineering simulations across both browser-based and server-side environments without the overhead of traditional desktop software. <br>🎯 **Our goal is to provide a powerful JavaScript API for FEM**. We are closing the gap between complex computational mechanics and the accessibility of the web, empowering developers to build professional-grade simulation tools that work on any device, anywhere. This is the core library of the FEAScript project.
 
-<img src="https://feascript.github.io/FEAScript-website/assets/cold-plate-logo-results-and-mesh.gif" width="300" alt="Results of heat conduction around the FEAScript logo"> <br/>
+<img src="https://feascript.github.io/FEAScript-website/assets/cold-plate-logo-results-and-mesh.gif" width="300" alt="Results of heat conduction around the FEAScript logo">
 
-> 🚧 **FEAScript is currently under heavy development.** Its functionality and interfaces may change rapidly as new features and enhancements are introduced. <a href="https://github.com/sponsors/FEAScript">Donations</a> help accelerate the next generation of FEAScript's solvers, performance, documentation and tutorials.
+> 🚧 **FEAScript is currently under heavy development.** Its functionality and interfaces may change rapidly as new features and enhancements are introduced. [Donations](https://github.com/sponsors/FEAScript) help accelerate the next generation of FEAScript's solvers, performance, documentation and tutorials.
 
 ## Contents
 
 - [Features](#features)
-- [How to Use FEAScript](#how-to-use-feascript)
+- [How to use FEAScript](#how-to-use-feascript)
 - [Examples](#examples)
-- [Help FEAScript Grow](#help-feascript-grow)
+- [Help FEAScript grow](#help-feascript-grow)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Features
 
-- <b>Physics models:</b> creeping (Stokes) flow, Euler-Bernoulli beam bending, front propagation, heat conduction, general form PDE (linear and nonlinear)
-- <b>Meshing:</b> simple 1D/2D mesh generation, unstructured mesh import from Gmsh (`.msh`) with quadrilateral and triangular elements (linear and quadratic)
-- <b>Solvers:</b> frontal, Jacobi (CPU/WebGPU) and LU, Newton–Raphson for nonlinear systems
-- <b>Spatially varying coefficients:</b> `thermalConductivity(x, y)` and `heatSource(x, y)` can be scalars or functions, evaluated at each Gauss point
-- <b>Performance:</b> web worker support for multi-threaded computation
-- <b>Visualization:</b> interactive rendering with vtk.js and Plotly
+- **Physics models:** creeping (Stokes) flow, Euler-Bernoulli beam bending, front propagation, heat conduction, general form PDE (linear and nonlinear)
+- **Meshing:** simple 1D/2D mesh generation, unstructured mesh import from Gmsh (`.msh`) with quadrilateral and triangular elements (linear and quadratic)
+- **Solvers:** frontal, Jacobi (CPU/WebGPU) and LU, Newton–Raphson for nonlinear systems
+- **Spatially varying coefficients:** `thermalConductivity(x, y)` and `heatSource(x, y)` can be scalars or functions, evaluated at each Gauss point
+- **Performance:** web worker support for multi-threaded computation
+- **Visualization:** interactive rendering with vtk.js and Plotly
 
-## How to Use FEAScript
+## How to use FEAScript
 
 You can run simulations with FEAScript by calling its functions from JavaScript (the FEAScript API). The API is the core programmatic interface for FEAScript and works across multiple environments, including the browser (simple HTML pages and online JavaScript playgrounds, e.g. [CodePen](https://codepen.io/) and [Scribbler](https://scribbler.live/)) and server-side runtimes such as Node.js. The most common ways to use FEAScript are outlined below:
 
@@ -43,7 +43,7 @@ You can run simulations with FEAScript by calling its functions from JavaScript 
 
 📖 The **[FEAScript documentation](https://docs.feascript.com)** covers installation, the physical models and their equations, meshes, boundary conditions, solvers and the full API reference.
 
-#### Use FEAScript in the Browser
+### Use FEAScript in the browser
 
 You can use FEAScript in browser environments in three ways:
 
@@ -55,7 +55,7 @@ You can use FEAScript in browser environments in three ways:
   </script>
   ```
 
-- **Import from Hosted ESM Build:**
+- **Import from hosted ESM build:**
 
   ```html
   <script type="module">
@@ -71,7 +71,7 @@ You can use FEAScript in browser environments in three ways:
   > </script>
   > ```
 
-- **Download and Use Locally:**
+- **Download and use locally:**
 
   You can download the latest stable release from [GitHub Releases](https://github.com/FEAScript/FEAScript-core/releases).
 
@@ -83,7 +83,7 @@ You can use FEAScript in browser environments in three ways:
 
 👉 Explore browser-based tutorials on our [website](https://feascript.com/#tutorials).
 
-#### Use FEAScript in JavaScript Playgrounds
+### Use FEAScript in JavaScript playgrounds
 
 FEAScript works well in interactive JavaScript playgrounds where you can write code, visualize results inline, and share your work.
 
@@ -92,7 +92,7 @@ FEAScript works well in interactive JavaScript playgrounds where you can write c
 - [CodePen (interactive pens)](https://codepen.io/FEAScript)
 - [Scribbler (notebooks)](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples)
 
-#### Use FEAScript with Node.js
+### Use FEAScript with Node.js
 
 Install FEAScript and its peer dependencies from npm as follows:
 
@@ -170,14 +170,14 @@ node examples/heatConductionScript/heatConduction1DWall/heatConduction1DWall.js
 
 Each script prints its computed solution to the console.
 
-## Help FEAScript Grow
+## Help FEAScript grow
 
 > 💖 **If you find FEAScript useful, please consider supporting its development through a donation**. Your support helps fund new features, performance improvements, documentation and tutorials:
 
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/FEAScript)
 [![Donate on Liberapay](https://img.shields.io/badge/Donate-Liberapay-F6C915?logo=liberapay&logoColor=black)](https://liberapay.com/FEAScript/donate)
 
-> 📨 You can also join the <b>FEAScript mailing list</b> to receive project updates and news: <a href="https://mailchi.mp/e29600955ffe/join-the-mailing-list">Subscribe here</a>
+> 📨 You can also join the **FEAScript mailing list** to receive project updates and news: [Subscribe here](https://mailchi.mp/e29600955ffe/join-the-mailing-list)
 
 ## Contributing
 
@@ -185,4 +185,4 @@ We warmly welcome contributors to help expand and refine FEAScript. Please see t
 
 ## License
 
-The core library of FEAScript is released under the [MIT license](https://github.com/FEAScript/FEAScript-core/blob/main/LICENSE). &copy; 2023-2026 FEAScript.
+The core library of FEAScript is released under the [MIT license](LICENSE). © 2023-2026 FEAScript.
