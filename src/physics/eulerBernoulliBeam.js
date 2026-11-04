@@ -75,7 +75,13 @@ export function assembleEulerBernoulliBeamMat(meshData, boundaryConditions, coef
 
   // Initialize global Jacobian matrix and residual vector
   let residualVector = new Array(totalDOFs).fill(0);
-  let jacobianMatrix = new SparseMatrix(totalDOFs);
+  // The sparsity pattern comes from the [w, theta] DOFs of the 2 end nodes of each element
+  const elementDOFMap = (elementIndex) =>
+    [nop[elementIndex][0] - 1, nop[elementIndex][1] - 1].flatMap((node) => [
+      dofsPerNode * node,
+      dofsPerNode * node + 1,
+    ]);
+  let jacobianMatrix = SparseMatrix.fromElementDofs(totalDOFs, totalElements, elementDOFMap);
 
   // Cubic Hermite basis functions for the field, with a 4-point Gauss quadrature rule
   const basisFunctions = new BasisFunctions({ meshDimension: "1D", elementOrder: "hermiteCubic" });

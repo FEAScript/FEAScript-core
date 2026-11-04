@@ -41,7 +41,7 @@ let basisFunctions;
  */
 export function runFrontalSolver(assembleFront, meshData, boundaryConditionsHandler, solutionVector) {
   // Initialize FEA components
-  const FEAData = initializeFEA(meshData);
+  const FEAData = initializeFEA(meshData, { withMatrix: false });
   const totalNodes = meshData.nodesXCoordinates.length;
   const numElements = meshData.totalElements;
   const nodesPerElement = FEAData.nodesPerElement;

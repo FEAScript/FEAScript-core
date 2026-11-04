@@ -15,14 +15,22 @@ import { SparseMatrix } from "../linalg/sparseMatrix.js";
 /**
  * Function to initialize the FEA matrices and numerical tools
  * @param {object} meshData - Object containing mesh data from prepareMesh()
+ * @param {object} [options] - Optional parameters:
+ *  - withMatrix: Whether to create the global Jacobian matrix (default true). The frontal solver assembles
+ *    its own front, so it does not need it
  * @returns {object} An object containing initialized matrices and numerical tools
  */
-export function initializeFEA(meshData) {
-  const { totalNodes, nop, meshDimension, elementOrder, elementShape } = meshData;
+export function initializeFEA(meshData, { withMatrix = true } = {}) {
+  const { totalNodes, totalElements, nop, meshDimension, elementOrder, elementShape } = meshData;
 
-  // Initialize variables for matrix assembly
+  // Initialize variables for matrix assembly. The sparsity pattern of the matrix comes from the element
+  // connectivity: one degree of freedom per node, with nop numbering the nodes from 1
   let residualVector = new Array(totalNodes).fill(0);
-  let jacobianMatrix = new SparseMatrix(totalNodes);
+  let jacobianMatrix = withMatrix
+    ? SparseMatrix.fromElementDofs(totalNodes, totalElements, (elementIndex) =>
+        nop[elementIndex].map((node) => node - 1),
+      )
+    : null;
   let localToGlobalMap = [];
 
   // Initialize the BasisFunctions class

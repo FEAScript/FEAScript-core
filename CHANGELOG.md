@@ -20,6 +20,12 @@ All notable changes to FEAScript-core are documented in this file. The format is
 - The sparse LU solver imports only the math.js functions it uses (`slu`, `lusolve`, `flatten`, `SparseMatrix`)
   instead of the whole library. This makes the bundles in `dist/` about 60% smaller, e.g. `feascript.esm.js`
   goes from 730 KB to 308 KB
+- The system matrix is assembled directly into compressed sparse row (CSR) storage with typed arrays
+  ([#120](https://github.com/FEAScript/FEAScript-core/issues/120)). The sparsity pattern is computed once from the
+  element connectivity, and element contributions are added at fixed positions, instead of growing a `Map` per
+  row. Assembly of the 2D fin on a 320×160 mesh (51,681 nodes) takes about 0.1 s, and the peak memory of a
+  `"lusolve"` solve falls from 375 MB to 355 MB (one core of an AMD Ryzen 5 9600X). `SparseMatrix` keeps its
+  methods; entries outside the pattern are still accepted
 
 ### Removed
 

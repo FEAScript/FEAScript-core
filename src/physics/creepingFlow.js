@@ -112,7 +112,35 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions, coeffic
 
   // Initialize Jacobian matrix and residual vector
   let residualVector = new Array(totalDOFs).fill(0);
-  let jacobianMatrix = new SparseMatrix(totalDOFs);
+
+  // Local DOF ordering in the element matrix: [u_0 … u_{n_2−1}, v_0 … v_{n_2−1}, p_0 … p_{n_1−1}]
+  const localDOFs = 2 * nodesPerVelocityElement + nodesPerPressureElement;
+
+  /**
+   * Fill the global DOF index of each local DOF of an element
+   * @param {number} elementIndex - Element index
+   * @param {array} dofMap - Array of length localDOFs to fill
+   * @returns {array} dofMap
+   */
+  const fillElementDOFMap = (elementIndex, dofMap) => {
+    for (let localNodeIndex = 0; localNodeIndex < nodesPerVelocityElement; localNodeIndex++) {
+      // Subtract 1 from nop in order to start numbering from 0
+      const globalNode = nop[elementIndex][localNodeIndex] - 1;
+      dofMap[localNodeIndex] = globalNode; // u-velocity DOF
+      dofMap[nodesPerVelocityElement + localNodeIndex] = totalNodesVelocity + globalNode; // v-velocity DOF
+    }
+    for (let localNodeIndex = 0; localNodeIndex < nodesPerPressureElement; localNodeIndex++) {
+      const globalQ2Node = nop[elementIndex][cornerLocalIndices[localNodeIndex]] - 1;
+      dofMap[2 * nodesPerVelocityElement + localNodeIndex] =
+        2 * totalNodesVelocity + q2ToPressureMap.get(globalQ2Node); // Pressure DOF
+    }
+    return dofMap;
+  };
+
+  // The sparsity pattern of the Jacobian matrix comes from the DOFs of each element
+  let jacobianMatrix = SparseMatrix.fromElementDofs(totalDOFs, totalElements, (elementIndex) =>
+    fillElementDOFMap(elementIndex, new Array(localDOFs)),
+  );
 
   // Initialize basis functions for velocity (Q2/P2) and pressure (Q1/P1)
   const velocityBasisFunctions = new BasisFunctions({
@@ -153,8 +181,6 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions, coeffic
     errorLog(`Creeping flow viscosity must be a positive number or a function of (x, y); got ${viscosity}.`);
   }
 
-  // Local DOF ordering in the element matrix: [u_0 … u_{n_2−1}, v_0 … v_{n_2−1}, p_0 … p_{n_1−1}]
-  const localDOFs = 2 * nodesPerVelocityElement + nodesPerPressureElement;
   const localToGlobalDOFMap = new Array(localDOFs);
 
   // Element matrix and basis function derivatives, reused for every element and integration point
@@ -164,22 +190,9 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions, coeffic
 
   // Matrix assembly
   for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {
-    // Build local-to-global mapping for velocity nodes (Q2/P2)
-    let velLocalToGlobalMap = [];
-    for (let localNodeIndex = 0; localNodeIndex < nodesPerVelocityElement; localNodeIndex++) {
-      // Subtract 1 from nop in order to start numbering from 0
-      velLocalToGlobalMap[localNodeIndex] = nop[elementIndex][localNodeIndex] - 1;
-      localToGlobalDOFMap[localNodeIndex] = velLocalToGlobalMap[localNodeIndex]; // u-velocity DOF
-      localToGlobalDOFMap[nodesPerVelocityElement + localNodeIndex] =
-        totalNodesVelocity + velLocalToGlobalMap[localNodeIndex]; // v-velocity DOF
-    }
-
-    // Build local-to-global mapping for pressure nodes (Q1/P1)
-    for (let localNodeIndex = 0; localNodeIndex < nodesPerPressureElement; localNodeIndex++) {
-      const globalQ2Node = nop[elementIndex][cornerLocalIndices[localNodeIndex]] - 1;
-      localToGlobalDOFMap[2 * nodesPerVelocityElement + localNodeIndex] =
-        2 * totalNodesVelocity + q2ToPressureMap.get(globalQ2Node); // Pressure DOF
-    }
+    // Build local-to-global mapping of the element DOFs
+    fillElementDOFMap(elementIndex, localToGlobalDOFMap);
+    const velLocalToGlobalMap = localToGlobalDOFMap.slice(0, nodesPerVelocityElement); // Velocity nodes (Q2/P2)
     localJacobianMatrix.fill(0);
 
     // Loop over integration points

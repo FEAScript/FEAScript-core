@@ -18,6 +18,7 @@
  *  - Accumulation with addValue and addLocalMatrix, overwriting with setValue and row clearing with clearRow
  *  - Conversion to dense, CSR and CSC formats (sorted indices, exact zeros dropped)
  *  - Round trip through fromDense
+ *  - Assembly into a pattern from fromElementDofs, with entries outside the pattern
  *  - Sparse and dense input give the same solution in the LU and Jacobi solvers
  *
  * Run: node tests/unit/solvers.test.js (or npm test)
@@ -115,7 +116,7 @@ function assert(condition, message) {
   matrix.addValue(1, 2, -3); // Stored, but exactly zero
   matrix.clearRow(1);
   matrix.setValue(1, 1, 1);
-  assert(matrix.rows[1].size === 1 && matrix.getValue(1, 1) === 1, "clearRow removes every entry of the row");
+  assert(matrix.rowNonZeros(1) === 1 && matrix.getValue(1, 1) === 1, "clearRow removes every entry of the row");
 
   basicLog("");
   basicLog("[2] Local (element) matrix assembly");
@@ -138,8 +139,37 @@ function assert(condition, message) {
   const zeroBlockMatrix = new SparseMatrix(2);
   zeroBlockMatrix.addLocalMatrix([0, 1], Float64Array.from([5, 0, 0, 7]));
   assert(
-    zeroBlockMatrix.rows[0].size === 1 && zeroBlockMatrix.rows[1].size === 1,
+    zeroBlockMatrix.rowNonZeros(0) === 1 && zeroBlockMatrix.rowNonZeros(1) === 1,
     "addLocalMatrix skips zero entries of the local matrix",
+  );
+
+  // The same elements, assembled into the pattern computed from the element connectivity
+  const elementNodes = [
+    [0, 1],
+    [1, 2],
+  ];
+  const patternMatrix = SparseMatrix.fromElementDofs(3, 2, (elementIndex) => elementNodes[elementIndex]);
+  assert(
+    sameArray(patternMatrix.rowPointers, [0, 2, 5, 7]) &&
+      sameArray(patternMatrix.columnIndices, [0, 1, 0, 1, 2, 1, 2]),
+    "fromElementDofs computes the CSR pattern of the element connectivity, with sorted columns",
+  );
+  patternMatrix.addLocalMatrix([0, 1], elementMatrix);
+  patternMatrix.addLocalMatrix([1, 2], elementMatrix);
+  assert(
+    patternMatrix.toDense().every((row, i) => sameArray(row, expectedAssembled[i])),
+    "addLocalMatrix accumulates into the pattern",
+  );
+  patternMatrix.addValue(0, 2, 5); // Outside the pattern
+  patternMatrix.clearRow(1);
+  patternMatrix.setValue(1, 1, 1);
+  const patternCSR = patternMatrix.toCSR();
+  assert(
+    patternMatrix.getValue(0, 2) === 5 &&
+      sameArray(patternCSR.rowPointers, [0, 3, 4, 6]) &&
+      sameArray(patternCSR.columnIndices, [0, 1, 2, 1, 1, 2]) &&
+      sameArray(patternCSR.values, [1, -1, 5, 1, -1, 1]),
+    "Entries outside the pattern are kept and merged in column order; clearRow empties a pattern row",
   );
 
   basicLog("");
