@@ -49,6 +49,11 @@ All notable changes to FEAScript-core are documented in this file. The format is
     the next element. It sizes the front from its maximum width, computed in a prefront pass, and stores it in
     typed arrays.
   - The unused determinant bookkeeping, which cost O(N) per pivot, is removed.
+  - The elements are assembled in the order that keeps the front narrowest: the solver compares the order of
+    the mesh, sweeps along x and y, and a breadth-first order through neighboring elements, and keeps the one
+    with the smallest maximum front width. On one core of an AMD Ryzen 5 9600X, a 32×320 quadratic strip solves
+    in 0.5 s instead of 16.7 s, with a third of the memory, and the L-shaped Gmsh mesh of the TPLP01 test 2.4×
+    faster. Structured meshes numbered across their short side are unchanged.
   - Results on one core of an Intel N100:
     - 80×40 quadratic mesh (13k nodes): previously ran out of memory, now solves in 0.9 s.
     - 160×80 linear mesh (13k nodes): 31 s → 1.1 s.

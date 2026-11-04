@@ -46,9 +46,11 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditionsHand
   const numElements = meshData.totalElements;
   const nodesPerElement = FEAData.nodesPerElement;
 
-  // Calculate required array sizes (the front is sized from its actual maximum width)
-  const maxFrontWidth = computeMaxFrontWidth(meshData.nop, numElements, nodesPerElement, totalNodes);
+  // Order the elements to keep the front narrow, and size the front from its actual maximum width
+  const { elementOrder, maxFrontWidth } = computeElementOrder(meshData, numElements, totalNodes);
   initializeFrontalArrays(nodesPerElement, numElements, totalNodes, maxFrontWidth);
+  frontalState.elementOrder = elementOrder;
+  debugLog(`Frontal solver: maximum front width ${maxFrontWidth} of ${totalNodes} nodes`);
 
   // Start timing for system solving (frontal algorithm)
   basicLog("Solving system using frontal...");
@@ -61,10 +63,11 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditionsHand
     elementShape: meshData.elementShape,
   });
 
-  // Copy node connectivity array into frontalData storage
-  for (let elementIndex = 0; elementIndex < meshData.totalElements; elementIndex++) {
+  // Copy node connectivity array into frontalData storage, in the order the elements enter the front
+  for (let position = 0; position < meshData.totalElements; position++) {
+    const elementIndex = elementOrder[position];
     for (let nodeIndex = 0; nodeIndex < FEAData.nodesPerElement; nodeIndex++) {
-      frontalData.nodalNumbering[elementIndex][nodeIndex] = meshData.nop[elementIndex][nodeIndex];
+      frontalData.nodalNumbering[position][nodeIndex] = meshData.nop[elementIndex][nodeIndex];
     }
   }
 
@@ -139,38 +142,118 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditionsHand
  * (assembled but not yet eliminated) at the same time, when every node is eliminated right after
  * its last element has been assembled
  * @param {array} nop - Nodal numbering array (1-based node indices)
- * @param {number} numElements - Number of elements in the mesh
- * @param {number} nodesPerElement - Number of nodes per element
+ * @param {Int32Array} elementOrder - Element indices in the order they are assembled
  * @param {number} totalNodes - Number of nodes in the mesh
  * @returns {number} Maximum front width
  */
-function computeMaxFrontWidth(nop, numElements, nodesPerElement, totalNodes) {
-  // Element index of the last appearance of each node
+function computeMaxFrontWidth(nop, elementOrder, totalNodes) {
+  // Position (in elementOrder) of the last element of each node
   const lastAppearance = new Int32Array(totalNodes).fill(-1);
-  for (let elementIndex = 0; elementIndex < numElements; elementIndex++) {
-    for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
-      lastAppearance[nop[elementIndex][localNodeIndex] - 1] = elementIndex;
-    }
+  for (let position = 0; position < elementOrder.length; position++) {
+    for (const node of nop[elementOrder[position]]) lastAppearance[node - 1] = position;
   }
 
   const isActive = new Uint8Array(totalNodes);
   let frontWidth = 0;
   let maxFrontWidth = 0;
-  for (let elementIndex = 0; elementIndex < numElements; elementIndex++) {
-    for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
-      const nodeIndex = nop[elementIndex][localNodeIndex] - 1;
-      if (!isActive[nodeIndex]) {
-        isActive[nodeIndex] = 1;
+  for (let position = 0; position < elementOrder.length; position++) {
+    const elementNodes = nop[elementOrder[position]];
+    for (const node of elementNodes) {
+      if (!isActive[node - 1]) {
+        isActive[node - 1] = 1;
         frontWidth++;
       }
     }
     maxFrontWidth = Math.max(maxFrontWidth, frontWidth);
-    for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
-      if (lastAppearance[nop[elementIndex][localNodeIndex] - 1] === elementIndex) frontWidth--;
+    for (const node of elementNodes) {
+      if (lastAppearance[node - 1] === position) frontWidth--;
     }
   }
 
   return maxFrontWidth;
+}
+
+/**
+ * Function to choose the order in which the elements enter the front. The front width, and with it the memory and
+ * run time of the frontal solver, depends on this order: a front that sweeps across the short side of the domain
+ * stays narrow. Four candidates are compared, and the one with the narrowest front is kept:
+ *  - the order of the mesh (structured meshes are numbered across one side)
+ *  - sweeps along x and along y, by element centroid
+ *  - a breadth-first order through elements that share nodes, started from an element at the far end of the mesh
+ *    (suits unstructured meshes and non-rectangular domains)
+ * @param {object} meshData - Object containing mesh data
+ * @param {number} numElements - Number of elements in the mesh
+ * @param {number} totalNodes - Number of nodes in the mesh
+ * @returns {object} An object containing:
+ *  - elementOrder: Element indices in the order they enter the front (Int32Array)
+ *  - maxFrontWidth: Maximum front width with this order
+ */
+function computeElementOrder(meshData, numElements, totalNodes) {
+  const { nop, nodesXCoordinates, nodesYCoordinates } = meshData;
+  const candidates = [Int32Array.from({ length: numElements }, (_, elementIndex) => elementIndex)];
+
+  // Sweeps along x and y, by element centroid (ties broken by the other coordinate)
+  const centroidX = new Float64Array(numElements);
+  const centroidY = new Float64Array(numElements);
+  for (let elementIndex = 0; elementIndex < numElements; elementIndex++) {
+    const elementNodes = nop[elementIndex];
+    for (const node of elementNodes) {
+      centroidX[elementIndex] += nodesXCoordinates[node - 1];
+      centroidY[elementIndex] += nodesYCoordinates?.[node - 1] ?? 0;
+    }
+    centroidX[elementIndex] /= elementNodes.length;
+    centroidY[elementIndex] /= elementNodes.length;
+  }
+  if (meshData.meshDimension === "2D") {
+    candidates.push(
+      candidates[0].slice().sort((a, b) => centroidX[a] - centroidX[b] || centroidY[a] - centroidY[b]),
+      candidates[0].slice().sort((a, b) => centroidY[a] - centroidY[b] || centroidX[a] - centroidX[b]),
+    );
+
+    // Breadth-first order through elements that share a node (node-to-element lists in CSR format)
+    const nodeElementPointers = new Int32Array(totalNodes + 1);
+    for (const elementNodes of nop) for (const node of elementNodes) nodeElementPointers[node]++;
+    for (let node = 0; node < totalNodes; node++) nodeElementPointers[node + 1] += nodeElementPointers[node];
+    const nodeElements = new Int32Array(nodeElementPointers[totalNodes]);
+    const nextNodeElement = nodeElementPointers.slice(0, totalNodes);
+    nop.forEach((elementNodes, elementIndex) => {
+      for (const node of elementNodes) nodeElements[nextNodeElement[node - 1]++] = elementIndex;
+    });
+    const breadthFirst = (startElement) => {
+      const order = new Int32Array(numElements);
+      const visited = new Uint8Array(numElements);
+      let count = 0;
+      // Restart from the next unvisited element if the mesh has disconnected parts
+      for (let seed = startElement, next = 0; count < numElements; seed = next) {
+        while (visited[seed]) seed = ++next;
+        visited[seed] = 1;
+        order[count++] = seed;
+        for (let head = count - 1; head < count; head++) {
+          for (const node of nop[order[head]]) {
+            for (let k = nodeElementPointers[node - 1]; k < nodeElementPointers[node]; k++) {
+              const neighbour = nodeElements[k];
+              if (!visited[neighbour]) {
+                visited[neighbour] = 1;
+                order[count++] = neighbour;
+              }
+            }
+          }
+        }
+      }
+      return order;
+    };
+    // The last element reached is far from the start; starting again from it gives narrower levels
+    let startElement = 0;
+    for (let pass = 0; pass < 2; pass++) startElement = breadthFirst(startElement)[numElements - 1];
+    candidates.push(breadthFirst(startElement));
+  }
+
+  let best = null;
+  for (const elementOrder of candidates) {
+    const maxFrontWidth = computeMaxFrontWidth(nop, elementOrder, totalNodes);
+    if (!best || maxFrontWidth < best.maxFrontWidth) best = { elementOrder, maxFrontWidth };
+  }
+  return best;
 }
 
 /**
@@ -220,18 +303,20 @@ function initializeFrontalArrays(nodesPerElement, numElements, totalNodes, maxFr
  * @param {function} assembleFront - Element assembler of the physical model
  */
 function assembleElementContribution(meshData, FEAData, boundaryConditionsHandler, assembleFront) {
-  const elementIndex = elementData.currentElementIndex - 1;
+  // Position of the element in the assembly order, and its index in the mesh
+  const position = elementData.currentElementIndex - 1;
+  const elementIndex = frontalState.elementOrder[position];
 
   // Guard against out-of-range indices
-  if (elementIndex < 0 || elementIndex >= meshData.totalElements) {
-    errorLog(`Skipping out-of-range elementIndex=${elementIndex} (totalElements=${meshData.totalElements})`);
+  if (position < 0 || position >= meshData.totalElements) {
+    errorLog(`Skipping out-of-range element position=${position} (totalElements=${meshData.totalElements})`);
     return false;
   }
 
   // Domain terms
   const { localJacobianMatrix, localResidualVector, ngl } = assembleFront({
     elementIndex,
-    nop: frontalData.nodalNumbering,
+    nop: meshData.nop,
     meshData,
     basisFunctions: basisFunctions,
     FEAData,
