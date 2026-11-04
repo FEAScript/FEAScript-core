@@ -13,7 +13,7 @@ FEAScript makes use of the following third-party software:
 2. **math.js**
    - License: Apache 2.0 (https://github.com/josdejong/mathjs/blob/develop/LICENSE)
    - Source: https://github.com/josdejong/mathjs
-   - Bundled in `dist/`, together with its dependencies, all under the MIT license: complex.js, decimal.js, escape-latex, fraction.js, javascript-natural-sort, seedrandom, tiny-emitter, typed-function and @babel/runtime
+   - Bundled in `dist/` (only the parts used by the sparse LU solver), together with its dependencies, all under the MIT license: complex.js, decimal.js, tiny-emitter, typed-function and @babel/runtime
 
 3. **plotly.js**
    - License: MIT (https://github.com/plotly/plotly.js/blob/master/LICENSE)

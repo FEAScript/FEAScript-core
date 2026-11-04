@@ -17,6 +17,9 @@ All notable changes to FEAScript-core are documented in this file. The format is
 - The Jacobi solver (`"jacobi"`) stops on the residual relative to the right-hand side, ‖R − J u‖ / ‖R‖, instead
   of on the size of the update, and its default `tolerance` is `1e-8`. The update size could be small while the
   solution was still about 1e-3 away, so the method reported convergence too early
+- The sparse LU solver imports only the math.js functions it uses (`slu`, `lusolve`, `flatten`, `SparseMatrix`)
+  instead of the whole library. This makes the bundles in `dist/` about 60% smaller, e.g. `feascript.esm.js`
+  goes from 730 KB to 308 KB
 
 ### Removed
 

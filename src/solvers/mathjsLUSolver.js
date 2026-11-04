@@ -8,8 +8,15 @@
  */
 
 // External imports
-import { create, all } from "mathjs";
-const math = create(all);
+// Only the functions used here, so bundlers can leave the rest of mathjs out
+import {
+  create,
+  SparseMatrixDependencies,
+  sluDependencies,
+  lusolveDependencies,
+  flattenDependencies,
+} from "mathjs";
+const math = create({ SparseMatrixDependencies, sluDependencies, lusolveDependencies, flattenDependencies });
 
 // Internal imports
 import { SparseMatrix } from "../linalg/sparseMatrix.js";
