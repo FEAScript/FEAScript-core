@@ -25,6 +25,16 @@ All notable changes to FEAScript-core are documented in this file. The format is
 
 ### Fixed
 
+- Frontal solver memory and run time on medium-sized problems
+  ([#121](https://github.com/FEAScript/FEAScript-core/issues/121)):
+  - The front was allocated with the size of the whole system (N × N), and the solver eliminated at most one node
+    per assembled element, so the front kept growing. It now eliminates every fully summed node before assembling
+    the next element. It sizes the front from its maximum width, computed in a prefront pass, and stores it in
+    typed arrays.
+  - The unused determinant bookkeeping, which cost O(N) per pivot, is removed.
+  - Results on one core of an Intel N100:
+    - 80×40 quadratic mesh (13k nodes): previously ran out of memory, now solves in 0.9 s.
+    - 160×80 linear mesh (13k nodes): 31 s → 1.1 s.
 - Creeping flow with velocity conditions on every boundary: at a node shared by a moving wall and a fixed wall,
   the condition applied last won, so one corner of a moving lid leaked fluid through a side wall. With the
   pressure fixed at one node, this gave a spurious flow near that node. Zero-velocity (no-slip) conditions now

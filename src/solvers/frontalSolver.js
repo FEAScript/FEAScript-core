@@ -46,8 +46,9 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditionsHand
   const numElements = meshData.totalElements;
   const nodesPerElement = FEAData.nodesPerElement;
 
-  // Calculate required array sizes
-  initializeFrontalArrays(nodesPerElement, numElements);
+  // Calculate required array sizes (the front is sized from its actual maximum width)
+  const maxFrontWidth = computeMaxFrontWidth(meshData.nop, numElements, nodesPerElement, totalNodes);
+  initializeFrontalArrays(nodesPerElement, numElements, totalNodes, maxFrontWidth);
 
   // Start timing for system solving (frontal algorithm)
   basicLog("Solving system using frontal...");
@@ -88,7 +89,6 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditionsHand
   frontalState.totalNodes = meshData.nodesXCoordinates.length;
   frontalState.writeFlag = 0;
   frontalState.transformationFlag = 1;
-  frontalState.determinant = 1;
 
   for (let elementIndex = 0; elementIndex < meshData.totalElements; elementIndex++) {
     frontalState.nodesPerElement[elementIndex] = FEAData.nodesPerElement;
@@ -135,32 +135,68 @@ export function runFrontalSolver(assembleFront, meshData, boundaryConditionsHand
 }
 
 /**
+ * Function to compute the maximum front width, i.e. the largest number of nodes that are active
+ * (assembled but not yet eliminated) at the same time, when every node is eliminated right after
+ * its last element has been assembled
+ * @param {array} nop - Nodal numbering array (1-based node indices)
+ * @param {number} numElements - Number of elements in the mesh
+ * @param {number} nodesPerElement - Number of nodes per element
+ * @param {number} totalNodes - Number of nodes in the mesh
+ * @returns {number} Maximum front width
+ */
+function computeMaxFrontWidth(nop, numElements, nodesPerElement, totalNodes) {
+  // Element index of the last appearance of each node
+  const lastAppearance = new Int32Array(totalNodes).fill(-1);
+  for (let elementIndex = 0; elementIndex < numElements; elementIndex++) {
+    for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
+      lastAppearance[nop[elementIndex][localNodeIndex] - 1] = elementIndex;
+    }
+  }
+
+  const isActive = new Uint8Array(totalNodes);
+  let frontWidth = 0;
+  let maxFrontWidth = 0;
+  for (let elementIndex = 0; elementIndex < numElements; elementIndex++) {
+    for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
+      const nodeIndex = nop[elementIndex][localNodeIndex] - 1;
+      if (!isActive[nodeIndex]) {
+        isActive[nodeIndex] = 1;
+        frontWidth++;
+      }
+    }
+    maxFrontWidth = Math.max(maxFrontWidth, frontWidth);
+    for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
+      if (lastAppearance[nop[elementIndex][localNodeIndex] - 1] === elementIndex) frontWidth--;
+    }
+  }
+
+  return maxFrontWidth;
+}
+
+/**
  * Function to initialize arrays dynamically based on problem size
  * @param {number} nodesPerElement - Number of nodes per element
  * @param {number} numElements - Number of elements in the mesh
+ * @param {number} totalNodes - Number of nodes in the mesh
+ * @param {number} maxFrontWidth - Maximum front width
  */
-function initializeFrontalArrays(nodesPerElement, numElements) {
+function initializeFrontalArrays(nodesPerElement, numElements, totalNodes, maxFrontWidth) {
   // Use the actual number of elements from the mesh
   frontalData.nodalNumbering = Array(numElements)
     .fill()
     .map(() => Array(nodesPerElement).fill(0));
-  frontalData.nodeConstraintCode = Array(nodesPerElement).fill(0);
-  frontalData.boundaryValues = Array(nodesPerElement).fill(0);
-  frontalData.globalResidualVector = Array(nodesPerElement).fill(0);
-  frontalData.solutionVector = Array(nodesPerElement).fill(0);
-  frontalData.topologyData = Array(numElements).fill(0);
-  frontalData.lateralData = Array(numElements).fill(0);
+  frontalData.nodeConstraintCode = Array(totalNodes).fill(0);
+  frontalData.boundaryValues = Array(totalNodes).fill(0);
+  frontalData.globalResidualVector = Array(totalNodes).fill(0);
+  frontalData.solutionVector = Array(totalNodes).fill(0);
 
   // Initialize frontalState arrays
   frontalState.writeFlag = 0;
-  frontalState.totalNodes = nodesPerElement;
+  frontalState.totalNodes = totalNodes;
   frontalState.transformationFlag = 0;
   frontalState.nodesPerElement = Array(numElements).fill(0);
-  frontalState.determinant = 1;
-
-  // For matrix operations, estimate required size based on problem complexity
-  const systemSize = Math.max(nodesPerElement, 2000);
-  frontalState.globalSolutionVector = Array(systemSize).fill(0);
+  frontalState.maxFrontWidth = maxFrontWidth;
+  frontalState.globalSolutionVector = new Float64Array(totalNodes);
   frontalState.frontDataIndex = 0;
 
   // Initialize elementData arrays
@@ -170,25 +206,10 @@ function initializeFrontalArrays(nodesPerElement, numElements) {
   elementData.currentElementIndex = 0;
 
   // Initialize frontStorage arrays
-  const frontSize = estimateFrontSize(nodesPerElement, numElements);
-  frontStorage.frontValues = Array(frontSize).fill(0);
-  frontStorage.columnHeaders = Array(systemSize).fill(0);
-  frontStorage.pivotRow = Array(systemSize).fill(0);
-  frontStorage.pivotData = Array(frontSize).fill(0);
-}
-
-/**
- * Function to estimate the required front size
- * @param {number} nodesPerElement - Number of of nodes per element
- * @param {number} numElements - Number of elements in the mesh
- * @returns {number} Estimated front size
- */
-function estimateFrontSize(nodesPerElement, numElements) {
-  const frontWidthEstimate = Math.max(
-    Math.ceil(Math.sqrt(numElements)) * nodesPerElement,
-    nodesPerElement * 2,
-  );
-  return frontWidthEstimate * numElements;
+  // Each eliminated node stores its pivot row and column headers (at most maxFrontWidth each) plus 4 values
+  frontStorage.frontValues = new Float64Array(totalNodes * (2 * maxFrontWidth + 4) + 4);
+  frontStorage.columnHeaders = new Float64Array(maxFrontWidth);
+  frontStorage.pivotRow = new Float64Array(maxFrontWidth);
 }
 
 /**
@@ -256,40 +277,25 @@ function assembleElementContribution(meshData, FEAData, boundaryConditionsHandle
 function runFrontalAlgorithm(meshData, FEAData, boundaryConditionsHandler, assembleFront) {
   // Allocate local arrays dynamically
   const totalElements = meshData.totalElements;
-  const nodesPerElement = meshData.nodesXCoordinates.length;
-  const systemSize = Math.max(nodesPerElement, frontalState.globalSolutionVector.length);
+  const totalNodes = meshData.nodesXCoordinates.length;
+  const frontWidth = frontalState.maxFrontWidth;
   let localDestination = Array(FEAData.nodesPerElement).fill(0);
   let rowDestination = Array(FEAData.nodesPerElement).fill(0);
-  let rowHeaders = Array(systemSize).fill(0);
-  let pivotRowIndices = Array(systemSize).fill(0);
-  let pivotColumnIndices = Array(systemSize).fill(0);
-  let modifiedRows = Array(systemSize).fill(0);
-  let pivotColumn = Array(systemSize).fill(0);
-  let frontMatrix = Array(systemSize)
-    .fill()
-    .map(() => Array(systemSize).fill(0));
-  let rowSwapCount = Array(nodesPerElement).fill(0);
-  let columnSwapCount = Array(nodesPerElement).fill(0);
-  let lastAppearanceCheck = Array(nodesPerElement).fill(0);
+  let rowHeaders = new Float64Array(frontWidth);
+  let pivotRowIndices = new Int32Array(frontWidth);
+  let pivotColumnIndices = new Int32Array(frontWidth);
+  let modifiedRows = new Int32Array(frontWidth);
+  let frontMatrix = Array.from({ length: frontWidth }, () => new Float64Array(frontWidth));
+  let lastAppearanceCheck = new Uint8Array(totalNodes);
   let pivotColumnGlobalIndex; // Pivot column global index
 
   let frontDataCounter = 1;
   frontalState.writeFlag++;
-  let pivotDataIndex = 1;
   let summedRows = 1;
   elementData.currentElementIndex = 0;
 
-  for (let nodeIndex = 0; nodeIndex < frontalState.totalNodes; nodeIndex++) {
-    rowSwapCount[nodeIndex] = 0;
-    columnSwapCount[nodeIndex] = 0;
-  }
-
   if (frontalState.transformationFlag !== 0) {
     // Prefront: find last appearance of each node
-    for (let nodeIndex = 0; nodeIndex < frontalState.totalNodes; nodeIndex++) {
-      lastAppearanceCheck[nodeIndex] = 0;
-    }
-
     for (let elementIndex = 0; elementIndex < totalElements; elementIndex++) {
       let reverseElementIndex = totalElements - elementIndex - 1;
       for (
@@ -311,19 +317,22 @@ function runFrontalAlgorithm(meshData, FEAData, boundaryConditionsHandler, assem
   let columnCount = 0;
   let rowCount = 0;
 
-  for (let i = 0; i < systemSize; i++) {
-    for (let j = 0; j < systemSize; j++) {
-      frontMatrix[j][i] = 0;
-    }
-  }
-
   while (true) {
+    // Eliminate every fully summed node before assembling the next element, which keeps the front narrow
+    let hasFullySummedColumn = false;
+    for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
+      if (frontStorage.columnHeaders[columnIndex] < 0) {
+        hasFullySummedColumn = true;
+        break;
+      }
+    }
+
     // Assemble a new element only while we still have elements
     let assembled = false;
     let numElementNodes = 0;
     let numElementColumns = 0;
 
-    if (elementData.currentElementIndex < totalElements) {
+    if (!hasFullySummedColumn && elementData.currentElementIndex < totalElements) {
       elementData.currentElementIndex++;
       assembled = assembleElementContribution(meshData, FEAData, boundaryConditionsHandler, assembleFront);
     }
@@ -377,8 +386,8 @@ function runFrontalAlgorithm(meshData, FEAData, boundaryConditionsHandler, assem
         }
       }
 
-      if (rowCount > systemSize || columnCount > systemSize) {
-        errorLog("Error: systemSize not large enough");
+      if (rowCount > frontWidth || columnCount > frontWidth) {
+        errorLog("Error: front width not large enough");
         return;
       }
 
@@ -462,18 +471,6 @@ function runFrontalAlgorithm(meshData, FEAData, boundaryConditionsHandler, assem
 
       let pivotGlobalRowIndex = Math.abs(rowHeaders[pivotRowIndex - 1]);
       pivotColumnGlobalIndex = Math.abs(frontStorage.columnHeaders[pivotColumnIndex - 1]); // Assign, don't declare
-      let permutationHelper =
-        pivotGlobalRowIndex +
-        pivotColumnGlobalIndex +
-        rowSwapCount[pivotGlobalRowIndex - 1] +
-        columnSwapCount[pivotColumnGlobalIndex - 1];
-      frontalState.determinant =
-        (frontalState.determinant * pivotValue * (-1) ** permutationHelper) / Math.abs(pivotValue);
-
-      for (let nodeIndex = 0; nodeIndex < frontalState.totalNodes; nodeIndex++) {
-        if (nodeIndex >= pivotGlobalRowIndex) rowSwapCount[nodeIndex]--;
-        if (nodeIndex >= pivotColumnGlobalIndex) columnSwapCount[nodeIndex]--;
-      }
 
       if (Math.abs(pivotValue) < 1e-10) {
         errorLog(
@@ -489,13 +486,11 @@ function runFrontalAlgorithm(meshData, FEAData, boundaryConditionsHandler, assem
 
       let rightHandSide = frontalData.globalResidualVector[pivotGlobalRowIndex - 1] / pivotValue;
       frontalData.globalResidualVector[pivotGlobalRowIndex - 1] = rightHandSide;
-      pivotColumn[pivotRowIndex - 1] = pivotValue;
 
       if (pivotRowIndex > 1) {
         for (let rowIndex = 0; rowIndex < pivotRowIndex - 1; rowIndex++) {
           let globalRowIndex = Math.abs(rowHeaders[rowIndex]);
           let eliminationFactor = frontMatrix[rowIndex][pivotColumnIndex - 1];
-          pivotColumn[rowIndex] = eliminationFactor;
           if (pivotColumnIndex > 1 && eliminationFactor !== 0) {
             for (let columnIndex = 0; columnIndex < pivotColumnIndex - 1; columnIndex++) {
               frontMatrix[rowIndex][columnIndex] -= eliminationFactor * frontStorage.pivotRow[columnIndex];
@@ -515,7 +510,6 @@ function runFrontalAlgorithm(meshData, FEAData, boundaryConditionsHandler, assem
         for (let rowIndex = pivotRowIndex; rowIndex < rowCount; rowIndex++) {
           let globalRowIndex = Math.abs(rowHeaders[rowIndex]);
           let eliminationFactor = frontMatrix[rowIndex][pivotColumnIndex - 1];
-          pivotColumn[rowIndex] = eliminationFactor;
           if (pivotColumnIndex > 1) {
             for (let columnIndex = 0; columnIndex < pivotColumnIndex - 1; columnIndex++) {
               frontMatrix[rowIndex - 1][columnIndex] =
@@ -531,19 +525,6 @@ function runFrontalAlgorithm(meshData, FEAData, boundaryConditionsHandler, assem
           frontalData.globalResidualVector[globalRowIndex - 1] -= eliminationFactor * rightHandSide;
         }
       }
-
-      for (let i = 0; i < rowCount; i++) {
-        frontStorage.pivotData[pivotDataIndex + i - 1] = pivotColumn[i];
-      }
-      pivotDataIndex += rowCount;
-
-      for (let i = 0; i < rowCount; i++) {
-        frontStorage.pivotData[pivotDataIndex + i - 1] = rowHeaders[i];
-      }
-      pivotDataIndex += rowCount;
-
-      frontStorage.pivotData[pivotDataIndex - 1] = pivotRowIndex;
-      pivotDataIndex++;
 
       for (let i = 0; i < columnCount; i++) {
         frontStorage.frontValues[frontDataCounter - 1 + i] = frontStorage.pivotRow[i];
@@ -590,13 +571,6 @@ function runFrontalAlgorithm(meshData, FEAData, boundaryConditionsHandler, assem
       pivotValue = frontMatrix[0][0];
       pivotGlobalRowIndex = Math.abs(rowHeaders[0]);
       pivotColumnIndex = 1;
-      permutationHelper =
-        pivotGlobalRowIndex +
-        pivotColumnGlobalIndex +
-        rowSwapCount[pivotGlobalRowIndex - 1] +
-        columnSwapCount[pivotColumnGlobalIndex - 1];
-      frontalState.determinant =
-        (frontalState.determinant * pivotValue * (-1) ** permutationHelper) / Math.abs(pivotValue);
 
       frontStorage.pivotRow[0] = 1;
       if (Math.abs(pivotValue) < 1e-10) {
@@ -618,13 +592,6 @@ function runFrontalAlgorithm(meshData, FEAData, boundaryConditionsHandler, assem
       frontStorage.frontValues[frontDataCounter + 1] = pivotColumnIndex;
       frontStorage.frontValues[frontDataCounter + 2] = pivotValue;
       frontDataCounter += 4;
-
-      frontStorage.pivotData[pivotDataIndex - 1] = pivotColumn[0];
-      pivotDataIndex++;
-      frontStorage.pivotData[pivotDataIndex - 1] = rowHeaders[0];
-      pivotDataIndex++;
-      frontStorage.pivotData[pivotDataIndex - 1] = pivotRowIndex;
-      pivotDataIndex++;
 
       frontalState.frontDataIndex = frontDataCounter;
       if (frontalState.writeFlag === 1)
