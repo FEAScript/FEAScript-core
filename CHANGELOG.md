@@ -26,6 +26,14 @@ All notable changes to FEAScript-core are documented in this file. The format is
   row. Assembly of the 2D fin on a 320×160 mesh (51,681 nodes) takes about 0.1 s, and the peak memory of a
   `"lusolve"` solve falls from 375 MB to 355 MB (one core of an AMD Ryzen 5 9600X). `SparseMatrix` keeps its
   methods; entries outside the pattern are still accepted
+- `"lusolve"` uses a fill-reducing ordering suited to each model
+  ([#132](https://github.com/FEAScript/FEAScript-core/issues/132)). Creeping flow, whose saddle-point matrix has
+  zeros on the diagonal of its pressure rows, is now factorized with an approximate minimum degree ordering of
+  JᵀJ and a pivoting threshold of 0.001, which halves the fill-in of the LU decomposition. The other models keep
+  the ordering of J + Jᵀ with partial pivoting, which is the faster one for them. On one core of an AMD Ryzen 5
+  9600X, together with the CSR assembly, the lid-driven cavity on a 64×64 mesh (16,641 nodes) solves in 10 s
+  instead of 145 s, with a peak memory of 0.73 GB instead of 1.26 GB. The ordering and the threshold can be
+  passed to `mathjsLUSolver` (`ordering`, `pivotThreshold`)
 
 ### Removed
 

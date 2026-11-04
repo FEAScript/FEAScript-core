@@ -372,9 +372,13 @@ export class FEAScriptModel {
       jacobianMatrix = creepingFlowResult.jacobianMatrix;
       residualVector = creepingFlowResult.residualVector;
 
+      // The pressure rows of the saddle-point matrix have zeros on the diagonal. The LU decomposition fills in
+      // much less with a column ordering of AᵀA and a small pivoting threshold (3 to 4 times faster)
       const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector, {
         maxIterations: options.maxIterations ?? this.maxIterations,
         tolerance: options.tolerance ?? this.tolerance,
+        ordering: 3,
+        pivotThreshold: 0.001,
       });
       solutionVector = linearSystemResult.solutionVector;
 

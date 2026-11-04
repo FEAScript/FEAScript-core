@@ -19,7 +19,8 @@ import * as Comlink from "../vendor/comlink.mjs";
  * @param {string} solverMethod - The solver method to use ("lusolve" or "jacobi")
  * @param {SparseMatrix} jacobianMatrix - The coefficient matrix
  * @param {Array} residualVector - The right-hand side vector
- * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance`
+ * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance` (Jacobi),
+ *  and `ordering` and `pivotThreshold` (LU decomposition, see mathjsLUSolver)
  * @returns {object} An object containing:
  *  - solutionVector: The solution vector (Float64Array)
  *  - converged: Boolean indicating whether the method converged (for iterative methods)
@@ -27,7 +28,7 @@ import * as Comlink from "../vendor/comlink.mjs";
  */
 export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, options = {}) {
   // Extract options (the Jacobi tolerance applies to the residual relative to the right-hand side)
-  const { maxIterations = 10000, tolerance = 1e-8 } = options;
+  const { maxIterations = 10000, tolerance = 1e-8, ordering, pivotThreshold } = options;
 
   let solutionVector = new Float64Array(0);
   let converged = true;
@@ -39,7 +40,11 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
 
   if (solverMethod === "lusolve") {
     // Use LU decomposition method
-    const luSolverResult = mathjsLUSolver(jacobianMatrix, residualVector, { matrixType: "sparse" });
+    const luSolverResult = mathjsLUSolver(jacobianMatrix, residualVector, {
+      matrixType: "sparse",
+      ordering,
+      pivotThreshold,
+    });
     solutionVector = luSolverResult.solutionVector;
   } else if (solverMethod === "jacobi") {
     // Use Jacobi method
