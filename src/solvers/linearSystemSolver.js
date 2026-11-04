@@ -69,7 +69,7 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
   }
 
   console.timeEnd("systemSolving");
-  basicLog("System solved successfully");
+  if (converged) basicLog("System solved successfully");
 
   return { solutionVector, converged, iterations };
 }
@@ -155,7 +155,7 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
   }
 
   console.timeEnd("systemSolving");
-  basicLog(`System solved successfully (${solverMethod})`);
+  if (converged) basicLog(`System solved successfully (${solverMethod})`);
 
   if (created) {
     await computeEngine?.destroy?.().catch(() => {});

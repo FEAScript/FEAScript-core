@@ -57,6 +57,8 @@ All notable changes to FEAScript-core are documented in this file. The format is
   - Results on one core of an Intel N100:
     - 80×40 quadratic mesh (13k nodes): previously ran out of memory, now solves in 0.9 s.
     - 160×80 linear mesh (13k nodes): 31 s → 1.1 s.
+- After a Jacobi solve that does not converge, the log no longer also reports "System solved successfully"; only
+  the error that the method did not converge is logged
 - Creeping flow with velocity conditions on every boundary: at a node shared by a moving wall and a fixed wall,
   the condition applied last won, so one corner of a moving lid leaked fluid through a side wall. With the
   pressure fixed at one node, this gave a spurious flow near that node. Zero-velocity (no-slip) conditions now
