@@ -7,4 +7,4 @@
 - [Felipe Ferrari](https://github.com/ferrari212)
 - [Nikos Chamakos](https://www.npmjs.com/~nikoscham)
 - [Priyank Bansal](https://github.com/Stu-ops)
-- [sridhar-mani](https://github.com/sridhar-mani)
+- [sridhar](https://github.com/sridhar-mani)
