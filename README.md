@@ -41,7 +41,7 @@ You can run simulations with FEAScript by calling its functions from JavaScript 
 2. **[In JavaScript playgrounds](#use-feascript-in-javascript-playgrounds)** – Try FEAScript in interactive JavaScript playgrounds such as [CodePen](https://codepen.io/FEAScript) or [Scribbler](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples).
 3. **[With Node.js](#use-feascript-with-nodejs)** – Use FEAScript in server-side JavaScript applications.
 
-📖 The **[FEAScript documentation](https://docs.feascript.com)** covers installation, the physical models and their equations, meshes, boundary conditions, solvers and the full API reference.
+The **[FEAScript documentation](https://docs.feascript.com)** covers installation, the physical models and their equations, meshes, boundary conditions, solvers and the full API reference.
 
 ### Use FEAScript in the browser
 
