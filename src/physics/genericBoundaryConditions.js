@@ -75,14 +75,13 @@ export class GenericBoundaryConditions {
    * corresponds to the traditional load (RHS) vector.
    */
   imposeDirichletBoundaryConditions(residualVector, jacobianMatrix, solutionVector) {
+    // A node shared by two boundaries takes the condition applied last
+    const prescribedValues = new Map();
     this.forEachConstantValueNode((globalNodeIndex, value) => {
-      // Set the residual vector to the value, or the increment needed to reach it for Newton-Raphson
-      residualVector[globalNodeIndex] = solutionVector ? value - solutionVector[globalNodeIndex] : value;
-      // Set the Jacobian matrix row to zero
-      jacobianMatrix.clearRow(globalNodeIndex);
-      // Set the diagonal entry of the Jacobian matrix to one
-      jacobianMatrix.setValue(globalNodeIndex, globalNodeIndex, 1);
+      // The value, or the increment needed to reach it for Newton-Raphson
+      prescribedValues.set(globalNodeIndex, solutionVector ? value - solutionVector[globalNodeIndex] : value);
     });
+    jacobianMatrix.imposeDirichletValues(prescribedValues, residualVector);
   }
 
   /**

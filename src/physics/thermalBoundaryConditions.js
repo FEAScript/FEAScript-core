@@ -263,14 +263,12 @@ export class ThermalBoundaryConditions {
    * corresponds to the traditional load (RHS) vector.
    */
   imposeConstantTempBoundaryConditions(residualVector, jacobianMatrix) {
+    // A node shared by two boundaries takes the condition applied last
+    const prescribedValues = new Map();
     this.forEachConstantTemperatureNode((globalNodeIndex, constantTemperatureValue) => {
-      // Set the residual vector to the constant temperature value
-      residualVector[globalNodeIndex] = constantTemperatureValue;
-      // Set the Jacobian matrix row to zero
-      jacobianMatrix.clearRow(globalNodeIndex);
-      // Set the diagonal entry of the Jacobian matrix to one
-      jacobianMatrix.setValue(globalNodeIndex, globalNodeIndex, 1);
+      prescribedValues.set(globalNodeIndex, constantTemperatureValue);
     });
+    jacobianMatrix.imposeDirichletValues(prescribedValues, residualVector);
   }
 
   /**

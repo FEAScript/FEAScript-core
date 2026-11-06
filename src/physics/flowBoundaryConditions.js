@@ -70,6 +70,7 @@ export class FlowBoundaryConditions {
    */
   imposeDirichletBoundaryConditions(residualVector, jacobianMatrix) {
     let hasStressFree = false;
+    const prescribedValues = new Map(); // Later values replace earlier ones
 
     if (this.meshDimension === "2D") {
       // A node shared by two boundaries takes the condition applied last. Apply moving walls first, so that
@@ -109,15 +110,8 @@ export class FlowBoundaryConditions {
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`,
                 );
-                // Apply u-velocity Dirichlet boundary condition
-                residualVector[xVelocityDegreeOfFreedom] = xVelocityValue;
-                jacobianMatrix.clearRow(xVelocityDegreeOfFreedom);
-                jacobianMatrix.setValue(xVelocityDegreeOfFreedom, xVelocityDegreeOfFreedom, 1);
-
-                // Apply v-velocity Dirichlet boundary condition
-                residualVector[yVelocityDegreeOfFreedom] = yVelocityValue;
-                jacobianMatrix.clearRow(yVelocityDegreeOfFreedom);
-                jacobianMatrix.setValue(yVelocityDegreeOfFreedom, yVelocityDegreeOfFreedom, 1);
+                prescribedValues.set(xVelocityDegreeOfFreedom, xVelocityValue);
+                prescribedValues.set(yVelocityDegreeOfFreedom, yVelocityValue);
               });
             } else if (this.elementOrder === "quadratic") {
               const boundarySides = {
@@ -135,15 +129,8 @@ export class FlowBoundaryConditions {
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`,
                 );
-                // Apply u-velocity Dirichlet boundary condition
-                residualVector[xVelocityDegreeOfFreedom] = xVelocityValue;
-                jacobianMatrix.clearRow(xVelocityDegreeOfFreedom);
-                jacobianMatrix.setValue(xVelocityDegreeOfFreedom, xVelocityDegreeOfFreedom, 1);
-
-                // Apply v-velocity Dirichlet boundary condition
-                residualVector[yVelocityDegreeOfFreedom] = yVelocityValue;
-                jacobianMatrix.clearRow(yVelocityDegreeOfFreedom);
-                jacobianMatrix.setValue(yVelocityDegreeOfFreedom, yVelocityDegreeOfFreedom, 1);
+                prescribedValues.set(xVelocityDegreeOfFreedom, xVelocityValue);
+                prescribedValues.set(yVelocityDegreeOfFreedom, yVelocityValue);
               });
             } else if (this.elementOrder === "linear") {
               const boundarySides = {
@@ -161,15 +148,8 @@ export class FlowBoundaryConditions {
                     elementIndex + 1
                   }, local node ${nodeIndex + 1})`,
                 );
-                // Apply u-velocity Dirichlet boundary condition
-                residualVector[xVelocityDegreeOfFreedom] = xVelocityValue;
-                jacobianMatrix.clearRow(xVelocityDegreeOfFreedom);
-                jacobianMatrix.setValue(xVelocityDegreeOfFreedom, xVelocityDegreeOfFreedom, 1);
-
-                // Apply v-velocity Dirichlet boundary condition
-                residualVector[yVelocityDegreeOfFreedom] = yVelocityValue;
-                jacobianMatrix.clearRow(yVelocityDegreeOfFreedom);
-                jacobianMatrix.setValue(yVelocityDegreeOfFreedom, yVelocityDegreeOfFreedom, 1);
+                prescribedValues.set(xVelocityDegreeOfFreedom, xVelocityValue);
+                prescribedValues.set(yVelocityDegreeOfFreedom, yVelocityValue);
               });
             }
           });
@@ -180,11 +160,11 @@ export class FlowBoundaryConditions {
       // (pressure is determined only up to a constant for all-Dirichlet velocity problems)
       if (!hasStressFree) {
         const pressureDegreeOfFreedom = 2 * this.totalNodesVelocity; // First pressure DOF
-        jacobianMatrix.clearRow(pressureDegreeOfFreedom);
-        jacobianMatrix.setValue(pressureDegreeOfFreedom, pressureDegreeOfFreedom, 1);
-        residualVector[pressureDegreeOfFreedom] = 0;
+        prescribedValues.set(pressureDegreeOfFreedom, 0);
         debugLog("Pinned pressure at first pressure node (p = 0) to remove null space");
       }
     }
+
+    jacobianMatrix.imposeDirichletValues(prescribedValues, residualVector);
   }
 }

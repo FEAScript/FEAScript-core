@@ -14,6 +14,10 @@ All notable changes to FEAScript-core are documented in this file. The format is
 
 ### Changed
 
+- Dirichlet conditions (constant temperature, value and velocity, beam supports) are applied symmetrically
+  ([#117](https://github.com/FEAScript/FEAScript-core/issues/117)): the known values move to the right-hand side and
+  the columns of the prescribed nodes are eliminated as well as their rows, so a symmetric system matrix stays
+  symmetric. The solution is the same, and the frontal solver is not affected
 - The Jacobi solver (`"jacobi"`) stops on the residual relative to the right-hand side, ‖R − J u‖ / ‖R‖, instead
   of on the size of the update, and its default `tolerance` is `1e-8`. The update size could be small while the
   solution was still about 1e-3 away, so the method reported convergence too early

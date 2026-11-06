@@ -93,11 +93,8 @@ export class BeamBoundaryConditions {
    * @param {SparseMatrix} jacobianMatrix - The Jacobian matrix to be modified
    */
   imposeEssentialBoundaryConditions(residualVector, jacobianMatrix) {
-    const applyDirichlet = (dofIndex, prescribedValue) => {
-      residualVector[dofIndex] = prescribedValue;
-      jacobianMatrix.clearRow(dofIndex);
-      jacobianMatrix.setValue(dofIndex, dofIndex, 1);
-    };
+    const prescribedValues = new Map();
+    const applyDirichlet = (dofIndex, prescribedValue) => prescribedValues.set(dofIndex, prescribedValue);
 
     Object.keys(this.boundaryConditions).forEach((nodeKey) => {
       const globalNodeIndex = Number(nodeKey) - 1; // Convert 1-based node number to 0-based index
@@ -122,5 +119,7 @@ export class BeamBoundaryConditions {
         }
       });
     });
+
+    jacobianMatrix.imposeDirichletValues(prescribedValues, residualVector);
   }
 }

@@ -197,12 +197,54 @@ export class SparseMatrix {
   }
 
   /**
-   * Function to set every entry of a row to zero (used for Dirichlet boundary conditions)
+   * Function to set every entry of a row to zero
    * @param {number} rowIndex - Row index
    */
   clearRow(rowIndex) {
     this.values.fill(0, this.rowPointers[rowIndex], this.rowPointers[rowIndex + 1]);
     this.overflowRows.delete(rowIndex);
+  }
+
+  /**
+   * Function to impose Dirichlet conditions on the system, keeping a symmetric matrix symmetric: the known value
+   * of each degree of freedom moves to the right-hand side, and its row and column become those of the identity
+   *
+   * All the values are given at once, since eliminating a column uses the final value of that degree of freedom
+   * @param {Map} prescribedValues - Map from degree of freedom index to its value
+   * @param {array} rightHandSideVector - The right-hand side vector, updated in place
+   */
+  imposeDirichletValues(prescribedValues, rightHandSideVector) {
+    const isPrescribed = new Uint8Array(this.size);
+    const values = new Float64Array(this.size);
+    prescribedValues.forEach((value, dof) => {
+      isPrescribed[dof] = 1;
+      values[dof] = value;
+    });
+
+    // Move the prescribed columns of the other rows to the right-hand side (R -= value × column)
+    for (let rowIndex = 0; rowIndex < this.size; rowIndex++) {
+      if (isPrescribed[rowIndex]) continue;
+      for (let k = this.rowPointers[rowIndex]; k < this.rowPointers[rowIndex + 1]; k++) {
+        const colIndex = this.columnIndices[k];
+        if (isPrescribed[colIndex]) {
+          rightHandSideVector[rowIndex] -= this.values[k] * values[colIndex];
+          this.values[k] = 0;
+        }
+      }
+      const overflow = this.overflowRows.get(rowIndex);
+      overflow?.forEach((value, colIndex) => {
+        if (isPrescribed[colIndex]) {
+          rightHandSideVector[rowIndex] -= value * values[colIndex];
+          overflow.delete(colIndex);
+        }
+      });
+    }
+
+    prescribedValues.forEach((value, dof) => {
+      rightHandSideVector[dof] = value;
+      this.clearRow(dof);
+      this.setValue(dof, dof, 1);
+    });
   }
 
   /**
