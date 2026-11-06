@@ -46,6 +46,9 @@ All notable changes to FEAScript-core are documented in this file. The format is
 
 ### Fixed
 
+- `FEAScriptWorker` starts its first call as soon as the worker is ready. It checked once a second, so every new
+  worker added up to a second before the first result. A worker that fails to start now reports the failure to the
+  waiting call straight away, instead of after the 50 s timeout
 - Frontal solver memory and run time on medium-sized problems
   ([#121](https://github.com/FEAScript/FEAScript-core/issues/121)):
   - The front was allocated with the size of the whole system (N × N), and the solver eliminated at most one node

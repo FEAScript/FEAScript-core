@@ -29,6 +29,10 @@
  *  - Every model gives the same solution with the rebuilt options as with the original options
  *  - Native functions are rejected with an error
  *
+ * Worker start:
+ *  - A call made while the worker starts goes through as soon as the worker is ready
+ *  - A worker that fails to start reports the failure to the waiting call, without waiting for the timeout
+ *
  * Run: node tests/unit/model.test.js (or npm test)
  */
 
@@ -36,6 +40,7 @@ import { FEAScriptModel } from "../../src/FEAScript.js";
 import { mathjsLUSolver } from "../../src/solvers/mathjsLUSolver.js";
 import { plotInterpolatedSolution } from "../../src/visualization/plotlyPlot.js";
 import { serializeFunctions, deserializeFunctions } from "../../src/workers/functionSerialization.js";
+import { FEAScriptWorker } from "../../src/workers/worker.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
 
 basicLog("");
@@ -530,6 +535,39 @@ function assert(condition, message) {
       )}`,
     );
   }
+}
+
+// Worker start. Node has no web workers, so these replace the step that starts one
+{
+  basicLog("");
+  basicLog("[Worker start]");
+
+  const START_TIME = 20; // Milliseconds
+
+  class StartingWorker extends FEAScriptWorker {
+    async _initWorker() {
+      await new Promise((resolve) => setTimeout(resolve, START_TIME));
+      this.feaWorker = { ping: async () => true };
+      this.isReady = true;
+    }
+  }
+
+  class FailingWorker extends FEAScriptWorker {
+    async _initWorker() {
+      throw new Error("No worker");
+    }
+  }
+
+  const startTime = performance.now();
+  const answer = await new StartingWorker().ping();
+  const waited = performance.now() - startTime;
+  assert(
+    answer === true && waited < 500,
+    `A call waits only until the worker is ready (${waited.toFixed(0)} ms)`,
+  );
+
+  const failure = await new FailingWorker().ping().catch((error) => error.message);
+  assert(failure === "No worker", "A worker that fails to start reports the failure to the waiting call");
 }
 
 basicLog("");

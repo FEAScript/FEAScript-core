@@ -13,6 +13,8 @@ import * as Comlink from "../vendor/comlink.mjs";
 // Internal imports
 import { serializeFunctions } from "./functionSerialization.js";
 
+const readyTimeout = 50000; // Milliseconds. A slow connection can take a while to load the worker bundle
+
 /**
  * Class to facilitate communication with web workers for FEAScript operations
  */
@@ -26,7 +28,7 @@ export class FEAScriptWorker {
     this.feaWorker = null;
     this.isReady = false;
 
-    this._initWorker();
+    this.started = this._initWorker();
   }
 
   /**
@@ -69,28 +71,21 @@ export class FEAScriptWorker {
   /**
    * Function to ensure that the worker is ready before performing any operations
    * @private
-   * @returns {Promise<void>} Resolves when the worker is ready
-   * @throws Will throw an error if the worker is not ready within the timeout period
+   * @returns {Promise<void>} Resolves as soon as the worker is ready
+   * @throws Will throw an error if the worker fails to start, or is not ready within the timeout period
    */
   async _ensureReady() {
-    if (this.isReady) return Promise.resolve();
+    if (this.isReady) return;
 
-    return new Promise((resolve, reject) => {
-      let attempts = 0;
-      const maxAttempts = 50; // 5 seconds max
-
-      const checkReady = () => {
-        attempts++;
-        if (this.isReady) {
-          resolve();
-        } else if (attempts >= maxAttempts) {
-          reject(new Error("Timeout waiting for worker to be ready"));
-        } else {
-          setTimeout(checkReady, 1000);
-        }
-      };
-      checkReady();
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error("Timeout waiting for worker to be ready")), readyTimeout);
     });
+    try {
+      await Promise.race([this.started, timeout]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   /**
