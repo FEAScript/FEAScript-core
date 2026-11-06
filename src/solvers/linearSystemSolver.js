@@ -11,7 +11,8 @@
 import { jacobiSolver } from "./jacobiSolver.js";
 import { mathjsLUSolver } from "./mathjsLUSolver.js";
 import { SparseMatrix } from "../linalg/sparseMatrix.js";
-import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
+import { FEAScriptError } from "../utilities/errors.js";
+import { basicLog, debugLog } from "../utilities/logging.js";
 import * as Comlink from "../vendor/comlink.mjs";
 
 /**
@@ -25,6 +26,7 @@ import * as Comlink from "../vendor/comlink.mjs";
  *  - solutionVector: The solution vector (Float64Array)
  *  - converged: Boolean indicating whether the method converged (for iterative methods)
  *  - iterations: Number of iterations performed (for iterative methods)
+ * @throws {FEAScriptError} If the method is unknown, or if it does not converge
  */
 export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, options = {}) {
   // Extract options (the Jacobi tolerance applies to the residual relative to the right-hand side)
@@ -54,22 +56,23 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
       tolerance,
     });
 
-    // Log convergence information
-    if (jacobiSolverResult.converged) {
-      debugLog(`Jacobi method converged in ${jacobiSolverResult.iterations} iterations`);
-    } else {
-      errorLog(`Jacobi method did not converge after ${jacobiSolverResult.iterations} iterations`);
-    }
-
     solutionVector = jacobiSolverResult.solutionVector;
     converged = jacobiSolverResult.converged;
     iterations = jacobiSolverResult.iterations;
+    if (converged) debugLog(`Jacobi method converged in ${iterations} iterations`);
   } else {
-    errorLog(`Unknown solver method: ${solverMethod}`);
+    console.timeEnd("systemSolving");
+    throw new FEAScriptError("UNSUPPORTED_SOLVER", `Unknown solver method: ${solverMethod}`);
   }
 
   console.timeEnd("systemSolving");
-  if (converged) basicLog("System solved successfully");
+  if (!converged) {
+    throw new FEAScriptError(
+      "NOT_CONVERGED",
+      `Jacobi method did not converge after ${iterations} iterations`,
+    );
+  }
+  basicLog("System solved successfully");
 
   return { solutionVector, converged, iterations };
 }
@@ -98,6 +101,7 @@ async function createDefaultComputeEngine() {
  *  - solutionVector: The solution vector (Float64Array)
  *  - converged: Boolean indicating whether the method converged (for iterative methods)
  *  - iterations: Number of iterations performed (for iterative methods)
+ * @throws {FEAScriptError} If the method is unknown, or if it does not converge
  */
 export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, residualVector, options = {}) {
   // Extract options
@@ -143,24 +147,26 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
     solutionVector = Float64Array.from(result.solutionVector);
     converged = result.converged;
     iterations = result.iterations;
-
-    // Log convergence information
-    if (converged) {
-      debugLog(`Jacobi method converged in ${iterations} iterations`);
-    } else {
-      errorLog(`Jacobi method did not converge after ${iterations} iterations`);
-    }
+    if (converged) debugLog(`Jacobi method converged in ${iterations} iterations`);
   } else {
-    errorLog(`Unknown solver method: ${solverMethod}`);
+    console.timeEnd("systemSolving");
+    throw new FEAScriptError("UNSUPPORTED_SOLVER", `Unknown solver method: ${solverMethod}`);
   }
 
   console.timeEnd("systemSolving");
-  if (converged) basicLog(`System solved successfully (${solverMethod})`);
 
   if (created) {
     await computeEngine?.destroy?.().catch(() => {});
     created.worker.terminate();
   }
+
+  if (!converged) {
+    throw new FEAScriptError(
+      "NOT_CONVERGED",
+      `Jacobi method did not converge after ${iterations} iterations`,
+    );
+  }
+  basicLog(`System solved successfully (${solverMethod})`);
 
   return { solutionVector, converged, iterations };
 }

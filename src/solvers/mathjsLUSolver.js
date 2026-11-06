@@ -19,6 +19,7 @@ import {
 const math = create({ SparseMatrixDependencies, sluDependencies, lusolveDependencies, flattenDependencies });
 
 // Internal imports
+import { FEAScriptError } from "../utilities/errors.js";
 import { SparseMatrix } from "../linalg/sparseMatrix.js";
 
 /**
@@ -45,7 +46,14 @@ export function mathjsLUSolver(systemMatrix, rightHandSideVector, options = {}) 
     const compressedMatrix =
       systemMatrix instanceof SparseMatrix ? systemMatrix : SparseMatrix.fromDense(systemMatrix);
     const sparseMatrix = new math.SparseMatrix({ ...compressedMatrix.toCSC(), datatype: "number" });
-    const luFactorization = math.slu(sparseMatrix, ordering, pivotThreshold);
+    let luFactorization;
+    try {
+      luFactorization = math.slu(sparseMatrix, ordering, pivotThreshold);
+    } catch (error) {
+      // On a singular matrix math.js fails with a TypeError, as its factorization comes back empty
+      if (!(error instanceof TypeError)) throw error;
+      throw new FEAScriptError("SINGULAR_MATRIX", "The system matrix is singular");
+    }
     const solutionMatrix = math.lusolve(luFactorization, rightHandSideVector);
     solutionVector = Float64Array.from(math.flatten(solutionMatrix).valueOf());
   } else {

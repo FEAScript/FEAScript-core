@@ -160,9 +160,9 @@ for (const elementOrder of ["linear", "quadratic"]) {
  *
  * `solveAsync` holds a second call into `assembleHeatConductionMat`, which is easy to miss
  * when the signature changes. It cannot be driven end to end here because `jacobi-gpu`
- * needs a WebGPU compute engine, but assembly happens before the solver method is branched
- * on, so a coefficient that counts its own invocations is enough to prove the coefficients
- * reach the assembler.
+ * needs a WebGPU compute engine, but assembly happens before the solver method is checked,
+ * so a coefficient that counts its own invocations is enough to prove the coefficients
+ * reach the assembler. The method used here is then refused.
  */
 {
   let thermalConductivityCalls = 0;
@@ -186,8 +186,9 @@ for (const elementOrder of ["linear", "quadratic"]) {
   model.addBoundaryCondition("1", ["constantTemp", 1]);
   model.setSolverMethod("lusolve");
 
-  await model.solveAsync(null);
+  const failure = await model.solveAsync(null).catch((error) => error);
 
+  assert(failure.code === "UNSUPPORTED_SOLVER", "solveAsync refuses a method it cannot run");
   assert(
     thermalConductivityCalls > 0 && heatSourceCalls > 0,
     `solveAsync forwards the coefficients to the assembler: thermalConductivity evaluated ` +

@@ -12,8 +12,17 @@ All notable changes to FEAScript-core are documented in this file. The format is
   Fourier series solution) and TPLP01 (L-shaped domain with a re-entrant corner, on Gmsh triangle and
   quadrilateral meshes)
 
+- `FEAScriptError`, with a `code`, is exported, and stops a solve that would otherwise return an empty or a wrong
+  result ([#125](https://github.com/FEAScript/FEAScript-core/issues/125)). The other input checks still log an error
+
 ### Changed
 
+- A solve that cannot succeed now throws a `FEAScriptError` instead of logging an error and returning a result:
+  `"UNSUPPORTED_SOLVER"` for a solver method the model does not support, such as the frontal solver for creeping
+  flow or beams, and for anything `solveAsync()` cannot run, and `"NOT_CONVERGED"` for a Jacobi solve, a front
+  propagation or a nonlinear general form PDE that does not converge, and `"SINGULAR_MATRIX"` for a singular system,
+  where the frontal solver returned zeros and the LU solver failed with a `TypeError`. Code that read a partial
+  result after such a failure must now catch the error
 - Dirichlet conditions (constant temperature, value and velocity, beam supports) are applied symmetrically
   ([#117](https://github.com/FEAScript/FEAScript-core/issues/117)): the known values move to the right-hand side and
   the columns of the prescribed nodes are eliminated as well as their rows, so a symmetric system matrix stays
@@ -64,8 +73,6 @@ All notable changes to FEAScript-core are documented in this file. The format is
   - Results on one core of an Intel N100:
     - 80×40 quadratic mesh (13k nodes): previously ran out of memory, now solves in 0.9 s.
     - 160×80 linear mesh (13k nodes): 31 s → 1.1 s.
-- After a Jacobi solve that does not converge, the log no longer also reports "System solved successfully"; only
-  the error that the method did not converge is logged
 - Creeping flow with velocity conditions on every boundary: at a node shared by a moving wall and a fixed wall,
   the condition applied last won, so one corner of a moving lid leaked fluid through a side wall. With the
   pressure fixed at one node, this gave a spurious flow near that node. Zero-velocity (no-slip) conditions now

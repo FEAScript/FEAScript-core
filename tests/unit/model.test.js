@@ -33,6 +33,12 @@
  *  - A call made while the worker starts goes through as soon as the worker is ready
  *  - A worker that fails to start reports the failure to the waiting call, without waiting for the timeout
  *
+ * Solver failures, which throw a FEAScriptError instead of returning an empty or a wrong result:
+ *  - A solver method that the model does not support, whichever model and method
+ *  - A method that does not converge
+ *  - solveAsync with anything but the WebGPU Jacobi solver for heat conduction
+ *  - A singular system, with the direct solvers
+ *
  * Run: node tests/unit/model.test.js (or npm test)
  */
 
@@ -41,6 +47,7 @@ import { mathjsLUSolver } from "../../src/solvers/mathjsLUSolver.js";
 import { plotInterpolatedSolution } from "../../src/visualization/plotlyPlot.js";
 import { serializeFunctions, deserializeFunctions } from "../../src/workers/functionSerialization.js";
 import { FEAScriptWorker } from "../../src/workers/worker.js";
+import { FEAScriptError } from "../../src/utilities/errors.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
 
 basicLog("");
@@ -535,6 +542,100 @@ function assert(condition, message) {
       )}`,
     );
   }
+}
+
+// Solver failures
+{
+  basicLog("");
+  basicLog("[Solver failures]");
+
+  const failureOf = (run) => {
+    const { log, error, time, timeEnd } = console;
+    Object.assign(console, { log() {}, error() {}, time() {}, timeEnd() {} });
+    try {
+      run();
+      return null;
+    } catch (failure) {
+      return failure;
+    } finally {
+      Object.assign(console, { log, error, time, timeEnd });
+    }
+  };
+
+  const beamModel = (solverMethod) => {
+    const model = new FEAScriptModel();
+    model.setModelConfig("eulerBernoulliBeamScript", { coefficientFunctions: { EI: () => 1e5 } });
+    model.setMeshConfig({ meshDimension: "1D", elementOrder: "linear", numElementsX: 4, maxX: 4 });
+    model.addBoundaryCondition("1", [["fixed"]]);
+    model.addBoundaryCondition("5", [["force", -1000]]);
+    model.setSolverMethod(solverMethod);
+    return model;
+  };
+
+  const flowModel = (solverMethod) => {
+    const model = new FEAScriptModel();
+    model.setModelConfig("creepingFlowScript", { coefficientFunctions: { viscosity: 1 } });
+    model.setMeshConfig({
+      meshDimension: "2D",
+      elementOrder: "quadratic",
+      numElementsX: 2,
+      numElementsY: 2,
+      maxX: 1,
+      maxY: 1,
+    });
+    model.addBoundaryCondition("0", ["constantVelocity", 0, 0]);
+    model.addBoundaryCondition("1", ["constantVelocity", 0, 0]);
+    model.addBoundaryCondition("2", ["constantVelocity", 1, 0]);
+    model.addBoundaryCondition("3", ["constantVelocity", 0, 0]);
+    model.setSolverMethod(solverMethod);
+    return model;
+  };
+
+  const unsupported = [
+    ["Beam with frontal", beamModel("frontal")],
+    ["Creeping flow with frontal", flowModel("frontal")],
+    ["Creeping flow with jacobi", flowModel("jacobi")],
+    ["Beam with an unknown method", beamModel("gauss")],
+    ["Beam with jacobi-gpu in solve()", beamModel("jacobi-gpu")],
+  ];
+  for (const [name, model] of unsupported) {
+    const failure = failureOf(() => model.solve());
+    assert(
+      failure instanceof FEAScriptError && failure.code === "UNSUPPORTED_SOLVER",
+      `${name} throws UNSUPPORTED_SOLVER`,
+    );
+  }
+
+  const diverged = failureOf(() => beamModel("jacobi").solve());
+  assert(
+    diverged instanceof FEAScriptError && diverged.code === "NOT_CONVERGED",
+    "Jacobi on a beam, which diverges, throws NOT_CONVERGED",
+  );
+
+  const asyncFailure = await beamModel("lusolve")
+    .solveAsync()
+    .then(
+      () => null,
+      (failure) => failure,
+    );
+  assert(asyncFailure?.code === "UNSUPPORTED_SOLVER", "solveAsync refuses what it cannot solve");
+
+  for (const solverMethod of ["frontal", "lusolve"]) {
+    const model = new FEAScriptModel();
+    model.setModelConfig("heatConductionScript", { coefficientFunctions: { thermalConductivity: () => 0 } });
+    model.setMeshConfig({ meshDimension: "1D", elementOrder: "linear", numElementsX: 4, maxX: 1 });
+    model.addBoundaryCondition("0", ["constantTemperature", 1]);
+    model.addBoundaryCondition("1", ["convection", 1, 0]);
+    model.setSolverMethod(solverMethod);
+    const failure = failureOf(() => model.solve());
+    assert(
+      failure?.code === "SINGULAR_MATRIX",
+      `Zero conductivity with ${solverMethod} throws SINGULAR_MATRIX`,
+    );
+  }
+
+  assert(failureOf(() => flowModel("lusolve").solve()) === null, "Creeping flow still solves with lusolve");
+  assert(failureOf(() => beamModel("lusolve").solve()) === null, "A beam still solves with lusolve");
 }
 
 // Worker start. Node has no web workers, so these replace the step that starts one

@@ -27,6 +27,7 @@ import {
   extractEulerBernoulliBeamFields,
 } from "./physics/eulerBernoulliBeam.js";
 import { runFrontalSolver } from "./solvers/frontalSolver.js";
+import { FEAScriptError } from "./utilities/errors.js";
 import { basicLog, debugLog, warnLog, errorLog } from "./utilities/logging.js";
 
 // Boundary condition types of each model (the Euler-Bernoulli beam model validates its own conditions)
@@ -35,6 +36,15 @@ const supportedBoundaryConditionTypes = {
   generalFormPDEScript: ["constantValue", "zeroGradient"],
   frontPropagationScript: ["constantValue", "zeroGradient"],
   creepingFlowScript: ["constantVelocity", "stressFree"],
+};
+
+// Solver methods of solve() for each model. "jacobi-gpu" runs through solveAsync()
+const supportedSolverMethods = {
+  heatConductionScript: ["lusolve", "jacobi", "frontal"],
+  generalFormPDEScript: ["lusolve", "jacobi", "frontal"],
+  frontPropagationScript: ["lusolve", "jacobi", "frontal"],
+  creepingFlowScript: ["lusolve"],
+  eulerBernoulliBeamScript: ["lusolve", "jacobi"],
 };
 
 /**
@@ -127,6 +137,25 @@ export class FEAScriptModel {
   }
 
   /**
+   * Method to stop a solve with a solver method that the selected model cannot use
+   * @throws {FEAScriptError} If the combination is not supported
+   */
+  validateSolverMethod() {
+    const { solverConfig, solverMethod, nonlinear } = this;
+    const supported = supportedSolverMethods[solverConfig]?.includes(solverMethod) ?? true;
+    const nonlinearFrontal =
+      solverConfig === "generalFormPDEScript" && nonlinear && solverMethod === "frontal";
+    if (supported && !nonlinearFrontal) return;
+    const asyncHint = solverMethod === "jacobi-gpu" ? " Use solveAsync() for it" : "";
+    throw new FEAScriptError(
+      "UNSUPPORTED_SOLVER",
+      `Solver method "${solverMethod}" is not supported for ${
+        nonlinear ? "nonlinear " : ""
+      }${solverConfig}.${asyncHint}`,
+    );
+  }
+
+  /**
    * Method to report boundary conditions that the selected model does not recognize, which would otherwise
    * be ignored (a boundary without a recognized condition gets the natural condition of the model)
    */
@@ -174,6 +203,7 @@ export class FEAScriptModel {
       errorLog("solverConfig, meshConfig and boundaryConditions must be set before solving");
     }
     this.validateBoundaryConditions();
+    this.validateSolverMethod();
     /**
      * For consistency across both linear and nonlinear formulations,
      * we always refer to the assembled right-hand side vector as
@@ -293,19 +323,15 @@ export class FEAScriptModel {
 
         // Stop at the first step that does not converge, instead of continuing from a wrong solution
         if (!newtonRaphsonResult.converged) {
-          errorLog(
+          throw new FEAScriptError(
+            "NOT_CONVERGED",
             `Front propagation did not converge at eikonal activation ${eikonalActivationFlag} (step ${stepIndex} of ${eikonalExteralIterations}). The solution is not valid; a finer mesh may be required.`,
           );
-          break;
         }
       }
     } else if (this.solverConfig === "generalFormPDEScript") {
       // Check if using frontal solver
-      if (this.solverMethod === "frontal" && this.nonlinear) {
-        errorLog(
-          "Frontal solver is not yet supported for nonlinear generalFormPDEScript. Please use 'lusolve' or 'jacobi'.",
-        );
-      } else if (this.solverMethod === "frontal") {
+      if (this.solverMethod === "frontal") {
         const genericBoundaryConditions = new GenericBoundaryConditions(
           this.boundaryConditions,
           meshData.boundaryElements,
@@ -344,6 +370,13 @@ export class FEAScriptModel {
             ),
           context,
         );
+
+        if (!newtonRaphsonResult.converged) {
+          throw new FEAScriptError(
+            "NOT_CONVERGED",
+            `Nonlinear general form PDE did not converge after ${newtonRaphsonResult.iterations} iterations`,
+          );
+        }
 
         jacobianMatrix = newtonRaphsonResult.jacobianMatrix;
         residualVector = newtonRaphsonResult.residualVector;
@@ -423,6 +456,12 @@ export class FEAScriptModel {
       errorLog("Solver config, mesh config, and boundary conditions must be set before solving.");
     }
     this.validateBoundaryConditions();
+    const refuse = () =>
+      new FEAScriptError(
+        "UNSUPPORTED_SOLVER",
+        `solveAsync() supports heatConductionScript with "jacobi-gpu", not ${this.solverConfig} with "${this.solverMethod}"`,
+      );
+    if (this.solverConfig !== "heatConductionScript") throw refuse();
 
     let jacobianMatrix = [];
     let residualVector = [];
@@ -447,21 +486,22 @@ export class FEAScriptModel {
         this.coefficientFunctions,
       ));
 
-      if (this.solverMethod === "jacobi-gpu") {
-        const { solutionVector: x } = await solveLinearSystemAsync(
-          "jacobi-gpu",
-          jacobianMatrix,
-          residualVector,
-          {
-            computeEngine,
-            maxIterations: options.maxIterations ?? this.maxIterations,
-            tolerance: options.tolerance ?? this.tolerance,
-          },
-        );
-        solutionVector = x;
-      } else {
-        // Any other async solver
+      if (this.solverMethod !== "jacobi-gpu") {
+        console.timeEnd("totalSolvingTime");
+        throw refuse();
       }
+
+      const { solutionVector: x } = await solveLinearSystemAsync(
+        "jacobi-gpu",
+        jacobianMatrix,
+        residualVector,
+        {
+          computeEngine,
+          maxIterations: options.maxIterations ?? this.maxIterations,
+          tolerance: options.tolerance ?? this.tolerance,
+        },
+      );
+      solutionVector = x;
     }
     console.timeEnd("totalSolvingTime");
     basicLog("Solving process completed");

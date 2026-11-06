@@ -10,6 +10,7 @@
 // Internal imports
 import { BasisFunctions } from "../elements/basisFunctions.js";
 import { initializeFEA } from "../elements/feaInitialization.js";
+import { FEAScriptError } from "../utilities/errors.js";
 import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
 
 // Create object templates
@@ -558,12 +559,11 @@ function runFrontalAlgorithm(meshData, FEAData, boundaryConditionsHandler, assem
       pivotColumnGlobalIndex = Math.abs(frontStorage.columnHeaders[pivotColumnIndex - 1]); // Assign, don't declare
 
       if (Math.abs(pivotValue) < 1e-10) {
-        errorLog(
+        throw new FEAScriptError(
+          "SINGULAR_MATRIX",
           `Matrix singular or ill-conditioned, currentElementIndex=${elementData.currentElementIndex}, pivotGlobalRowIndex=${pivotGlobalRowIndex}, pivotColumnGlobalIndex=${pivotColumnGlobalIndex}, pivotValue=${pivotValue}`,
         );
       }
-
-      if (pivotValue === 0) return;
 
       for (let columnIndex = 0; columnIndex < columnCount; columnIndex++) {
         frontStorage.pivotRow[columnIndex] = frontMatrix[pivotRowIndex - 1][columnIndex] / pivotValue;
@@ -659,12 +659,11 @@ function runFrontalAlgorithm(meshData, FEAData, boundaryConditionsHandler, assem
 
       frontStorage.pivotRow[0] = 1;
       if (Math.abs(pivotValue) < 1e-10) {
-        errorLog(
+        throw new FEAScriptError(
+          "SINGULAR_MATRIX",
           `Matrix singular or ill-conditioned, currentElementIndex=${elementData.currentElementIndex}, pivotGlobalRowIndex=${pivotGlobalRowIndex}, pivotColumnGlobalIndex=${pivotColumnGlobalIndex}, pivotValue=${pivotValue}`,
         );
       }
-
-      if (pivotValue === 0) return;
 
       frontalData.globalResidualVector[pivotGlobalRowIndex - 1] =
         frontalData.globalResidualVector[pivotGlobalRowIndex - 1] / pivotValue;
