@@ -35,10 +35,10 @@
 
 ## How to use FEAScript
 
-You can run simulations with FEAScript by calling its functions from JavaScript (the FEAScript API). The API is the core programmatic interface for FEAScript and works across multiple environments, including the browser (simple HTML pages and online JavaScript playgrounds, e.g. [CodePen](https://codepen.io/) and [Scribbler](https://scribbler.live/)) and server-side runtimes such as Node.js. The most common ways to use FEAScript are outlined below:
+You can run simulations with FEAScript by calling its functions from JavaScript (the FEAScript API). The API is the core programmatic interface for FEAScript and works across multiple environments, including the browser (simple HTML pages and online JavaScript playgrounds, e.g. CodePen and Scribbler) and server-side runtimes such as Node.js. The most common ways to use FEAScript are outlined below:
 
 1. **[In the browser](#use-feascript-in-the-browser)** – Run FEAScript directly in a simple HTML page to perform simulations locally with no additional installations or cloud services required.
-2. **[In JavaScript playgrounds](#use-feascript-in-javascript-playgrounds)** – Try FEAScript in interactive JavaScript playgrounds such as [CodePen](https://codepen.io/FEAScript) or [Scribbler](https://hub.scribbler.live/portfolio/#!nikoscham/FEAScript-Scribbler-examples).
+2. **[In JavaScript playgrounds](#use-feascript-in-javascript-playgrounds)** – Try FEAScript in interactive JavaScript playgrounds such as CodePen or Scribbler.
 3. **[With Node.js](#use-feascript-with-nodejs)** – Use FEAScript in server-side JavaScript applications.
 
 The **[FEAScript documentation](https://docs.feascript.com)** covers installation, the physical models and their equations, meshes, boundary conditions, solvers and the full API reference.
