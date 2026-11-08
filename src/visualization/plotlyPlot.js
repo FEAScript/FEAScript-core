@@ -13,6 +13,74 @@ import { pointInsideQuadrilateral, pointInsideTriangularElement } from "../eleme
 import { BasisFunctions } from "../elements/basisFunctions.js";
 import { selectSolutionField } from "./solutionFields.js";
 
+// Plot sizing: a plot fills the width of its container, up to the largest size below, and a 2D plot keeps one scale
+// for x and y. The colour bar of a 2D plot sits in a fixed right margin, with its title on its side, so plots of
+// different fields get the same drawing area
+const largestPlotSize = { width: 600, height: 600 };
+const linePlotHeight = 300;
+const contourMargin = { l: 50, r: 100, t: 50, b: 50 };
+
+/**
+ * Function to find the width available to a plot: the width of its container, up to the largest plot width
+ * @param {string} plotDivId - The id of the div where the plot will be rendered
+ * @returns {number} The width, in pixels
+ */
+function availablePlotWidth(plotDivId) {
+  // Without a page (as in Node.js tests) the width of the window is used
+  const containerWidth = globalThis.document?.getElementById(plotDivId)?.clientWidth || window.innerWidth;
+  return Math.min(containerWidth, largestPlotSize.width);
+}
+
+/**
+ * Function to find the largest plot of a given shape, so that x and y have one scale and no space goes unused
+ * @param {number} lengthX - The length of the domain along x
+ * @param {number} lengthY - The length of the domain along y
+ * @param {object} margins - The margins `l`, `r`, `t` and `b`, in pixels
+ * @param {object} box - The `width` and `height` available, in pixels
+ * @returns {object} The `width` and `height` of the plot, in pixels
+ */
+function fittedPlotSize(lengthX, lengthY, { l, r, t, b }, box) {
+  const scale = Math.min((box.width - l - r) / lengthX, (box.height - t - b) / lengthY);
+  return { width: Math.round(scale * lengthX) + l + r, height: Math.round(scale * lengthY) + t + b };
+}
+
+/**
+ * Function to draw a 2D contour plot that fills the width of its container, with one scale for x and y
+ * @param {string} plotDivId - The id of the div where the plot will be rendered
+ * @param {object} contourData - The Plotly contour trace
+ * @param {string} title - The title of the plot
+ * @param {number[]} xCoordinates - The x-coordinates of the points
+ * @param {number[]} yCoordinates - The y-coordinates of the points
+ * @param {string} colorbarTitle - The name of the plotted field
+ */
+function drawContourPlot(plotDivId, contourData, title, xCoordinates, yCoordinates, colorbarTitle) {
+  const minX = Math.min(...xCoordinates);
+  const maxX = Math.max(...xCoordinates);
+  const minY = Math.min(...yCoordinates);
+  const maxY = Math.max(...yCoordinates);
+  const box = { width: availablePlotWidth(plotDivId), height: largestPlotSize.height };
+
+  const layout = {
+    title,
+    ...fittedPlotSize(maxX - minX, maxY - minY, contourMargin, box),
+    xaxis: { title: "x", range: [minX, maxX] },
+    yaxis: { title: "y", range: [minY, maxY], scaleanchor: "x", scaleratio: 1 },
+    margin: contourMargin,
+    hovermode: "closest",
+  };
+  const trace = {
+    ...contourData,
+    colorbar: { title: { text: colorbarTitle, side: "right" }, thickness: 15 },
+  };
+  Plotly.newPlot(plotDivId, [trace], layout, { responsive: true });
+
+  // Very long colour bar labels can still widen the margins. Fit the plot again to the margins Plotly used
+  const margins = globalThis.document?.getElementById(plotDivId)?._fullLayout?._size;
+  if (margins && (margins.l !== contourMargin.l || margins.r !== contourMargin.r)) {
+    Plotly.relayout(plotDivId, fittedPlotSize(maxX - minX, maxY - minY, margins, box));
+  }
+}
+
 /**
  * Function to create plots of the solution vector
  * @param {object} result - Object containing solution vector and mesh information
@@ -43,14 +111,10 @@ export function plotSolution(model, result, plotType, plotDivId, options = {}) {
       name: solutionLabel,
     };
 
-    let maxWindowWidth = Math.min(window.innerWidth, 700);
-    let plotWidth = Math.min(maxWindowWidth, 600);
-    let plotHeight = 300;
-
     let layout = {
       title: `line plot - ${solverConfig}`,
-      width: plotWidth,
-      height: plotHeight,
+      width: availablePlotWidth(plotDivId),
+      height: linePlotHeight,
       xaxis: { title: "x" },
       yaxis: { title: solutionLabel },
       margin: { l: 50, r: 50, t: 50, b: 50 },
@@ -60,33 +124,6 @@ export function plotSolution(model, result, plotType, plotDivId, options = {}) {
     console.timeEnd("plottingTime");
   } else if (meshDimension === "2D" && plotType === "contour") {
     const zData = Array.from(solutionVector);
-
-    // Plot sizing parameters
-    let maxWindowWidth = Math.min(window.innerWidth, 700);
-    let minX = Math.min(...nodesXCoordinates);
-    let maxX = Math.max(...nodesXCoordinates);
-    let minY = Math.min(...nodesYCoordinates);
-    let maxY = Math.max(...nodesYCoordinates);
-    let lengthX = maxX - minX;
-    let lengthY = maxY - minY;
-    let aspectRatio = lengthY / lengthX;
-    let plotWidth = Math.min(maxWindowWidth, 600);
-    let plotHeight = plotWidth * aspectRatio;
-
-    // Layout properties
-    let layout = {
-      title: `${plotType} plot - ${solverConfig}`,
-      width: plotWidth,
-      height: plotHeight,
-      xaxis: { title: "x" },
-      yaxis: {
-        title: "y",
-        scaleanchor: "x",
-        scaleratio: 1,
-      },
-      margin: { l: 50, r: 50, t: 50, b: 50 },
-      hovermode: "closest",
-    };
 
     // Create the plot
     let contourData = {
@@ -102,13 +139,17 @@ export function plotSolution(model, result, plotType, plotDivId, options = {}) {
         showlabels: false,
       },
       //colorscale: 'Viridis',
-      colorbar: {
-        title: solutionLabel,
-      },
       name: "Solution Field",
     };
 
-    Plotly.newPlot(plotDivId, [contourData], layout, { responsive: true });
+    drawContourPlot(
+      plotDivId,
+      contourData,
+      `${plotType} plot - ${solverConfig}`,
+      nodesXCoordinates,
+      nodesYCoordinates,
+      solutionLabel,
+    );
     console.timeEnd("plottingTime");
   }
 }
@@ -246,27 +287,6 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId, opt
       }
     }
 
-    // Plot sizing parameters
-    let maxWindowWidth = Math.min(window.innerWidth, 700);
-    let aspectRatio = lengthY / lengthX;
-    let plotWidth = Math.min(maxWindowWidth, 600);
-    let plotHeight = plotWidth * aspectRatio;
-
-    // Layout properties
-    let layout = {
-      title: `${plotType} plot (interpolated) - ${model.solverConfig}`,
-      width: plotWidth,
-      height: plotHeight,
-      xaxis: { title: "x" },
-      yaxis: {
-        title: "y",
-        scaleanchor: "x",
-        scaleratio: 1,
-      },
-      margin: { l: 50, r: 50, t: 50, b: 50 },
-      hovermode: "closest",
-    };
-
     // Create the plot
     let contourData = {
       x: visNodeXCoordinates,
@@ -283,13 +303,17 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId, opt
         showlabels: false,
       },
       //colorscale: 'Viridis',
-      colorbar: {
-        title: fieldName ?? "Solution",
-      },
       name: "Interpolated Solution Field",
     };
 
-    Plotly.newPlot(plotDivId, [contourData], layout, { responsive: true });
+    drawContourPlot(
+      plotDivId,
+      contourData,
+      `${plotType} plot (interpolated) - ${model.solverConfig}`,
+      visNodeXCoordinates,
+      visNodeYCoordinates,
+      fieldName ?? "Solution",
+    );
     console.timeEnd("plottingTime");
   }
 }
