@@ -21,7 +21,8 @@
     "prepare": "npm run build",
     "prepublishOnly": "npm run build",
     "test": "node --test",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:browser": "npm run build && node tests/umd/runBrowserTests.js"
   },
   "repository": {
     "type": "git",
@@ -91,12 +92,13 @@
     "@kitware/vtk.js": "^32.12.0",
     "@rollup/plugin-commonjs": "^29.0.2",
     "@rollup/plugin-node-resolve": "^16.0.3",
+    "playwright": "~1.61.1",
+    "prettier": "^2.8.8",
     "rollup": "^2.79.2",
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.36.0",
-    "typescript": "^5.8.3",
-    "prettier": "^2.8.8",
     "rollup-plugin-wasm": "^3.0.0",
-    "taichi.js": "^0.0.36"
+    "taichi.js": "^0.0.36",
+    "typescript": "^5.8.3"
   }
 }

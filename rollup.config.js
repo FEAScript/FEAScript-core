@@ -23,8 +23,26 @@ const rewriteWorkerUrl = {
   },
 };
 
+// In the UMD bundle, Rollup turns import.meta.url into document.currentScript.src, read where it is used.
+// The worker code reads it inside async functions, after the script has run, when currentScript is null and
+// the fallback is the page URL, so a CDN-loaded bundle looked for its worker files next to the page. This
+// reads the script URL once while the bundle runs (umdScriptUrlIntro, inside the UMD factory so it adds no global)
+// and points import.meta.url at it
+const umdScriptUrl = {
+  name: "umd-script-url",
+  resolveImportMeta(property, { format }) {
+    if (format === "umd" && property === "url") return "__feascriptScriptUrl";
+    return null;
+  },
+};
+const umdScriptUrlIntro =
+  'var __feascriptScriptUrl = typeof document !== "undefined" && document.currentScript && ' +
+  'document.currentScript.src ? document.currentScript.src : typeof location !== "undefined" ? ' +
+  'location.href : typeof __filename !== "undefined" ? "file://" + __filename : "";';
+
 const plugins = [
   rewriteWorkerUrl,
+  umdScriptUrl,
   resolve({
     browser: true,
     preferBuiltins: false,
@@ -59,6 +77,7 @@ export default [
         file: "dist/feascript.umd.js",
         format: "umd",
         name: "FEAScript",
+        intro: umdScriptUrlIntro,
         sourcemap: true,
       },
     ],

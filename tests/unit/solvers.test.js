@@ -21,12 +21,21 @@
  *  - Assembly into a pattern from fromElementDofs, with entries outside the pattern
  *  - Sparse and dense input give the same solution in the LU and Jacobi solvers
  *
+ * WebGPU availability ("jacobi-gpu"):
+ *  - No navigator.gpu, no adapter, and a failing adapter request each throw UNSUPPORTED_SOLVER with the reason
+ *  - An available adapter passes the check
+ *  - solveLinearSystemAsync with "jacobi-gpu" where WebGPU is missing (Node.js) throws UNSUPPORTED_SOLVER
+ *    before starting a worker
+ *
  * Run: node tests/unit/solvers.test.js (or npm test)
  */
 
 import { jacobiSolver } from "../../src/solvers/jacobiSolver.js";
 import { SparseMatrix } from "../../src/linalg/sparseMatrix.js";
+import { solveLinearSystemAsync } from "../../src/solvers/linearSystemSolver.js";
 import { mathjsLUSolver } from "../../src/solvers/mathjsLUSolver.js";
+import { assertWebGPUAvailable } from "../../src/solvers/webgpuAvailability.js";
+import { FEAScriptError } from "../../src/utilities/errors.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
 
 basicLog("");
@@ -116,7 +125,10 @@ function assert(condition, message) {
   matrix.addValue(1, 2, -3); // Stored, but exactly zero
   matrix.clearRow(1);
   matrix.setValue(1, 1, 1);
-  assert(matrix.rowNonZeros(1) === 1 && matrix.getValue(1, 1) === 1, "clearRow removes every entry of the row");
+  assert(
+    matrix.rowNonZeros(1) === 1 && matrix.getValue(1, 1) === 1,
+    "clearRow removes every entry of the row",
+  );
 
   basicLog("");
   basicLog("[2] Local (element) matrix assembly");
@@ -234,6 +246,75 @@ function assert(condition, message) {
   assert(
     sameArray(jacobiSparse.solutionVector, jacobiDense.solutionVector),
     "Jacobi solver gives identical results for sparse and dense input",
+  );
+}
+
+// WebGPU availability
+{
+  basicLog("");
+  basicLog("[WebGPU availability]");
+
+  // Replaces globalThis.navigator for one check (Node.js 21 and later define it, older versions do not)
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  const withNavigator = async (navigatorValue, check) => {
+    Object.defineProperty(globalThis, "navigator", {
+      value: navigatorValue,
+      configurable: true,
+      writable: true,
+    });
+    try {
+      return await check().then(
+        () => null,
+        (failure) => failure,
+      );
+    } finally {
+      if (originalNavigator) Object.defineProperty(globalThis, "navigator", originalNavigator);
+      else delete globalThis.navigator;
+    }
+  };
+  const isUnsupported = (failure, text) =>
+    failure instanceof FEAScriptError &&
+    failure.code === "UNSUPPORTED_SOLVER" &&
+    failure.message.includes(text);
+
+  const noGpu = await withNavigator({}, () => assertWebGPUAvailable());
+  assert(isUnsupported(noGpu, "navigator.gpu is undefined"), "No navigator.gpu throws UNSUPPORTED_SOLVER");
+
+  const noAdapter = await withNavigator({ gpu: { requestAdapter: async () => null } }, () =>
+    assertWebGPUAvailable(),
+  );
+  assert(isUnsupported(noAdapter, "no GPU adapter"), "No adapter throws UNSUPPORTED_SOLVER");
+
+  const failedRequest = await withNavigator(
+    {
+      gpu: {
+        requestAdapter: async () => {
+          throw new Error("adapter request failed");
+        },
+      },
+    },
+    () => assertWebGPUAvailable(),
+  );
+  assert(
+    isUnsupported(failedRequest, "no GPU adapter"),
+    "A failing adapter request throws UNSUPPORTED_SOLVER",
+  );
+
+  const available = await withNavigator({ gpu: { requestAdapter: async () => ({}) } }, () =>
+    assertWebGPUAvailable(),
+  );
+  assert(available === null, "An available adapter passes the check");
+
+  const inWorker = await withNavigator({}, () => assertWebGPUAvailable("a web worker of this browser"));
+  assert(isUnsupported(inWorker, "a web worker of this browser"), "The message says where the check ran");
+
+  // In Node.js there is no WebGPU: the solve must stop with the reason, not fail on new Worker()
+  const nodeSolve = await withNavigator({}, () =>
+    solveLinearSystemAsync("jacobi-gpu", [[2]], [2], { maxIterations: 10, tolerance: 1e-4 }),
+  );
+  assert(
+    isUnsupported(nodeSolve, "navigator.gpu is undefined"),
+    `solveLinearSystemAsync with "jacobi-gpu" and no WebGPU throws UNSUPPORTED_SOLVER (got ${nodeSolve?.message})`,
   );
 }
 

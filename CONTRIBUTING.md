@@ -184,3 +184,5 @@ npm test
 ```
 
 This command uses the Node.js test runner to discover all test files under `tests/`. The tests compare numerical results against stored reference solutions and verify individual solver and assembler behavior.
+
+The script-tag build (`dist/feascript.umd.js`) and its web workers can only be checked in a browser. `npm test` does not run that check; run it with `npm run test:browser`, which builds and opens the page in headless Chromium and Firefox (see [`tests/umd`](tests/umd/README.md)).

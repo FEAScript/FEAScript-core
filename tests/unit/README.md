@@ -7,7 +7,7 @@ and utilities.
 
 | Test file                   | Covers                                                                                                               |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `solvers.test.js`           | Jacobi solver convergence; sparse matrix assembly and CSR/CSC/dense conversion; sparse solver input                  |
+| `solvers.test.js`           | Jacobi solver convergence; sparse matrix assembly and CSR/CSC/dense conversion; sparse solver input; WebGPU check    |
 | `model.test.js`             | Boundary condition input checks; solution format for every model and solver method; `FEAScriptWorker` options, start |
 | `elements2D.test.js`        | Basis functions and quadrature rules of linear and quadratic quadrilaterals and triangles                            |
 | `plotInterpolation.test.js` | Point location and solution interpolation of the contour plot, for all 2D element types                              |

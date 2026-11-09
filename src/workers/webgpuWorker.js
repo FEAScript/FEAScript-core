@@ -12,7 +12,9 @@ import * as Comlink from "../vendor/comlink.mjs";
 import * as ti from "../vendor/taichi.esm.js";
 
 // Internal imports
+import { assertWebGPUAvailable } from "../solvers/webgpuAvailability.js";
 import { WebGPUComputeEngine } from "../solvers/webgpuJacobiSolver.js";
+import "./errorTransfer.js"; // Keeps the code of a FEAScriptError thrown in the worker
 
 /**
  * Worker for handling FEAScript WebGPU Jacobi solver computations
@@ -32,6 +34,7 @@ class webgpuFEAScriptWorker {
    */
   async initialize(powerPreference = "high-performance") {
     if (!this.initialized) {
+      await assertWebGPUAvailable("a web worker of this browser");
       const originalRequestAdapter = navigator.gpu.requestAdapter.bind(navigator.gpu);
       navigator.gpu.requestAdapter = async (options = {}) => {
         return originalRequestAdapter({ ...options, powerPreference });

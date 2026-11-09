@@ -10,6 +10,7 @@
 // Internal imports
 import { jacobiSolver } from "./jacobiSolver.js";
 import { mathjsLUSolver } from "./mathjsLUSolver.js";
+import { assertWebGPUAvailable } from "./webgpuAvailability.js";
 import { SparseMatrix } from "../linalg/sparseMatrix.js";
 import { FEAScriptError } from "../utilities/errors.js";
 import { basicLog, debugLog } from "../utilities/logging.js";
@@ -117,14 +118,28 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
 
 // Helper to lazily create a default WebGPU compute engine (Comlink + worker)
 async function createDefaultComputeEngine() {
-  const wrapperUrl = new URL("../workers/webgpuWorker.js", import.meta.url).href;
+  await assertWebGPUAvailable();
+  // The WebGPU worker always runs from source, never bundled: Taichi.js compiles kernels from their source
+  // text, and bundling renames the fields and ti.* calls in it. Source mode (loaded from src/solvers/) finds
+  // it in src/workers/; bundle mode (dist/) reaches the src/ folder that the package ships beside dist/.
+  // Its imports are all relative, so it needs no import map
+  const base = import.meta.url;
+  const workerFile = base.includes("/src/solvers/")
+    ? "../workers/webgpuWorker.js"
+    : "../src/workers/webgpuWorker.js";
+  const wrapperUrl = new URL(workerFile, base).href;
   const workerCode = `import "${wrapperUrl}";`;
   const blob = new Blob([workerCode], { type: "application/javascript" });
   const worker = new Worker(URL.createObjectURL(blob), {
     type: "module",
   });
   const computeEngine = Comlink.wrap(worker);
-  await computeEngine.initialize();
+  try {
+    await computeEngine.initialize();
+  } catch (error) {
+    worker.terminate(); // The caller never receives this worker, so it could not terminate it
+    throw error;
+  }
   return { computeEngine, worker };
 }
 

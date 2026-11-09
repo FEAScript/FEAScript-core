@@ -13,7 +13,8 @@
  *  - "INVALID_INPUT": the model input is missing, misspelled or out of range (model, mesh settings, boundary
  *    conditions, coefficient functions)
  *  - "UNSUPPORTED_MESH": the mesh is valid, but the model or the Gmsh reader cannot use it yet
- *  - "UNSUPPORTED_SOLVER": the solver method is unknown, or the model cannot use it
+ *  - "UNSUPPORTED_SOLVER": the solver method is unknown, or the model cannot use it, or (for "jacobi-gpu") WebGPU
+ *    or a GPU adapter is not available
  *  - "NOT_CONVERGED": an iterative method did not converge
  *  - "SINGULAR_MATRIX": the system matrix is singular
  *  - "NON_FINITE_VALUES": the assembled system or the solution contains NaN or infinite values, e.g. from a
