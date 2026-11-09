@@ -17,6 +17,7 @@ import {
   assembleGeneralFormPDEMat,
   assembleGeneralFormPDEFront,
   assembleGeneralFormPDENonlinearMat,
+  assembleGeneralFormPDENonlinearFront,
 } from "./physics/generalFormPDE.js";
 import { assembleHeatConductionMat, assembleHeatConductionFront } from "./physics/heatConduction.js";
 import { ThermalBoundaryConditions } from "./physics/thermalBoundaryConditions.js";
@@ -168,9 +169,7 @@ export class FEAScriptModel {
   validateSolverMethod() {
     const { solverConfig, solverMethod, nonlinear } = this;
     const supported = supportedSolverMethods[solverConfig]?.includes(solverMethod) ?? true;
-    const nonlinearFrontal =
-      solverConfig === "generalFormPDEScript" && nonlinear && solverMethod === "frontal";
-    if (supported && !nonlinearFrontal) return;
+    if (supported) return;
     const asyncHint = solverMethod === "jacobi-gpu" ? " Use solveAsync() for it" : "";
     throw new FEAScriptError(
       "UNSUPPORTED_SOLVER",
@@ -522,8 +521,8 @@ export class FEAScriptModel {
         }
       }
     } else if (this.solverConfig === "generalFormPDEScript") {
-      // Check if using frontal solver
-      if (this.solverMethod === "frontal") {
+      // Check if using frontal solver for the linear PDE (the nonlinear PDE uses it inside Newton-Raphson)
+      if (this.solverMethod === "frontal" && !this.nonlinear) {
         const genericBoundaryConditions = new GenericBoundaryConditions(
           this.boundaryConditions,
           meshData.boundaryElements,
@@ -550,6 +549,20 @@ export class FEAScriptModel {
           solverMethod: this.solverMethod,
           maxIterations: options.maxIterations ?? this.maxIterations,
           tolerance: options.tolerance ?? this.tolerance,
+          // Used only by the frontal solver
+          assembleFront: (elementArgs) =>
+            assembleGeneralFormPDENonlinearFront({
+              ...elementArgs,
+              coefficientFunctions: this.coefficientFunctions,
+            }),
+          boundaryConditionsHandler: new GenericBoundaryConditions(
+            this.boundaryConditions,
+            meshData.boundaryElements,
+            meshData.nop,
+            meshData.meshDimension,
+            meshData.elementOrder,
+            meshData.elementShape,
+          ),
         };
 
         const newtonRaphsonResult = newtonRaphson(

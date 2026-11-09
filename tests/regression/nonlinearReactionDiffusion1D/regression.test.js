@@ -12,7 +12,7 @@
  *
  * Replicates the physical setup from nonlinearReactionDiffusion1D.js (Newton-Raphson with lusolve)
  * for linear and quadratic elements, and asserts the solution at x=1, x=5 and x=10 against known
- * good values
+ * good values. The same values are asserted with the frontal solver inside Newton-Raphson
  *
  * Run: node tests/regression/nonlinearReactionDiffusion1D/regression.test.js (or npm test)
  */
@@ -42,7 +42,7 @@ const cases = [
   },
 ];
 
-function runSimulation(elementOrder) {
+function runSimulation(elementOrder, solverMethod) {
   const model = new FEAScriptModel();
 
   model.setModelConfig("generalFormPDEScript", {
@@ -64,7 +64,7 @@ function runSimulation(elementOrder) {
 
   model.addBoundaryCondition("0", ["constantValue", 1]);
   model.addBoundaryCondition("1", ["zeroGradient"]);
-  model.setSolverMethod("lusolve");
+  model.setSolverMethod(solverMethod);
 
   return model.solve();
 }
@@ -86,19 +86,21 @@ basicLog("");
 basicLog("================================");
 basicLog("Starting regression test for 1D nonlinear reaction-diffusion...");
 
-for (const { elementOrder, expected } of cases) {
-  const label = `${elementOrder} elements, lusolve`;
-  const { solutionVector, nodesCoordinates } = runSimulation(elementOrder);
+for (const solverMethod of ["lusolve", "frontal"]) {
+  for (const { elementOrder, expected } of cases) {
+    const label = `${elementOrder} elements, ${solverMethod}`;
+    const { solutionVector, nodesCoordinates } = runSimulation(elementOrder, solverMethod);
 
-  for (const { x, u: expectedU } of expected) {
-    const nodeIndex = nodesCoordinates.nodesXCoordinates.findIndex((nodeX) => Math.abs(nodeX - x) < 1e-10);
+    for (const { x, u: expectedU } of expected) {
+      const nodeIndex = nodesCoordinates.nodesXCoordinates.findIndex((nodeX) => Math.abs(nodeX - x) < 1e-10);
 
-    const u = solutionVector[nodeIndex];
+      const u = solutionVector[nodeIndex];
 
-    assert(
-      Math.abs(u - expectedU) < TOLERANCE,
-      `${label}: solution at x=${x}: expected ${expectedU}, got ${u} (tolerance ${TOLERANCE})`,
-    );
+      assert(
+        Math.abs(u - expectedU) < TOLERANCE,
+        `${label}: solution at x=${x}: expected ${expectedU}, got ${u} (tolerance ${TOLERANCE})`,
+      );
+    }
   }
 }
 

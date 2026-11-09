@@ -386,3 +386,112 @@ export function assembleGeneralFormPDENonlinearMat(
     residualVector,
   };
 }
+
+/**
+ * Function to assemble the local Jacobian matrix and residual vector for the nonlinear general form PDE model
+ * when using the frontal system solver within the Newton-Raphson method
+ * @param {object} data - Object containing element data for the frontal solver
+ * @param {array} data.solutionVector - The current solution vector (Newton-Raphson iterate)
+ * @param {object} data.coefficientFunctions - Functions A(x), B(x), C(x), D(x, u) and dDdu(x, u)
+ * @returns {object} An object containing:
+ *  - localJacobianMatrix: Local Jacobian matrix (negative of dResidual/du)
+ *  - localResidualVector: Local residual vector
+ *  - ngl: Array mapping local node indices to global node indices
+ */
+export function assembleGeneralFormPDENonlinearFront({
+  elementIndex,
+  nop,
+  meshData,
+  basisFunctions,
+  FEAData,
+  coefficientFunctions,
+  solutionVector,
+}) {
+  // Extract numerical integration parameters and mesh coordinates
+  const { gaussPoints, gaussWeights, referenceBasisFunctions, nodesPerElement } = FEAData;
+  const { nodesXCoordinates, meshDimension } = meshData;
+  const { A, B, C, D, dDdu } = coefficientFunctions;
+
+  // Initialize local Jacobian matrix and local residual vector
+  const localJacobianMatrix = Array(nodesPerElement)
+    .fill()
+    .map(() => Array(nodesPerElement).fill(0));
+  const localResidualVector = Array(nodesPerElement).fill(0);
+
+  // Build the mapping from local node indices to global node indices
+  const ngl = Array(nodesPerElement);
+  const localToGlobalMap = Array(nodesPerElement);
+  for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
+    ngl[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]);
+    localToGlobalMap[localNodeIndex] = Math.abs(nop[elementIndex][localNodeIndex]) - 1;
+  }
+
+  if (meshDimension === "1D") {
+    // 1D nonlinear general form PDE
+
+    // Loop over Gauss points
+    for (let gaussPointIndex = 0; gaussPointIndex < gaussPoints.length; gaussPointIndex++) {
+      // Basis functions on the reference element at this Gauss point
+      const { basisFunction, basisFunctionDerivKsi } = referenceBasisFunctions[gaussPointIndex];
+
+      // Perform isoparametric mapping
+      const { xCoordinates, detJacobian, basisFunctionDerivX } = performIsoparametricMapping1D({
+        basisFunction,
+        basisFunctionDerivKsi,
+        nodesXCoordinates,
+        localToGlobalMap,
+        nodesPerElement,
+      });
+
+      // Calculate the solution value and solution derivative at this Gauss point
+      let uValue = 0;
+      let uDerivX = 0;
+      for (let i = 0; i < nodesPerElement; i++) {
+        uValue += solutionVector[localToGlobalMap[i]] * basisFunction[i];
+        uDerivX += solutionVector[localToGlobalMap[i]] * basisFunctionDerivX[i];
+      }
+
+      // Evaluate coefficient functions at this physical coordinate and solution state
+      const a = A(xCoordinates);
+      const b = B(xCoordinates);
+      const c = C(xCoordinates);
+      const d = D(xCoordinates, uValue);
+      const dDduVal = dDdu(xCoordinates, uValue);
+
+      // Integration factor, common to every pair of local nodes
+      const weightFactor = gaussWeights[gaussPointIndex] * detJacobian;
+
+      // Computation of the local residual vector and the Newton-Raphson local Jacobian matrix
+      for (let localNodeIndex1 = 0; localNodeIndex1 < nodesPerElement; localNodeIndex1++) {
+        // Residual contribution (diffusion, advection, reaction and nonlinear source terms)
+        localResidualVector[localNodeIndex1] +=
+          weightFactor *
+          (a * uDerivX * basisFunctionDerivX[localNodeIndex1] -
+            b * uDerivX * basisFunction[localNodeIndex1] -
+            c * uValue * basisFunction[localNodeIndex1] +
+            d * basisFunction[localNodeIndex1]);
+
+        for (let localNodeIndex2 = 0; localNodeIndex2 < nodesPerElement; localNodeIndex2++) {
+          // Jacobian is the negative of the residual derivative, matching the Newton-Raphson solver convention
+          localJacobianMatrix[localNodeIndex1][localNodeIndex2] +=
+            -weightFactor *
+            (a * basisFunctionDerivX[localNodeIndex1] * basisFunctionDerivX[localNodeIndex2] -
+              b * basisFunctionDerivX[localNodeIndex2] * basisFunction[localNodeIndex1] -
+              c * basisFunction[localNodeIndex1] * basisFunction[localNodeIndex2] +
+              dDduVal * basisFunction[localNodeIndex1] * basisFunction[localNodeIndex2]);
+        }
+      }
+    }
+  } else if (meshDimension === "2D") {
+    throw new FEAScriptError(
+      "UNSUPPORTED_MESH",
+      "The nonlinear general form PDE supports only 1D meshes yet.",
+    );
+  }
+
+  return {
+    localJacobianMatrix,
+    localResidualVector,
+    ngl,
+  };
+}

@@ -5,7 +5,7 @@
 ## Purpose
 
 This test guards the numerical output of the 1D nonlinear reaction-diffusion example against
-unintended changes to the nonlinear general form PDE assembler or the Newton-Raphson method.
+unintended changes to the nonlinear general form PDE assemblers or the Newton-Raphson method.
 
 It replicates the physical problem set up in
 [`nonlinearReactionDiffusion1D.js`](../../../examples/generalFormPDEScript/nonlinearReactionDiffusion1D/nonlinearReactionDiffusion1D.js)
@@ -13,17 +13,17 @@ for linear and quadratic elements, and asserts known good values.
 
 ## Problem setup
 
-| Parameter           | Value                                  |
-| ------------------- | -------------------------------------- |
-| Domain              | 1D, x ∈ [0, 10]                        |
-| Mesh                | 20 elements                            |
-| Coefficients        | A = 1, B = 0, C = 0                    |
-| Nonlinear term      | D = Da u², dD/du = 2 Da u, with Da = 1 |
-| Boundary 0 (x = 0)  | `constantValue`, u = 1                 |
-| Boundary 1 (x = 10) | `zeroGradient`                         |
-| Solver              | Newton-Raphson with `lusolve`          |
+| Parameter           | Value                                            |
+| ------------------- | ------------------------------------------------ |
+| Domain              | 1D, x ∈ [0, 10]                                  |
+| Mesh                | 20 elements                                      |
+| Coefficients        | A = 1, B = 0, C = 0                              |
+| Nonlinear term      | D = Da u², dD/du = 2 Da u, with Da = 1           |
+| Boundary 0 (x = 0)  | `constantValue`, u = 1                           |
+| Boundary 1 (x = 10) | `zeroGradient`                                   |
+| Solver              | Newton-Raphson with `lusolve` and with `frontal` |
 
-The frontal solver is not yet supported for nonlinear `generalFormPDEScript`.
+Both solver methods are asserted against the same expected values.
 
 ## Expected values
 
@@ -48,7 +48,7 @@ node tests/regression/nonlinearReactionDiffusion1D/regression.test.js
 
 The `test` script in `package.json` also runs this file, so `npm test` works too.
 
-A passing run prints six `PASS:` lines followed by `6 passed, 0 failed.`. A failing run prints one or
+A passing run prints twelve `PASS:` lines followed by `12 passed, 0 failed.`. A failing run prints one or
 more `FAIL:` lines, ends with the same summary line format, and exits with code 1.
 
 ## After modifying the code

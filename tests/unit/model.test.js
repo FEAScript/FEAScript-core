@@ -529,7 +529,7 @@ function assert(condition, message) {
       ],
       meshConfig: mesh1D,
       boundaryConditions: { 0: ["constantValue", 1], 1: ["zeroGradient"] },
-      solverMethods: ["lusolve"],
+      solverMethods: ["lusolve", "frontal"],
       degreesOfFreedom: 5,
     },
     {

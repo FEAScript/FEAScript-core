@@ -25,6 +25,9 @@ All notable changes to FEAScript-core are documented in this file. The format is
 - A NaN or infinite value in the assembled system or in the solution throws `"NON_FINITE_VALUES"`. The sparse LU
   solver took a NaN on the right-hand side for a zero, so a coefficient function that returns NaN somewhere gave a
   finite but wrong solution
+- The frontal solver runs the nonlinear general form PDE (`nonlinear: true`) inside Newton–Raphson
+  ([#101](https://github.com/FEAScript/FEAScript-core/issues/101)), as it does front propagation. It stopped with
+  `"UNSUPPORTED_SOLVER"` before
 
 ### Changed
 
