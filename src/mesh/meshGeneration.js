@@ -9,7 +9,30 @@
 
 // Internal imports
 import { mapGmshMeshToFEAScript } from "../io/gmshReader.js";
-import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
+import { FEAScriptError } from "../utilities/errors.js";
+import { basicLog, debugLog } from "../utilities/logging.js";
+
+/**
+ * Function to check the geometry settings of a structured mesh: the numbers of elements must be positive integers
+ * and the lengths positive numbers
+ * @param {object} settings - The settings to check, by name, e.g. { numElementsX: 10, maxX: 1 }
+ * @param {string} meshDimension - The mesh dimension, for the message
+ * @throws {FEAScriptError} INVALID_INPUT, listing each missing or invalid setting
+ */
+function validateGeometrySettings(settings, meshDimension) {
+  const problems = [];
+  Object.entries(settings).forEach(([name, value]) => {
+    const isCount = name.startsWith("numElements");
+    const valid = isCount ? Number.isInteger(value) && value > 0 : Number.isFinite(value) && value > 0;
+    if (value === null || value === undefined) {
+      problems.push(`${name} is required to generate a ${meshDimension} mesh from geometry.`);
+    } else if (!valid) {
+      const shown = typeof value === "string" ? `"${value}"` : value;
+      problems.push(`${name} must be a ${isCount ? "positive integer" : "positive number"}; got ${shown}.`);
+    }
+  });
+  FEAScriptError.throwIfAny("INVALID_INPUT", problems);
+}
 
 /**
  * Basic structure for the mesh
@@ -80,8 +103,8 @@ export class Mesh1D extends Mesh {
       parsedMesh,
     });
 
-    if (this.numElementsX === null || this.maxX === null) {
-      errorLog("numElementsX and maxX are required parameters when generating a 1D mesh from geometry");
+    if (!parsedMesh) {
+      validateGeometrySettings({ numElementsX: this.numElementsX, maxX: this.maxX }, "1D");
     }
   }
 
@@ -234,13 +257,9 @@ export class Mesh2D extends Mesh {
     this.angleRight = angleRight;
 
     // Validate geometry parameters (when not using a parsed mesh)
-    if (
-      !parsedMesh &&
-      (this.numElementsX === null || this.maxX === null || this.numElementsY === null || this.maxY === null)
-    ) {
-      errorLog(
-        "numElementsX, maxX, numElementsY, and maxY are required parameters when generating a 2D mesh from geometry",
-      );
+    if (!parsedMesh) {
+      const { numElementsX, maxX, numElementsY, maxY } = this;
+      validateGeometrySettings({ numElementsX, maxX, numElementsY, maxY }, "2D");
     }
   }
 

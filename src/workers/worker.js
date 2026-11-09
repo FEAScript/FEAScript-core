@@ -12,6 +12,7 @@ import * as Comlink from "../vendor/comlink.mjs";
 
 // Internal imports
 import { serializeFunctions } from "./functionSerialization.js";
+import "./errorTransfer.js"; // Keeps the code of a FEAScriptError thrown in the worker
 
 const readyTimeout = 50000; // Milliseconds. A slow connection can take a while to load the worker bundle
 

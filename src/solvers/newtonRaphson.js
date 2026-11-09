@@ -10,7 +10,7 @@
 // Internal imports
 import { euclideanNorm, axpy } from "../linalg/blasUtilities.js";
 import { solveLinearSystem } from "./linearSystemSolver.js";
-import { basicLog, errorLog } from "../utilities/logging.js";
+import { basicLog, warnLog } from "../utilities/logging.js";
 import { runFrontalSolver } from "./frontalSolver.js";
 
 /**
@@ -84,7 +84,7 @@ export function newtonRaphson(assembleMat, context = {}) {
     if (errorNorm <= tolerance) {
       converged = true;
     } else if (errorNorm > 1e2) {
-      errorLog(`Solution not converged. Error norm: ${errorNorm}`);
+      warnLog(`Newton-Raphson iterations diverge (error norm ${errorNorm.toExponential(4)}); stopping.`);
       break;
     }
 

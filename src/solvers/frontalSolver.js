@@ -11,7 +11,7 @@
 import { BasisFunctions } from "../elements/basisFunctions.js";
 import { initializeFEA } from "../elements/feaInitialization.js";
 import { FEAScriptError } from "../utilities/errors.js";
-import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
+import { basicLog, debugLog } from "../utilities/logging.js";
 
 // Create object templates
 const frontalData = {};
@@ -310,8 +310,10 @@ function assembleElementContribution(meshData, FEAData, boundaryConditionsHandle
 
   // Guard against out-of-range indices
   if (position < 0 || position >= meshData.totalElements) {
-    errorLog(`Skipping out-of-range element position=${position} (totalElements=${meshData.totalElements})`);
-    return false;
+    throw new FEAScriptError(
+      "INTERNAL_ERROR",
+      `Frontal solver: out-of-range element position=${position} (totalElements=${meshData.totalElements})`,
+    );
   }
 
   // Domain terms
@@ -473,8 +475,13 @@ function runFrontalAlgorithm(meshData, FEAData, boundaryConditionsHandler, assem
       }
 
       if (rowCount > frontWidth || columnCount > frontWidth) {
-        errorLog("Error: front width not large enough");
-        return;
+        throw new FEAScriptError(
+          "INTERNAL_ERROR",
+          `Frontal solver: front width ${frontWidth} is not large enough (needs ${Math.max(
+            rowCount,
+            columnCount,
+          )})`,
+        );
       }
 
       for (let localColumnIndex = 0; localColumnIndex < numElementColumns; localColumnIndex++) {
@@ -531,8 +538,7 @@ function runFrontalAlgorithm(meshData, FEAData, boundaryConditionsHandler, assem
         // No node is fully summed yet (e.g. unstructured meshes); assemble the next element before eliminating
         if (elementData.currentElementIndex < totalElements) continue;
 
-        errorLog("Error: no more rows fully summed");
-        return;
+        throw new FEAScriptError("INTERNAL_ERROR", "Frontal solver: no more rows fully summed");
       }
 
       let pivotRowIndex = pivotRowIndices[0];

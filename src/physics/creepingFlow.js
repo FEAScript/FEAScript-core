@@ -13,7 +13,8 @@ import { BasisFunctions } from "../elements/basisFunctions.js";
 import { NumericalIntegration } from "../elements/numericalIntegration.js";
 import { SparseMatrix } from "../linalg/sparseMatrix.js";
 import { FlowBoundaryConditions } from "./flowBoundaryConditions.js";
-import { basicLog, debugLog, errorLog } from "../utilities/logging.js";
+import { FEAScriptError } from "../utilities/errors.js";
+import { basicLog, debugLog } from "../utilities/logging.js";
 
 /**
  * Function to assemble the Jacobian matrix and residual vector for the steady creeping flow (Stokes) model
@@ -60,13 +61,15 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions, coeffic
 
   // Validate mesh configuration
   if (meshDimension !== "2D") {
-    errorLog(
+    throw new FEAScriptError(
+      "UNSUPPORTED_MESH",
       "Creeping flow requires a 2D mesh. For fully developed 1D channel flow (μ u″ = dp/dx), " +
         "use generalFormPDEScript or heatConductionScript.",
     );
   }
   if (elementOrder !== "quadratic") {
-    errorLog(
+    throw new FEAScriptError(
+      "UNSUPPORTED_MESH",
       "Creeping flow requires quadratic elements (Taylor-Hood Q2-Q1 / P2-P1); set elementOrder: 'quadratic'. " +
         "Linear (equal-order) elements need stabilization, which is not yet supported.",
     );
@@ -178,7 +181,10 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions, coeffic
   const viscosity = coefficientFunctions?.viscosity ?? 1;
   const viscosityAt = typeof viscosity === "function" ? viscosity : () => viscosity;
   if (typeof viscosity !== "function" && !(viscosity > 0)) {
-    errorLog(`Creeping flow viscosity must be a positive number or a function of (x, y); got ${viscosity}.`);
+    throw new FEAScriptError(
+      "INVALID_INPUT",
+      `Creeping flow viscosity must be a positive number or a function of (x, y); got ${viscosity}.`,
+    );
   }
 
   const localToGlobalDOFMap = new Array(localDOFs);

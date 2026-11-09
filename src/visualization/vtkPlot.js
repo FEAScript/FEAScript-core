@@ -11,7 +11,8 @@
 import { prepareMesh, computeNodeNeighbors, getBoundarySegments } from "../mesh/meshUtils.js";
 import { pointInsideQuadrilateral, pointInsideTriangularElement } from "../elements/elementGeometry.js";
 import { BasisFunctions } from "../elements/basisFunctions.js";
-import { errorLog } from "../utilities/logging.js";
+import { FEAScriptError } from "../utilities/errors.js";
+import { warnLog } from "../utilities/logging.js";
 import { selectSolutionField } from "./solutionFields.js";
 
 let _vtkModules = null;
@@ -236,7 +237,7 @@ export function transformSolverOutputToMLBuffers(result) {
 
 async function renderVtkScene(vtkData, plotDivId, solverConfig, plotType, renderOptions = {}) {
   if (typeof document === "undefined") {
-    errorLog("vtk.js visualization requires a browser environment");
+    warnLog("vtk.js visualization requires a browser environment; nothing is plotted.");
     return;
   }
   const {
@@ -250,8 +251,7 @@ async function renderVtkScene(vtkData, plotDivId, solverConfig, plotType, render
 
   const container = document.getElementById(plotDivId);
   if (!container) {
-    errorLog(`Could not find plot container with id: ${plotDivId}`);
-    return;
+    throw new FEAScriptError("INVALID_INPUT", `Could not find plot container with id: ${plotDivId}`);
   }
 
   if (rendererCache.has(plotDivId)) {

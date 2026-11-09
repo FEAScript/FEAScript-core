@@ -8,7 +8,7 @@
  */
 
 // Internal imports
-import { errorLog } from "../utilities/logging.js";
+import { FEAScriptError } from "../utilities/errors.js";
 
 // Field plotted when none is requested, for models that return named fields
 const defaultFields = {
@@ -30,8 +30,9 @@ const defaultFields = {
 export function selectSolutionField(model, result, field) {
   if (!result.fields) {
     if (field) {
-      errorLog(
-        `Field "${field}" was requested, but this result has no named fields; the solution vector is plotted.`,
+      throw new FEAScriptError(
+        "INVALID_INPUT",
+        `Field "${field}" was requested, but this ${model.solverConfig} result has no named fields. Leave out the field option to plot the solution.`,
       );
     }
     return { values: result.solutionVector, fieldName: null };
@@ -39,12 +40,11 @@ export function selectSolutionField(model, result, field) {
 
   const defaultField = defaultFields[model.solverConfig] ?? Object.keys(result.fields)[0];
   if (field && !(field in result.fields)) {
-    errorLog(
-      `Unknown field "${field}"; plotting "${defaultField}" instead. Available fields: ${Object.keys(
-        result.fields,
-      ).join(", ")}.`,
+    throw new FEAScriptError(
+      "INVALID_INPUT",
+      `Unknown field "${field}". Available fields: ${Object.keys(result.fields).join(", ")}.`,
     );
   }
-  const fieldName = field in result.fields ? field : defaultField;
+  const fieldName = field || defaultField;
   return { values: result.fields[fieldName], fieldName };
 }

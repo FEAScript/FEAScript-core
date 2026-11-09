@@ -10,11 +10,25 @@
 /**
  * Unit tests for FEAScriptModel input and output
  *
- * Boundary condition input checks:
- *  - An unknown (e.g. misspelled) condition type is reported as an error when solving
- *  - The supported condition types of every model, and the deprecated "constantTemp", are not reported
- *  - A condition given as a plain string is wrapped in an array, with a warning, and gives the same solution
- *  - Euler-Bernoulli beam conditions that are not an array of conditions are reported as an error
+ * Input checks, which throw a FEAScriptError (INVALID_INPUT unless noted) instead of giving a wrong result:
+ *  - An unknown (e.g. misspelled) condition type, a missing condition value and a value that is not a number
+ *  - Every problem of the input is reported at once, in one error
+ *  - A condition on a boundary, or a beam node, that is not in the mesh
+ *  - The supported condition types, and the deprecated "constantTemp", still solve
+ *  - A condition given as a plain string is wrapped in an array, with a warning, and gives the same solution;
+ *    a condition that is not an array throws when added
+ *  - Euler-Bernoulli beam conditions that are not an array of conditions, or of an unknown type
+ *  - A missing or misspelled model, a missing coefficient function, and a coefficient that the model does not
+ *    use (e.g. misspelled)
+ *  - A coefficient function that returns NaN, with every solver method (NON_FINITE_VALUES)
+ *  - Mesh settings: no elements, a missing length, a 3D dimension, and linear elements for creeping flow
+ *    (UNSUPPORTED_MESH)
+ *  - A FEAScriptError thrown in the worker keeps its code and details
+ *
+ * Plot input checks, which throw a FEAScriptError (INVALID_INPUT) instead of plotting something else or nothing:
+ *  - An unknown field, and a field requested from a result without named fields
+ *  - A plot type that the function cannot draw for the mesh dimension
+ *  - A plot container that does not exist
  *
  * Solution vector format, every model and every applicable solver method (lusolve, jacobi, frontal):
  *  - The solution vector is a Float64Array with one entry per degree of freedom
@@ -44,9 +58,10 @@
 
 import { FEAScriptModel } from "../../src/FEAScript.js";
 import { mathjsLUSolver } from "../../src/solvers/mathjsLUSolver.js";
-import { plotInterpolatedSolution } from "../../src/visualization/plotlyPlot.js";
+import { plotSolution, plotInterpolatedSolution } from "../../src/visualization/plotlyPlot.js";
 import { serializeFunctions, deserializeFunctions } from "../../src/workers/functionSerialization.js";
 import { FEAScriptWorker } from "../../src/workers/worker.js";
+import * as Comlink from "../../src/vendor/comlink.mjs";
 import { FEAScriptError } from "../../src/utilities/errors.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
 
@@ -67,113 +82,358 @@ function assert(condition, message) {
   }
 }
 
-// Boundary condition input checks
+// Input checks
 {
   basicLog("");
-  basicLog("[Boundary condition input checks]");
+  basicLog("[Input checks]");
 
-  // Run a function and return the [ERROR] and [WARN] messages it logs, together with its result (null if it threw,
-  // e.g. when a rejected support leaves the system singular)
-  function captureLogs(run) {
+  // Run a function and return what it threw (null if nothing) and the [ERROR] and [WARN] messages it logged,
+  // together with its result
+  function attempt(run) {
     const messages = [];
-    const originalLog = console.log;
-    console.log = (message, ...rest) => {
-      if (typeof message === "string" && /\[(ERROR|WARN)\]/.test(message)) messages.push(message);
-      else originalLog(message, ...rest);
-    };
+    const { log, time, timeEnd } = console;
+    Object.assign(console, {
+      log(message, ...rest) {
+        if (typeof message === "string" && /\[(ERROR|WARN)\]/.test(message)) messages.push(message);
+        else if (!(typeof message === "string" && message.includes("[INFO]"))) log(message, ...rest);
+      },
+      time() {},
+      timeEnd() {},
+    });
     let result = null;
+    let failure = null;
     try {
       result = run();
-    } catch {
-      // The logged messages are what is checked
+    } catch (error) {
+      failure = error;
     } finally {
-      console.log = originalLog;
+      Object.assign(console, { log, time, timeEnd });
     }
     return {
       result,
+      failure,
       errors: messages.filter((m) => m.includes("[ERROR]")),
       warnings: messages.filter((m) => m.includes("[WARN]")),
     };
   }
 
-  function solveHeatConduction(boundaryConditions) {
+  // True when the run threw a FEAScriptError with this code, and with every given text in its message
+  const threw = (run, code, ...texts) =>
+    run.failure instanceof FEAScriptError &&
+    run.failure.code === code &&
+    texts.every((text) => run.failure.message.includes(text));
+
+  const mesh1D = { meshDimension: "1D", elementOrder: "linear", numElementsX: 4, maxX: 1 };
+
+  function solveHeatConduction(boundaryConditions, { meshConfig = mesh1D, coefficientFunctions } = {}) {
     const model = new FEAScriptModel();
-    model.setModelConfig("heatConductionScript");
-    model.setMeshConfig({ meshDimension: "1D", elementOrder: "linear", numElementsX: 4, maxX: 1 });
+    model.setModelConfig("heatConductionScript", coefficientFunctions ? { coefficientFunctions } : {});
+    model.setMeshConfig(meshConfig);
     Object.entries(boundaryConditions).forEach(([key, condition]) =>
       model.addBoundaryCondition(key, condition),
     );
     return model.solve();
   }
 
-  function solveGeneralForm(rightCondition) {
+  function solveGeneralForm(
+    rightCondition,
+    coefficientFunctions = { A: (x) => 1, B: (x) => 0, C: (x) => 0, D: (x) => 1 },
+  ) {
     const model = new FEAScriptModel();
-    model.setModelConfig("generalFormPDEScript", {
-      coefficientFunctions: { A: (x) => 1, B: (x) => 0, C: (x) => 0, D: (x) => 1 },
-    });
-    model.setMeshConfig({ meshDimension: "1D", elementOrder: "linear", numElementsX: 4, maxX: 1 });
+    model.setModelConfig("generalFormPDEScript", { coefficientFunctions });
+    model.setMeshConfig(mesh1D);
     model.addBoundaryCondition("0", ["constantValue", 1]);
     model.addBoundaryCondition("1", rightCondition);
     return model.solve();
   }
 
-  // Unknown condition type
+  const solveBeam = (conditions) =>
+    attempt(() => {
+      const model = new FEAScriptModel();
+      model.setModelConfig("eulerBernoulliBeamScript", { coefficientFunctions: { EI: (x) => 1 } });
+      model.setMeshConfig({ meshDimension: "1D", elementOrder: "linear", numElementsX: 2, maxX: 1 });
+      Object.entries(conditions).forEach(([key, condition]) => model.addBoundaryCondition(key, condition));
+      return model.solve();
+    });
+
+  // Boundary condition types
   {
-    const { errors } = captureLogs(() =>
+    const misspelled = attempt(() =>
       solveHeatConduction({ 0: ["convektion", 1, 25], 1: ["constantTemperature", 5] }),
     );
     assert(
-      errors.some(
-        (m) => m.includes('Unknown boundary condition type "convektion"') && m.includes("boundary 0"),
-      ),
-      "misspelled condition type is reported as an error",
+      threw(misspelled, "INVALID_INPUT", 'Unknown boundary condition type "convektion"', "boundary 0"),
+      "misspelled condition type throws INVALID_INPUT",
     );
-  }
 
-  // Supported and deprecated condition types
-  {
-    const { errors } = captureLogs(() =>
+    const supported = attempt(() =>
       solveHeatConduction({ 0: ["convection", 1, 25], 1: ["constantTemperature", 5] }),
     );
-    assert(errors.length === 0, "supported heat conduction condition types are not reported");
+    assert(
+      supported.failure === null && supported.errors.length === 0,
+      "supported heat conduction condition types solve",
+    );
 
-    const deprecated = captureLogs(() => solveHeatConduction({ 0: ["symmetry"], 1: ["constantTemp", 5] }));
-    assert(deprecated.errors.length === 0, 'deprecated "constantTemp" is not reported as unknown');
+    const deprecated = attempt(() => solveHeatConduction({ 0: ["symmetry"], 1: ["constantTemp", 5] }));
+    assert(deprecated.failure === null, 'deprecated "constantTemp" still solves');
   }
 
-  // Plain string condition
+  // Plain string and non-array conditions
   {
-    const arrayRun = captureLogs(() => solveGeneralForm(["zeroGradient"]));
-    const stringRun = captureLogs(() => solveGeneralForm("zeroGradient"));
+    const arrayRun = attempt(() => solveGeneralForm(["zeroGradient"]));
+    const stringRun = attempt(() => solveGeneralForm("zeroGradient"));
     assert(
       stringRun.warnings.some((m) => m.includes('use ["zeroGradient"] instead of "zeroGradient"')),
       "plain string condition gives a warning",
     );
-    assert(stringRun.errors.length === 0, "plain string condition is not reported as unknown");
+    assert(stringRun.failure === null, "plain string condition solves");
     const largestDifference = Math.max(
       ...Array.from(arrayRun.result.solutionVector).map((value, index) =>
         Math.abs(value - stringRun.result.solutionVector[index]),
       ),
     );
     assert(largestDifference === 0, "plain string condition gives the same solution as the array form");
+
+    const numberRun = attempt(() => new FEAScriptModel().addBoundaryCondition("0", 5));
+    assert(
+      threw(numberRun, "INVALID_INPUT", "must be an array with the condition type first"),
+      "a condition that is not an array throws INVALID_INPUT when added",
+    );
+  }
+
+  // Boundary condition values
+  {
+    const missingValue = attempt(() =>
+      solveHeatConduction({ 0: ["constantTemperature"], 1: ["constantTemperature", 5] }),
+    );
+    assert(
+      threw(missingValue, "INVALID_INPUT", '"constantTemperature" on boundary 0 needs 1 number'),
+      "a missing condition value throws INVALID_INPUT",
+    );
+
+    const stringValue = attempt(() =>
+      solveHeatConduction({ 0: ["constantTemperature", "5"], 1: ["constantTemperature", 5] }),
+    );
+    assert(
+      threw(stringValue, "INVALID_INPUT", 'must be a finite number; got "5"'),
+      "a condition value given as a string throws INVALID_INPUT",
+    );
+
+    const twoProblems = attempt(() =>
+      solveHeatConduction({ 0: ["convection", 1], 1: ["constantTemprature", 5] }),
+    );
+    assert(
+      threw(twoProblems, "INVALID_INPUT", "2 problems found") && twoProblems.failure.details.length === 2,
+      "every input problem is reported at once, in one error",
+    );
+  }
+
+  // Boundaries that are not in the mesh
+  {
+    const missingBoundary = attempt(() =>
+      solveHeatConduction({ 0: ["constantTemperature", 1], 5: ["constantTemperature", 5] }),
+    );
+    assert(
+      threw(
+        missingBoundary,
+        "INVALID_INPUT",
+        "Boundary 5 does not exist in the mesh",
+        "Boundaries of the mesh: 0, 1",
+      ),
+      "a condition on a boundary that is not in the mesh throws INVALID_INPUT",
+    );
   }
 
   // Euler-Bernoulli beam conditions
   {
-    const solveBeam = (condition) =>
-      captureLogs(() => {
+    assert(
+      solveBeam({ 1: [["fixed"]], 3: [["force", -1]] }).failure === null,
+      'beam condition [["fixed"]] solves',
+    );
+    assert(
+      threw(
+        solveBeam({ 1: ["fixed"], 3: [["force", -1]] }),
+        "INVALID_INPUT",
+        "must be an array of conditions",
+      ),
+      'beam condition ["fixed"] (not an array of conditions) throws INVALID_INPUT',
+    );
+    assert(
+      threw(
+        solveBeam({ 1: [["fixed"]], 9: [["force", -1]] }),
+        "INVALID_INPUT",
+        "Node 9 does not exist",
+        "nodes 1 to 3",
+      ),
+      "a beam condition on a node that is not in the mesh throws INVALID_INPUT",
+    );
+    assert(
+      threw(
+        solveBeam({ 1: [["fixed"]], 3: [["force"]] }),
+        "INVALID_INPUT",
+        '"force" on node 3 needs 1 number',
+      ),
+      "a beam force without a value throws INVALID_INPUT",
+    );
+    assert(
+      threw(
+        solveBeam({ 1: [["clamped"]], 3: [["force", -1]] }),
+        "INVALID_INPUT",
+        'Unknown boundary condition type "clamped"',
+      ),
+      "an unknown beam condition type throws INVALID_INPUT",
+    );
+  }
+
+  // Model and coefficient functions
+  {
+    const noModel = attempt(() => {
+      const model = new FEAScriptModel();
+      model.setMeshConfig(mesh1D);
+      return model.solve();
+    });
+    assert(
+      threw(noModel, "INVALID_INPUT", "No model is set"),
+      "a solve without a model throws INVALID_INPUT",
+    );
+
+    const unknownModel = attempt(() => {
+      const model = new FEAScriptModel();
+      model.setModelConfig("heatConductionScrpt");
+      model.setMeshConfig(mesh1D);
+      return model.solve();
+    });
+    assert(
+      threw(unknownModel, "INVALID_INPUT", 'Unknown model "heatConductionScrpt"'),
+      "a misspelled model throws INVALID_INPUT",
+    );
+
+    const missingFunction = attempt(() =>
+      solveGeneralForm(["zeroGradient"], { A: (x) => 1, B: (x) => 0, C: (x) => 0 }),
+    );
+    assert(
+      threw(missingFunction, "INVALID_INPUT", "needs the coefficient function D"),
+      "a missing coefficient function throws INVALID_INPUT",
+    );
+
+    const misspelledCoefficient = attempt(() =>
+      solveHeatConduction(
+        { 0: ["constantTemperature", 1], 1: ["constantTemperature", 5] },
+        { coefficientFunctions: { thermalConductivty: 2 } },
+      ),
+    );
+    assert(
+      threw(
+        misspelledCoefficient,
+        "INVALID_INPUT",
+        "Coefficient thermalConductivty is not used by heatConductionScript",
+        "Coefficients of this model: thermalConductivity, heatSource",
+      ),
+      "a coefficient that the model does not use (misspelled) throws INVALID_INPUT",
+    );
+
+    const nonlinearNameWhenLinear = attempt(() =>
+      solveGeneralForm(["zeroGradient"], {
+        A: (x) => 1,
+        B: (x) => 0,
+        C: (x) => 0,
+        D: (x) => 1,
+        dDdu: (x, u) => 0,
+      }),
+    );
+    assert(
+      nonlinearNameWhenLinear.failure === null,
+      "dDdu is accepted for a linear general form PDE, where it is not needed",
+    );
+
+    const nanSource = attempt(() =>
+      solveHeatConduction(
+        { 0: ["constantTemperature", 1], 1: ["constantTemperature", 5] },
+        { coefficientFunctions: { heatSource: (x) => (x > 0.5 ? NaN : 0) } },
+      ),
+    );
+    assert(
+      threw(nanSource, "NON_FINITE_VALUES", "NaN or infinite"),
+      "a coefficient function that returns NaN throws NON_FINITE_VALUES, with lusolve",
+    );
+    for (const solverMethod of ["jacobi", "frontal"]) {
+      const run = attempt(() => {
         const model = new FEAScriptModel();
-        model.setModelConfig("eulerBernoulliBeamScript", { coefficientFunctions: { EI: (x) => 1 } });
-        model.setMeshConfig({ meshDimension: "1D", elementOrder: "linear", numElementsX: 2, maxX: 1 });
-        model.addBoundaryCondition("1", condition);
-        model.addBoundaryCondition("3", [["force", -1]]);
+        model.setModelConfig("heatConductionScript", {
+          coefficientFunctions: { heatSource: (x) => (x > 0.5 ? NaN : 0) },
+        });
+        model.setMeshConfig(mesh1D);
+        model.addBoundaryCondition("0", ["constantTemperature", 1]);
+        model.addBoundaryCondition("1", ["constantTemperature", 5]);
+        model.setSolverMethod(solverMethod);
         return model.solve();
       });
-    assert(solveBeam([["fixed"]]).errors.length === 0, 'beam condition [["fixed"]] is not reported');
-    assert(
-      solveBeam(["fixed"]).errors.some((m) => m.includes("must be an array of conditions")),
-      'beam condition ["fixed"] (not an array of conditions) is reported as an error',
+      assert(
+        threw(run, "NON_FINITE_VALUES", "NaN or infinite"),
+        `a coefficient function that returns NaN throws NON_FINITE_VALUES, with ${solverMethod}`,
+      );
+    }
+  }
+
+  // Mesh settings
+  {
+    const bcs = { 0: ["constantTemperature", 1], 1: ["constantTemperature", 5] };
+    const zeroElements = attempt(() =>
+      solveHeatConduction(bcs, { meshConfig: { ...mesh1D, numElementsX: 0 } }),
     );
+    assert(
+      threw(zeroElements, "INVALID_INPUT", "numElementsX must be a positive integer; got 0"),
+      "zero elements throws INVALID_INPUT",
+    );
+
+    const noLength = attempt(() => solveHeatConduction(bcs, { meshConfig: { ...mesh1D, maxX: undefined } }));
+    assert(
+      threw(noLength, "INVALID_INPUT", "maxX is required"),
+      "a missing mesh length throws INVALID_INPUT",
+    );
+
+    const dimension3D = attempt(() =>
+      solveHeatConduction(bcs, { meshConfig: { ...mesh1D, meshDimension: "3D" } }),
+    );
+    assert(
+      threw(dimension3D, "INVALID_INPUT", 'Mesh dimension must be either "1D" or "2D"; got "3D"'),
+      "a 3D mesh dimension throws INVALID_INPUT",
+    );
+
+    const linearFlow = attempt(() => {
+      const model = new FEAScriptModel();
+      model.setModelConfig("creepingFlowScript");
+      model.setMeshConfig({
+        meshDimension: "2D",
+        elementOrder: "linear",
+        numElementsX: 2,
+        numElementsY: 2,
+        maxX: 1,
+        maxY: 1,
+      });
+      ["0", "1", "2", "3"].forEach((key) => model.addBoundaryCondition(key, ["constantVelocity", 0, 0]));
+      return model.solve();
+    });
+    assert(
+      threw(linearFlow, "UNSUPPORTED_MESH", "requires quadratic elements"),
+      "creeping flow with linear elements throws UNSUPPORTED_MESH",
+    );
+  }
+
+  // A FEAScriptError thrown in the worker keeps its code and details on the way back
+  {
+    const throwHandler = Comlink.transferHandlers.get("throw");
+    const sent = new FEAScriptError("INVALID_INPUT", "2 problems found", ["first", "second"]);
+    const [serialized] = throwHandler.serialize({ value: sent });
+    const received = attempt(() => throwHandler.deserialize(structuredClone(serialized)));
+    assert(
+      threw(received, "INVALID_INPUT", "2 problems found") &&
+        received.failure.details.join() === "first,second",
+      "a FEAScriptError keeps its code and details through the worker",
+    );
+    const [plainSerialized] = throwHandler.serialize({ value: new TypeError("plain") });
+    const plain = attempt(() => throwHandler.deserialize(structuredClone(plainSerialized)));
+    assert(plain.failure?.message === "plain", "other errors still go through the worker as before");
   }
 }
 
@@ -541,6 +801,101 @@ function assert(condition, message) {
         3,
       )}`,
     );
+  }
+}
+
+// Plot input checks (Plotly and window are stubbed above)
+{
+  basicLog("");
+  basicLog("[Plot input checks]");
+
+  const plotFailure = (run) => {
+    const { log, time, timeEnd } = console;
+    Object.assign(console, { log() {}, time() {}, timeEnd() {} });
+    try {
+      run();
+      return null;
+    } catch (failure) {
+      return failure;
+    } finally {
+      Object.assign(console, { log, time, timeEnd });
+    }
+  };
+  const isInvalidInput = (failure, text) =>
+    failure instanceof FEAScriptError && failure.code === "INVALID_INPUT" && failure.message.includes(text);
+
+  const solveQuietly = (build) => {
+    let solved;
+    plotFailure(() => {
+      solved = build();
+    });
+    return solved;
+  };
+  const heatModel = new FEAScriptModel();
+  const heatResult = solveQuietly(() => {
+    heatModel.setModelConfig("heatConductionScript");
+    heatModel.setMeshConfig({ meshDimension: "1D", elementOrder: "linear", numElementsX: 4, maxX: 1 });
+    heatModel.addBoundaryCondition("0", ["constantTemperature", 1]);
+    heatModel.addBoundaryCondition("1", ["constantTemperature", 5]);
+    return heatModel.solve();
+  });
+  const beamModel = new FEAScriptModel();
+  const beamResult = solveQuietly(() => {
+    beamModel.setModelConfig("eulerBernoulliBeamScript", { coefficientFunctions: { EI: (x) => 1 } });
+    beamModel.setMeshConfig({ meshDimension: "1D", elementOrder: "linear", numElementsX: 2, maxX: 1 });
+    beamModel.addBoundaryCondition("1", [["fixed"]]);
+    beamModel.addBoundaryCondition("3", [["force", -1]]);
+    return beamModel.solve();
+  });
+
+  assert(
+    plotFailure(() => plotSolution(heatModel, heatResult, "line", "plotDiv")) === null,
+    "a 1D line plot draws",
+  );
+  assert(
+    plotFailure(() => plotSolution(beamModel, beamResult, "line", "plotDiv", { field: "theta" })) === null,
+    "a named field of the beam draws",
+  );
+  assert(
+    isInvalidInput(
+      plotFailure(() => plotSolution(beamModel, beamResult, "line", "plotDiv", { field: "rotation" })),
+      'Unknown field "rotation". Available fields: w, theta',
+    ),
+    "an unknown field throws INVALID_INPUT",
+  );
+  assert(
+    isInvalidInput(
+      plotFailure(() => plotSolution(heatModel, heatResult, "line", "plotDiv", { field: "u" })),
+      "has no named fields",
+    ),
+    "a field requested from a result without named fields throws INVALID_INPUT",
+  );
+  assert(
+    isInvalidInput(
+      plotFailure(() => plotSolution(heatModel, heatResult, "contour", "plotDiv")),
+      'cannot draw a "contour" plot of a 1D mesh',
+    ),
+    "a contour plot of a 1D mesh throws INVALID_INPUT",
+  );
+  assert(
+    isInvalidInput(
+      plotFailure(() => plotInterpolatedSolution(heatModel, heatResult, "line", "plotDiv")),
+      'cannot draw a "line" plot of a 1D mesh',
+    ),
+    "an interpolated plot of a 1D mesh throws INVALID_INPUT",
+  );
+
+  globalThis.document = { getElementById: (id) => (id === "plotDiv" ? {} : null) };
+  try {
+    assert(
+      isInvalidInput(
+        plotFailure(() => plotSolution(heatModel, heatResult, "line", "plotDvi")),
+        "Could not find plot container with id: plotDvi",
+      ),
+      "a plot container that does not exist throws INVALID_INPUT",
+    );
+  } finally {
+    delete globalThis.document;
   }
 }
 

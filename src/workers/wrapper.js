@@ -13,6 +13,7 @@ import * as Comlink from "../vendor/comlink.mjs";
 // Internal imports
 import { FEAScriptModel } from "../FEAScript.js";
 import { deserializeFunctions } from "./functionSerialization.js";
+import "./errorTransfer.js"; // Keeps the code of a FEAScriptError thrown in the worker
 
 /**
  * Class to wrap the FEAScriptModel for use in a web worker context

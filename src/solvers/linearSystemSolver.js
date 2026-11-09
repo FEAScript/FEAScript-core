@@ -16,6 +16,42 @@ import { basicLog, debugLog } from "../utilities/logging.js";
 import * as Comlink from "../vendor/comlink.mjs";
 
 /**
+ * Function to stop a solve whose assembled system contains NaN or infinite values. These must not reach the
+ * solvers: the sparse LU solver of math.js takes a NaN on the right-hand side for a zero, and returns a finite but
+ * wrong solution
+ * @param {SparseMatrix|array} jacobianMatrix - The coefficient matrix (SparseMatrix or dense array of arrays)
+ * @param {array} residualVector - The right-hand side vector
+ * @throws {FEAScriptError} NON_FINITE_VALUES
+ */
+function validateLinearSystem(jacobianMatrix, residualVector) {
+  const advice =
+    "Check that the coefficient functions return finite numbers over the whole domain, and that no mesh element is degenerate (zero area or length).";
+  const entryIndex = Array.prototype.findIndex.call(residualVector, (value) => !Number.isFinite(value));
+  if (entryIndex !== -1) {
+    throw new FEAScriptError(
+      "NON_FINITE_VALUES",
+      `The assembled right-hand side contains NaN or infinite values (first at entry ${entryIndex} of ${residualVector.length}). ${advice}`,
+    );
+  }
+
+  let matrixIsFinite;
+  if (jacobianMatrix instanceof SparseMatrix) {
+    matrixIsFinite =
+      jacobianMatrix.values.every(Number.isFinite) &&
+      [...jacobianMatrix.overflowRows.values()].every((row) => [...row.values()].every(Number.isFinite));
+  } else {
+    const rows = jacobianMatrix?.toArray?.() ?? jacobianMatrix;
+    matrixIsFinite = rows.every((row) => Array.prototype.every.call(row, Number.isFinite));
+  }
+  if (!matrixIsFinite) {
+    throw new FEAScriptError(
+      "NON_FINITE_VALUES",
+      `The assembled system matrix contains NaN or infinite values. ${advice}`,
+    );
+  }
+}
+
+/**
  * Function to solve a system of linear equations using different solver methods
  * @param {string} solverMethod - The solver method to use ("lusolve" or "jacobi")
  * @param {SparseMatrix} jacobianMatrix - The coefficient matrix
@@ -35,6 +71,8 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
   let solutionVector = new Float64Array(0);
   let converged = true;
   let iterations = 0;
+
+  validateLinearSystem(jacobianMatrix, residualVector);
 
   // Solve the linear system based on the specified solver method
   basicLog(`Solving system using ${solverMethod}...`);
@@ -120,6 +158,8 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
   const rightHandSideVector = Array.isArray(residualVector)
     ? residualVector
     : residualVector?.toArray?.() ?? residualVector;
+
+  validateLinearSystem(systemMatrix, rightHandSideVector);
 
   let created = null;
   let computeEngine = null;

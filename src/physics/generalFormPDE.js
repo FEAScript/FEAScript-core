@@ -11,7 +11,8 @@
 import { initializeFEA } from "../elements/feaInitialization.js";
 import { performIsoparametricMapping1D } from "../elements/isoparametricMapping.js";
 import { GenericBoundaryConditions } from "./genericBoundaryConditions.js";
-import { basicLog, errorLog } from "../utilities/logging.js";
+import { FEAScriptError } from "../utilities/errors.js";
+import { basicLog } from "../utilities/logging.js";
 
 /**
  * Function to assemble the Jacobian matrix and residuals vector for the general form PDE model
@@ -121,8 +122,7 @@ export function assembleGeneralFormPDEMat(meshData, boundaryConditions, coeffici
       jacobianMatrix.addLocalMatrix(localToGlobalMap, localJacobianMatrix);
     }
   } else if (meshDimension === "2D") {
-    errorLog("2D general form PDE is not yet supported in assembleGeneralFormPDEMat.");
-    // 2D general form PDE - empty for now
+    throw new FEAScriptError("UNSUPPORTED_MESH", "The general form PDE supports only 1D meshes yet.");
   }
 
   // Apply boundary conditions
@@ -228,8 +228,7 @@ export function assembleGeneralFormPDEFront({
       }
     }
   } else if (meshDimension === "2D") {
-    errorLog("2D general form PDE is not yet supported in assembleGeneralFormPDEFront.");
-    // 2D general form PDE - empty for now
+    throw new FEAScriptError("UNSUPPORTED_MESH", "The general form PDE supports only 1D meshes yet.");
   }
 
   return {
@@ -361,8 +360,10 @@ export function assembleGeneralFormPDENonlinearMat(
       jacobianMatrix.addLocalMatrix(localToGlobalMap, localJacobianMatrix);
     }
   } else if (meshDimension === "2D") {
-    errorLog("2D nonlinear general form PDE is not yet supported in assembleGeneralFormPDENonlinearMat.");
-    // 2D nonlinear general form PDE - empty for now
+    throw new FEAScriptError(
+      "UNSUPPORTED_MESH",
+      "The nonlinear general form PDE supports only 1D meshes yet.",
+    );
   }
 
   // Apply boundary conditions

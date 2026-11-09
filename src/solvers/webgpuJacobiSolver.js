@@ -11,7 +11,7 @@
 import * as ti from "../vendor/taichi.esm.js";
 
 // Internal imports
-import { debugLog, errorLog } from "../utilities/logging.js";
+import { debugLog } from "../utilities/logging.js";
 
 /**
  * Class to provide GPU-accelerated Jacobi solver using Taichi.js/WebGPU
@@ -143,7 +143,7 @@ export class WebGPUComputeEngine {
     }
 
     if (!converged) {
-      errorLog(`Jacobi: Did not converge in ${maxIterations} iterations`);
+      debugLog(`Jacobi: Did not converge in ${maxIterations} iterations`);
     }
 
     return {

@@ -8,7 +8,8 @@
  */
 
 // Internal imports
-import { debugLog, errorLog } from "../utilities/logging.js";
+import { FEAScriptError } from "../utilities/errors.js";
+import { debugLog } from "../utilities/logging.js";
 
 /**
  * Class to handle boundary conditions for the 1D Euler-Bernoulli beam model
@@ -115,7 +116,10 @@ export class BeamBoundaryConditions {
           applyDirichlet(rotationDOF, value ?? 0);
           debugLog(`Node ${nodeKey}: Applied rotation theta=${value ?? 0} (essential BC)`);
         } else if (conditionType !== "force" && conditionType !== "moment" && conditionType !== "spring") {
-          errorLog(`Unknown beam boundary condition type: "${conditionType}"`);
+          throw new FEAScriptError(
+            "INVALID_INPUT",
+            `Unknown beam boundary condition type: "${conditionType}"`,
+          );
         }
       });
     });

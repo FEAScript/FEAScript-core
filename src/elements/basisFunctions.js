@@ -8,7 +8,7 @@
  */
 
 // Internal imports
-import { errorLog } from "../utilities/logging.js";
+import { FEAScriptError } from "../utilities/errors.js";
 
 /**
  * Local node indices on each side of the reference triangle, following the quad side numbering
@@ -140,8 +140,10 @@ export class BasisFunctions {
         // functions converts the interpolated dw/dksi at the nodes into the actual
         // rotation DOF, so no extra scaling is required when mapping derivatives to x
         if (elementLength === null) {
-          errorLog("elementLength is required to evaluate 'hermiteCubic' basis functions");
-          return;
+          throw new FEAScriptError(
+            "INTERNAL_ERROR",
+            "elementLength is required to evaluate 'hermiteCubic' basis functions",
+          );
         }
         const h = elementLength;
 
@@ -164,8 +166,7 @@ export class BasisFunctions {
       }
     } else if (this.meshDimension === "2D") {
       if (eta === null) {
-        errorLog("Eta coordinate is required for 2D elements");
-        return;
+        throw new FEAScriptError("INTERNAL_ERROR", "Eta coordinate is required for 2D elements");
       }
 
       if (this.elementShape === "triangle") {

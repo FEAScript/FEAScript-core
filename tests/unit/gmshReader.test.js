@@ -21,6 +21,8 @@
  *    - No extra (disconnected) nodes are created by the gaps
  *    - Element and boundary node references point to the same coordinates
  *    - The heat conduction solution (lusolve and jacobi) is the same at every element node
+ *  - Incomplete boundary: a boundary node pair that is not on an element side makes a condition on that boundary
+ *    throw a FEAScriptError (INVALID_INPUT); without a condition on it, the mesh still solves
  *
  * Run: node tests/unit/gmshReader.test.js (or npm test)
  */
@@ -30,6 +32,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { FEAScriptModel } from "../../src/FEAScript.js";
 import { importGmshMesh } from "../../src/io/gmshReader.js";
+import { FEAScriptError } from "../../src/utilities/errors.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -251,6 +254,49 @@ for (const { meshFile, solverMethods } of meshCases) {
       )} (tolerance ${TOLERANCE})`,
     );
   }
+}
+
+// ─── Incomplete boundary ────────────────────────────────────────
+
+{
+  basicLog("");
+  basicLog("[Incomplete boundary]");
+
+  // Add to the right boundary (physical tag 2, boundary key 1) the pair of opposite corners (0, 0) and (4, 2) of
+  // the rectangle, nodes 1 and 3, which no element contains
+  const incompleteMesh = async () => {
+    const parsedMesh = await parseMesh(readMeshFile("rect_quad_linear.msh"));
+    parsedMesh.boundaryNodePairs[2].push([1, 3]);
+    return parsedMesh;
+  };
+  const solveWith = (parsedMesh, conditions) => {
+    const model = new FEAScriptModel();
+    model.setModelConfig("heatConductionScript");
+    model.setMeshConfig({ parsedMesh });
+    Object.entries(conditions).forEach(([key, condition]) => model.addBoundaryCondition(key, condition));
+    try {
+      model.solve();
+      return null;
+    } catch (failure) {
+      return failure;
+    }
+  };
+
+  const withCondition = solveWith(await incompleteMesh(), boundaryConditions);
+  assert(
+    withCondition instanceof FEAScriptError &&
+      withCondition.code === "INVALID_INPUT" &&
+      withCondition.message.includes("Boundary 1") &&
+      withCondition.message.includes("is incomplete") &&
+      withCondition.message.includes("tag 2"),
+    "a condition on an incomplete boundary throws INVALID_INPUT",
+  );
+
+  const { 1: rightCondition, ...otherConditions } = boundaryConditions;
+  assert(
+    solveWith(await incompleteMesh(), otherConditions) === null,
+    "a mesh with an incomplete boundary still solves without a condition on it",
+  );
 }
 
 basicLog(`Gmsh reader tests: ${passed} passed, ${failed} failed`);

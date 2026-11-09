@@ -13,7 +13,18 @@ All notable changes to FEAScript-core are documented in this file. The format is
   quadrilateral meshes)
 
 - `FEAScriptError`, with a `code`, is exported, and stops a solve that would otherwise return an empty or a wrong
-  result ([#125](https://github.com/FEAScript/FEAScript-core/issues/125)). The other input checks still log an error
+  result ([#125](https://github.com/FEAScript/FEAScript-core/issues/125)). Its `details` list every problem found
+  by one check, so that all the input mistakes are reported at once, like a compiler does. A `FEAScriptError`
+  thrown in `FEAScriptWorker` keeps its `code` and `details`
+- Input checks that were missing, so far ignored or left to fail later with a `TypeError` or a wrong result: a
+  misspelled or unset model, a boundary condition on a boundary (or beam node) that is not in the mesh, a missing
+  condition value or one that is not a number (e.g. `["constantTemperature"]` or `["constantTemperature", "5"]`), a
+  missing coefficient function (`A`–`D` of the general form PDE, `dDdu` when nonlinear, `EI` of the beam), and a
+  number of elements that is not a positive integer or a length that is not positive, and a coefficient that the
+  model does not use, e.g. a misspelled `thermalConductivty` that would leave the default value in place
+- A NaN or infinite value in the assembled system or in the solution throws `"NON_FINITE_VALUES"`. The sparse LU
+  solver took a NaN on the right-hand side for a zero, so a coefficient function that returns NaN somewhere gave a
+  finite but wrong solution
 
 ### Changed
 
@@ -23,6 +34,19 @@ All notable changes to FEAScript-core are documented in this file. The format is
   propagation or a nonlinear general form PDE that does not converge, and `"SINGULAR_MATRIX"` for a singular system,
   where the frontal solver returned zeros and the LU solver failed with a `TypeError`. Code that read a partial
   result after such a failure must now catch the error
+- The other input checks also throw a `FEAScriptError` instead of logging an error and going on
+  ([#125](https://github.com/FEAScript/FEAScript-core/issues/125)): `"INVALID_INPUT"` for an unknown boundary
+  condition type (it was ignored), a condition that is not an array, a mesh dimension other than 1D or 2D, and a
+  negative creeping flow viscosity; `"UNSUPPORTED_MESH"` for a mesh the model or the Gmsh reader cannot use yet
+  (creeping flow without quadratic 2D elements, a beam that is not on a linear 1D mesh, a 2D general form PDE, a
+  Gmsh mesh that is not 2D or that mixes element orders or shapes); and `"INTERNAL_ERROR"` for a frontal solver
+  step that fails, which returned a wrong solution. A condition on an imported Gmsh boundary with a node pair that
+  is not on an element side throws `"INVALID_INPUT"`, as it would apply to only part of the boundary; such a
+  boundary without a condition only gives a warning. Plots throw `"INVALID_INPUT"` for an unknown field and for a
+  field requested from a result without named fields (they plotted another field), for a plot type they cannot
+  draw (they drew nothing) and for a plot container that does not exist. A mesh setting that conflicts with an
+  imported Gmsh mesh is a warning instead of an error, as the mesh value is used, and so is a vtk.js plot outside a
+  browser
 - Dirichlet conditions (constant temperature, value and velocity, beam supports) are applied symmetrically
   ([#117](https://github.com/FEAScript/FEAScript-core/issues/117)): the known values move to the right-hand side and
   the columns of the prescribed nodes are eliminated as well as their rows, so a symmetric system matrix stays

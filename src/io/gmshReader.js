@@ -9,7 +9,8 @@
 
 // Internal imports
 import { triangleBoundarySides } from "../elements/basisFunctions.js";
-import { debugLog, errorLog } from "../utilities/logging.js";
+import { FEAScriptError } from "../utilities/errors.js";
+import { debugLog, warnLog } from "../utilities/logging.js";
 
 /**
  * Function to import mesh data from Gmsh (.msh v4.1) containing quadrilateral and triangular elements
@@ -296,7 +297,8 @@ const importGmshMesh = async (file) => {
   // Detect the mesh dimension from the highest-dimensional elements (lower-dimensional ones are boundaries)
   result.meshDimension = `${maxElementDimension}D`;
   if (result.meshDimension !== "2D") {
-    errorLog(
+    throw new FEAScriptError(
+      "UNSUPPORTED_MESH",
       `The Gmsh mesh is ${result.meshDimension}; only 2D meshes (triangles and quadrilaterals) are supported yet.`,
     );
   }
@@ -306,7 +308,10 @@ const importGmshMesh = async (file) => {
   const hasLinearElements = Boolean(result.elementTypes[2] || result.elementTypes[3]);
   const hasQuadraticElements = Boolean(result.elementTypes[9] || result.elementTypes[10]);
   if (hasLinearElements && hasQuadraticElements) {
-    errorLog("Mixed linear and quadratic elements in the same Gmsh mesh are not supported.");
+    throw new FEAScriptError(
+      "UNSUPPORTED_MESH",
+      "Mixed linear and quadratic elements in the same Gmsh mesh are not supported.",
+    );
   }
   result.elementOrder = hasQuadraticElements ? "quadratic" : "linear";
   debugLog(`Detected element order from Gmsh mesh: ${result.elementOrder}`);
@@ -326,7 +331,7 @@ export function mapGmshMeshToFEAScript(parsedMesh) {
   let boundaryElementsProcessed = false;
 
   if (!parsedMesh.nodalNumbering) {
-    errorLog("No valid nodal numbering found in the parsed mesh.");
+    throw new FEAScriptError("INVALID_INPUT", "No valid nodal numbering found in the parsed mesh.");
   }
 
   // If this parsed mesh was already converted in a previous run, don't re-process it.
@@ -349,7 +354,10 @@ export function mapGmshMeshToFEAScript(parsedMesh) {
     const hasTriangleElements = triangleElements.length > 0;
 
     if (hasQuadElements && hasTriangleElements) {
-      errorLog("Mixed quadrilateral and triangular meshes are not supported yet.");
+      throw new FEAScriptError(
+        "UNSUPPORTED_MESH",
+        "Mixed quadrilateral and triangular meshes are not supported yet.",
+      );
     }
 
     // Check if it has quadElements or triangleElements structure from gmshReader
@@ -442,7 +450,10 @@ export function mapGmshMeshToFEAScript(parsedMesh) {
 
       parsedMesh.nodalNumbering = mappedNodalNumbering;
     } else {
-      errorLog("Element type is neither triangle nor quad; mapping for this type is not implemented yet.");
+      throw new FEAScriptError(
+        "UNSUPPORTED_MESH",
+        "Element type is neither triangle nor quad; mapping for this type is not implemented yet.",
+      );
     }
 
     debugLog(
@@ -472,6 +483,10 @@ export function mapGmshMeshToFEAScript(parsedMesh) {
       if (parsedMesh.boundaryNodePairs && !parsedMesh.boundaryElementsProcessed) {
         // Reset boundary elements array
         parsedMesh.boundaryElements = [];
+
+        // Boundaries with node pairs that are not on an element side, with the count of such pairs. They are
+        // keyed below by boundary key, so that a solve can refuse a condition on one of them
+        const incompleteBoundaryArrays = new Map();
 
         // Process each physical property from the Gmsh file
         parsedMesh.physicalPropMap.forEach((prop) => {
@@ -677,7 +692,15 @@ export function mapGmshMeshToFEAScript(parsedMesh) {
                 }
 
                 if (!foundElement) {
-                  errorLog(
+                  const boundarySides = parsedMesh.boundaryElements[prop.tag];
+                  const incomplete = incompleteBoundaryArrays.get(boundarySides) ?? {
+                    name: prop.name,
+                    tag: prop.tag,
+                    missingPairs: 0,
+                  };
+                  incomplete.missingPairs++;
+                  incompleteBoundaryArrays.set(boundarySides, incomplete);
+                  warnLog(
                     `Could not find element containing boundary nodes ${node1} and ${node2}. Boundary may be incomplete.`,
                   );
                 }
@@ -699,6 +722,12 @@ export function mapGmshMeshToFEAScript(parsedMesh) {
           }
           parsedMesh.boundaryElements = fixedBoundaryElements;
         }
+
+        // Key the incomplete boundaries by their position in the final boundary elements array
+        parsedMesh.incompleteBoundaries = {};
+        incompleteBoundaryArrays.forEach((incomplete, boundarySides) => {
+          parsedMesh.incompleteBoundaries[parsedMesh.boundaryElements.indexOf(boundarySides)] = incomplete;
+        });
       }
     }
   }

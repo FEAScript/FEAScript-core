@@ -12,7 +12,8 @@ import { BasisFunctions } from "../elements/basisFunctions.js";
 import { NumericalIntegration } from "../elements/numericalIntegration.js";
 import { SparseMatrix } from "../linalg/sparseMatrix.js";
 import { BeamBoundaryConditions } from "./beamBoundaryConditions.js";
-import { basicLog, errorLog } from "../utilities/logging.js";
+import { FEAScriptError } from "../utilities/errors.js";
+import { basicLog } from "../utilities/logging.js";
 
 /**
  * Function to assemble the Jacobian matrix and residual vector for the 1D Euler-Bernoulli beam model
@@ -58,10 +59,11 @@ export function assembleEulerBernoulliBeamMat(meshData, boundaryConditions, coef
   const { nodesXCoordinates, nop, totalElements, totalNodesX, meshDimension, elementOrder } = meshData;
 
   if (meshDimension !== "1D") {
-    errorLog("Euler-Bernoulli beam solver requires a 1D mesh");
+    throw new FEAScriptError("UNSUPPORTED_MESH", "Euler-Bernoulli beam solver requires a 1D mesh");
   }
   if (elementOrder !== "linear") {
-    errorLog(
+    throw new FEAScriptError(
+      "UNSUPPORTED_MESH",
       "Euler-Bernoulli beam solver requires 'linear' (2-node) elements for the beam geometry; " +
         "the cubic Hermite field interpolation for w(x) is applied internally regardless of this setting",
     );

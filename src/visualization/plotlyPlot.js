@@ -12,6 +12,18 @@ import { prepareMesh, computeNodeNeighbors, getBoundarySegments } from "../mesh/
 import { pointInsideQuadrilateral, pointInsideTriangularElement } from "../elements/elementGeometry.js";
 import { BasisFunctions } from "../elements/basisFunctions.js";
 import { selectSolutionField } from "./solutionFields.js";
+import { FEAScriptError } from "../utilities/errors.js";
+
+/**
+ * Function to stop a plot whose container does not exist (Plotly would otherwise fail with a plain Error). Outside
+ * a browser there is no document to check, and the call is left to Plotly
+ * @param {string} plotDivId - The id of the div where the plot will be rendered
+ * @throws {FEAScriptError} INVALID_INPUT
+ */
+function validatePlotContainer(plotDivId) {
+  if (typeof document === "undefined" || document.getElementById(plotDivId)) return;
+  throw new FEAScriptError("INVALID_INPUT", `Could not find plot container with id: ${plotDivId}`);
+}
 
 // Plot sizing: a plot fills the width of its container, up to the largest size below, and a 2D plot keeps one scale
 // for x and y. The colour bar of a 2D plot sits in a fixed right margin, with its title on its side, so plots of
@@ -92,6 +104,7 @@ function drawContourPlot(plotDivId, contourData, title, xCoordinates, yCoordinat
  *    creeping flow, "w", "theta" for the Euler-Bernoulli beam); defaults to the main field of the model
  */
 export function plotSolution(model, result, plotType, plotDivId, options = {}) {
+  validatePlotContainer(plotDivId);
   console.time("plottingTime");
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const { values: solutionVector, fieldName } = selectSolutionField(model, result, options.field);
@@ -151,6 +164,12 @@ export function plotSolution(model, result, plotType, plotDivId, options = {}) {
       solutionLabel,
     );
     console.timeEnd("plottingTime");
+  } else {
+    console.timeEnd("plottingTime");
+    throw new FEAScriptError(
+      "INVALID_INPUT",
+      `plotSolution cannot draw a "${plotType}" plot of a ${meshDimension} mesh. Supported: "line" for 1D and "contour" for 2D meshes.`,
+    );
   }
 }
 
@@ -164,6 +183,7 @@ export function plotSolution(model, result, plotType, plotDivId, options = {}) {
  *  - field: The named field to plot, for models with more than one unknown per node; defaults to the main field of the model
  */
 export function plotInterpolatedSolution(model, result, plotType, plotDivId, options = {}) {
+  validatePlotContainer(plotDivId);
   console.time("plottingTime");
   const { values, fieldName } = selectSolutionField(model, result, options.field);
   result = { ...result, solutionVector: values, fields: undefined }; // Interpolate the selected field
@@ -178,9 +198,7 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId, opt
     elementShape: meshData.elementShape,
   });
 
-  if (meshDimension === "1D" && plotType === "line") {
-    // 1D plot region
-  } else if (meshDimension === "2D" && plotType === "contour") {
+  if (meshDimension === "2D" && plotType === "contour") {
     const visNodeXCoordinates = [];
     const visNodeYCoordinates = [];
     const lengthX = Math.max(...nodesXCoordinates) - Math.min(...nodesXCoordinates);
@@ -315,6 +333,12 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId, opt
       fieldName ?? "Solution",
     );
     console.timeEnd("plottingTime");
+  } else {
+    console.timeEnd("plottingTime");
+    throw new FEAScriptError(
+      "INVALID_INPUT",
+      `plotInterpolatedSolution cannot draw a "${plotType}" plot of a ${meshDimension} mesh. Supported: "contour" for 2D meshes (use plotSolution for 1D).`,
+    );
   }
 }
 

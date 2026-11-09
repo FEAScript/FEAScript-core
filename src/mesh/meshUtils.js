@@ -10,12 +10,13 @@
 // Internal imports
 import { getBoundarySides } from "../elements/basisFunctions.js";
 import { Mesh1D, Mesh2D } from "./meshGeneration.js";
-import { debugLog, errorLog } from "../utilities/logging.js";
+import { FEAScriptError } from "../utilities/errors.js";
+import { debugLog, warnLog } from "../utilities/logging.js";
 
 /**
  * Function to fill in the mesh settings that a parsed mesh (e.g., from a Gmsh .msh import) already defines.
  * The mesh dimension and element order are taken from the mesh itself; a conflicting value in the mesh
- * configuration is reported as an error
+ * configuration is warned about, and the value of the mesh is used
  * @param {object} meshConfig - Object containing computational mesh details
  * @returns {object} A copy of the mesh configuration with the settings of the parsed mesh filled in
  */
@@ -29,8 +30,8 @@ export function resolveMeshConfig(meshConfig) {
     const meshValue = parsedMesh[setting];
     if (meshValue === undefined) continue;
     if (configValue !== undefined && configValue !== meshValue) {
-      errorLog(
-        `${setting} is '${configValue}' but the imported mesh is '${meshValue}'. Remove ${setting} from the mesh configuration; it is detected from the mesh.`,
+      warnLog(
+        `${setting} is '${configValue}' but the imported mesh is '${meshValue}'; '${meshValue}' is used. Remove ${setting} from the mesh configuration; it is detected from the mesh.`,
       );
     }
     resolvedMeshConfig[setting] = meshValue;
@@ -65,7 +66,12 @@ export function prepareMesh(meshConfig) {
       angleRight,
     });
   } else {
-    errorLog("Mesh dimension must be either '1D' or '2D'");
+    throw new FEAScriptError(
+      "INVALID_INPUT",
+      `Mesh dimension must be either "1D" or "2D"; got ${
+        typeof meshDimension === "string" ? `"${meshDimension}"` : meshDimension
+      }.`,
+    );
   }
 
   // Use the parsed mesh (e.g., from a Gmsh .msh import) if provided. Otherwise, generate a structured mesh
@@ -110,6 +116,8 @@ export function prepareMesh(meshConfig) {
     meshDimension,
     elementOrder,
     elementShape,
+    // Imported boundaries with node pairs that are not on an element side, keyed by boundary key
+    incompleteBoundaries: nodesCoordinatesAndNumbering.incompleteBoundaries ?? {},
   };
 }
 
