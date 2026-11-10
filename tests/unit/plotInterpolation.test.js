@@ -138,9 +138,9 @@ for (const { label, meshConfig } of cases) {
     maxError = Math.max(maxError, Math.abs(value - exact));
   });
 
-  // Points exactly on the outer boundary may be excluded by the ray casting check
+  // The domain is a rectangle, so every grid point, including those on its edges, must get a value
   assert(
-    insidePoints > 0.95 * plottedTrace.z.length,
+    insidePoints === plottedTrace.z.length,
     `${label}: ${insidePoints} of ${plottedTrace.z.length} grid points located inside the mesh`,
   );
   assert(

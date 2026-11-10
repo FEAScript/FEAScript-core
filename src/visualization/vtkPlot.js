@@ -898,10 +898,24 @@ function solutionInterpolation(model, meshData, result, elementIndex, ksi, eta, 
 }
 
 function pointInsidePolygon(x, y, segments) {
+  // Points on the boundary count as inside: ray casting alone keeps the bottom and left edges of a
+  // domain but drops the top and right ones, so the plot would stop one grid step short there
   let inside = false;
   for (let i = 0; i < segments.length; i++) {
     const [[x1, y1], [x2, y2]] = segments[i];
-    const intersect = y1 > y !== y2 > y && x < ((x2 - x1) * (y - y1)) / (y2 - y1) + x1;
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const tolerance = 1e-9 * (Math.abs(dx) + Math.abs(dy)); // Relative to the segment length
+    if (
+      x >= Math.min(x1, x2) - tolerance &&
+      x <= Math.max(x1, x2) + tolerance &&
+      y >= Math.min(y1, y2) - tolerance &&
+      y <= Math.max(y1, y2) + tolerance &&
+      Math.abs(dx * (y - y1) - dy * (x - x1)) <= tolerance * Math.hypot(dx, dy)
+    ) {
+      return true;
+    }
+    const intersect = y1 > y !== y2 > y && x < (dx * (y - y1)) / dy + x1;
     if (intersect) inside = !inside;
   }
   return inside;
