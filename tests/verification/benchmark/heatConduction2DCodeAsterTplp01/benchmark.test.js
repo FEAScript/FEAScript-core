@@ -30,7 +30,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { FEAScriptModel } from "../../../../src/FEAScript.js";
 import { importGmshMesh } from "../../../../src/io/gmshReader.js";
-import { generateTriangleMesh } from "../../../../src/mesh/triangleMeshGenerator.js";
+import { generateTriangleMesh } from "../../../../src/mesh/triangleMesh.js";
 import { basicLog, errorLog } from "../../../../src/utilities/logging.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

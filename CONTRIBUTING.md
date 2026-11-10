@@ -22,7 +22,7 @@ Thank you for your interest in contributing! FEAScript is in early development, 
 ## Variable & File Naming
 
 - Use [camelCase](https://en.wikipedia.org/wiki/Camel_case) formatting for variable names throughout the code
-- JavaScript source file names use camelCase (e.g., `logging.js`, `meshGeneration.js`, `newtonRaphson.js`)
+- JavaScript source file names use camelCase (e.g., `logging.js`, `structuredMesh.js`, `newtonRaphson.js`)
 
 ### Exceptions
 

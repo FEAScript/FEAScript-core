@@ -9,7 +9,7 @@
 
 // Internal imports
 import { getBoundarySides } from "../elements/basisFunctions.js";
-import { Mesh1D, Mesh2D } from "./meshGeneration.js";
+import { Mesh1D, Mesh2D } from "./structuredMesh.js";
 import { FEAScriptError } from "../utilities/errors.js";
 import { debugLog, warnLog } from "../utilities/logging.js";
 

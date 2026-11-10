@@ -29,7 +29,7 @@
  */
 
 import { FEAScriptModel } from "../../src/FEAScript.js";
-import { generateTriangleMesh } from "../../src/mesh/triangleMeshGenerator.js";
+import { generateTriangleMesh } from "../../src/mesh/triangleMesh.js";
 import { FEAScriptError } from "../../src/utilities/errors.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
 
