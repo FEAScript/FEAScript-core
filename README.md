@@ -7,11 +7,11 @@
 [![Last Commit](https://img.shields.io/github/last-commit/FEAScript/FEAScript-core?logo=github)](https://github.com/FEAScript/FEAScript-core/commits/main)
 [![License](https://img.shields.io/github/license/FEAScript/FEAScript-core?logo=github)](https://github.com/FEAScript/FEAScript-core/blob/main/LICENSE)
 
-<img src="https://feascript.com/assets/favicon.ico" alt="FEAScript Icon" width="18" height="18"> **[FEAScript](https://feascript.com/) is a finite element simulation library developed in JavaScript**. It enables engineering simulations across both browser-based and server-side environments without the overhead of traditional desktop software. <br>🎯 **Our goal is to provide a powerful JavaScript API for FEM**. We are closing the gap between complex computational mechanics and the accessibility of the web, empowering developers to build professional-grade simulation tools that work on any device, anywhere. This is the core library of the FEAScript project.
+<img src="https://feascript.com/assets/favicon.ico" alt="FEAScript Icon" width="18" height="18"> **[FEAScript](https://feascript.com/) is a finite element simulation library developed in JavaScript**. It runs engineering simulations in the browser or in Node.js, with no desktop software to install. <br>🎯 **A JavaScript API for FEM:** you set up the model, solve it and plot the results in JavaScript, and you can build the simulation into your own web pages and applications. This is the core library of the FEAScript project.
 
 <img src="https://feascript.github.io/FEAScript-website/assets/cold-plate-logo-results-and-mesh.gif" width="300" alt="Results of heat conduction around the FEAScript logo">
 
-> 🚧 **FEAScript is currently under heavy development.** Its functionality and interfaces may change rapidly as new features and enhancements are introduced. [Donations](https://github.com/sponsors/FEAScript) help accelerate the next generation of FEAScript's solvers, performance, documentation and tutorials.
+> 🚧 **FEAScript is in development, and each release adds features.** Its API may change between minor releases; see the [changelog](CHANGELOG.md). [Donations](https://github.com/sponsors/FEAScript) pay for development time, documentation and tutorials.
 
 ## Contents
 
@@ -24,7 +24,7 @@
 
 ## Features
 
-- **Physics models:** creeping (Stokes) flow, Euler-Bernoulli beam bending, front propagation, heat conduction, general form PDE (linear and nonlinear)
+- **Physics models:** creeping (Stokes) flow, Euler–Bernoulli beam bending, front propagation, heat conduction, general-form PDE (linear and nonlinear)
 - **Meshing:** simple 1D/2D mesh generation, unstructured mesh import from Gmsh (`.msh`) with quadrilateral and triangular elements (linear and quadratic)
 - **Solvers:** frontal, Jacobi (CPU/WebGPU) and LU, Newton–Raphson for nonlinear systems
 - **Spatially varying coefficients:** `thermalConductivity(x, y)` and `heatSource(x, y)` can be scalars or functions, evaluated at each Gauss point
@@ -79,7 +79,7 @@ You can use FEAScript in browser environments in three ways:
   </script>
   ```
 
-👉 Explore browser-based tutorials on our [website](https://feascript.com/#tutorials).
+👉 Explore browser-based tutorials on our [website](https://feascript.com/tutorials/).
 
 ### Use FEAScript in JavaScript playgrounds
 
