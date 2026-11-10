@@ -13,6 +13,8 @@
  *  - "INVALID_INPUT": the model input is missing, misspelled or out of range (model, mesh settings, boundary
  *    conditions, coefficient functions)
  *  - "UNSUPPORTED_MESH": the mesh is valid, but the model or the Gmsh reader cannot use it yet
+ *  - "MESH_TOO_FINE": the mesh generator passed its limit on the number of nodes (maxNodes) before meeting the
+ *    element size and angle targets
  *  - "UNSUPPORTED_SOLVER": the solver method is unknown, or the model cannot use it, or (for "jacobi-gpu") WebGPU
  *    or a GPU adapter is not available
  *  - "NOT_CONVERGED": an iterative method did not converge

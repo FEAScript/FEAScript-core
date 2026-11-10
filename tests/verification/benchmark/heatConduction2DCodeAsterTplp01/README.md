@@ -28,13 +28,17 @@ internal heat generation:
 | DE (right)     | Constant temperature, T = 0 °C  |
 | AB, BC, CD, EF | Insulated (`symmetry`)          |
 
-| Case              | Mesh                                                     |
-| ----------------- | -------------------------------------------------------- |
-| P2 triangles      | `tests/meshes/lshape_triang_quadratic.msh` (6-node, 618) |
-| Q2 quadrilaterals | `tests/meshes/lshape_quad_quadratic.msh` (9-node, 321)   |
+| Case                    | Mesh                                                     |
+| ----------------------- | -------------------------------------------------------- |
+| P2 triangles            | `tests/meshes/lshape_triang_quadratic.msh` (6-node, 618) |
+| Q2 quadrilaterals       | `tests/meshes/lshape_quad_quadratic.msh` (9-node, 321)   |
+| P2 triangles, generated | `generateTriangleMesh` with the grading of `lshape.geo`  |
 
-Both meshes come from [`lshape.geo`](../../../meshes/lshape.geo): element size 0.05 m, refined to
-0.01 m at `C`, with mesh nodes at all 13 reference points.
+The Gmsh meshes come from [`lshape.geo`](../../../meshes/lshape.geo): element size 0.05 m, refined to
+0.01 m at `C`, with mesh nodes at all 13 reference points. The generated mesh takes the same polygon,
+with its boundary split at the 0.2 m grid and the interior reference points embedded, and a maximum
+element area from the same element size (0.05 m, growing from 0.01 m at `C`), with angles of at least
+30 degrees.
 
 ## Expected values
 

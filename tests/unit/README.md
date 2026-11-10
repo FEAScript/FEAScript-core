@@ -12,6 +12,7 @@ and utilities.
 | `elements2D.test.js`        | Basis functions and quadrature rules of linear and quadratic quadrilaterals and triangles                            |
 | `plotInterpolation.test.js` | Point location and solution interpolation of the contour plot, for all 2D element types                              |
 | `gmshReader.test.js`        | Gmsh reader, including meshes with non-contiguous node tags (same nodes, connectivity, solution)                     |
+| `triangleMesh.test.js`      | Triangle mesh generator: angles, areas, boundaries, holes, embedded points, quadratic nodes, small angles, a solve   |
 
 Run all unit, regression, and verification tests from the repository root with:
 
