@@ -8,6 +8,16 @@ All notable changes to FEAScript-core are documented in this file. The format is
 
 ### Added
 
+- `generateTriangleMesh()`, a mesh generator for a polygon with holes
+  ([#135](https://github.com/FEAScript/FEAScript-core/issues/135)): a constrained Delaunay triangulation of the
+  polygon (Delaunator and Constrainautor), refined by Ruppert's algorithm with off-centers until every triangle has
+  angles of at least `minAngle` (default 20°) and an area of at most `maxArea`, a number or a function of position
+  for a graded mesh. Each edge of the polygons takes a boundary name, which groups the edges into the boundaries of
+  the model, and points inside the domain can be made nodes. Small input angles are handled with concentric shell
+  splitting, so the refinement always stops. The result is in the format of `importGmshMesh`, with linear or
+  quadratic triangles, and is used with `setMeshConfig({ parsedMesh })`. A refinement that passes `maxNodes` throws
+  `FEAScriptError` `"MESH_TOO_FINE"`
+
 - Benchmark tests for 2D heat conduction from the Code_Aster validation manual: TPLP302 (strip with a
   Fourier series solution) and TPLP01 (L-shaped domain with a re-entrant corner, on Gmsh triangle and
   quadrilateral meshes)

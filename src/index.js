@@ -9,6 +9,7 @@
 
 export { FEAScriptModel } from "./FEAScript.js";
 export { importGmshMesh } from "./io/gmshReader.js";
+export { generateTriangleMesh } from "./mesh/triangleMeshGenerator.js";
 export { FEAScriptError } from "./utilities/errors.js";
 export { logSystem } from "./utilities/logging.js";
 export { plotSolution, plotInterpolatedSolution } from "./visualization/plotlyPlot.js";

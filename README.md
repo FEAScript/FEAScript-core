@@ -25,7 +25,7 @@
 ## Features
 
 - **Physics models:** creeping (Stokes) flow, Euler–Bernoulli beam bending, front propagation, heat conduction, general-form PDE (linear and nonlinear)
-- **Meshing:** simple 1D/2D mesh generation, unstructured mesh import from Gmsh (`.msh`) with quadrilateral and triangular elements (linear and quadratic)
+- **Meshing:** simple 1D/2D mesh generation, triangle mesh generation in a polygon with holes (Delaunay refinement, with named boundaries), unstructured mesh import from Gmsh (`.msh`) with quadrilateral and triangular elements (linear and quadratic)
 - **Solvers:** frontal, Jacobi (CPU/WebGPU) and LU, Newton–Raphson for nonlinear systems
 - **Spatially varying coefficients:** `thermalConductivity(x, y)` and `heatSource(x, y)` can be scalars or functions, evaluated at each Gauss point
 - **Performance:** web worker support for multi-threaded computation
