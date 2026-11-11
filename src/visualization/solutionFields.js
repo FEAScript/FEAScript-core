@@ -10,10 +10,13 @@
 // Internal imports
 import { FEAScriptError } from "../utilities/errors.js";
 
-// Field plotted when none is requested, for models that return named fields
+// Field plotted when none is requested, for models that return named fields. The deprecated names with the
+// Script suffix are kept, for model information built outside FEAScriptModel (e.g. by FEAScript Studio)
 const defaultFields = {
   creepingFlow: "velocityMagnitude",
   eulerBernoulliBeam: "w",
+  creepingFlowScript: "velocityMagnitude",
+  eulerBernoulliBeamScript: "w",
 };
 
 /**
