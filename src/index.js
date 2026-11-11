@@ -26,7 +26,7 @@ export {
 export { FEAScriptWorker } from "./workers/worker.js";
 
 /** The version of FEAScript, as in its npm package (e.g. "0.4.0") */
-export const version = "0.4.0-rc.1";
+export const version = "0.4.0-rc.2";
 
 /**
  * The version of FEAScript, as text
