@@ -10,8 +10,9 @@ All notable changes to FEAScript-core are documented in this file. The format is
 
 - One way to set up a domain, whatever its mesh ([#136](https://github.com/FEAScript/FEAScript-core/issues/136)):
   `setGeometry()` takes the geometry, `{ line: length }`, `{ rectangle: [width, height] }` or
-  `{ shapes: [polygon], holes, points }`, where a polygon is a list of named boundaries `{ name, points }` chained
-  in order, each a polyline of points; `setMeshConfig()` then takes how to mesh it, `{ elements, elementOrder,
+  `{ shape, holes, points }`, where a polygon is a path `{ start, boundaries: [{ name, to }] }` (each boundary runs
+  from where the previous one ended to `to`, a point or a polyline, and the last may leave out `to` to close the
+  shape), a polygon `{ name, points }` with one name, or a plain list of points; `setMeshConfig()` then takes how to mesh it, `{ elements, elementOrder,
   size, divisions, minAngle, maxNodes }`, with `elements: "quadrilaterals"` (a rectangle or a convex four-sided
   shape, mapped from a grid) or `"triangles"` (any shape with holes). The `size` is the length of an element side,
   for triangles also a function of position for a graded mesh; `divisions` is the number of elements of a line or
@@ -22,7 +23,7 @@ All notable changes to FEAScript-core are documented in this file. The format is
   `generateTriangleMesh(geometry, options)` or `generateQuadrilateralMesh(geometry, options)`, which are exported
   and return the same mesh object (nodes, elements, boundary element sides by name, aliases). The geometry
   checks (a polygon that is not simple, a hole outside the shape or inside another hole, a point outside the
-  domain, boundaries that do not chain) throw `FEAScriptError` `"INVALID_INPUT"` listing every problem
+  domain, a path that does not close) throw `FEAScriptError` `"INVALID_INPUT"` listing every problem
 - `generateTriangleMesh()`, a mesh generator for a polygon with holes
   ([#135](https://github.com/FEAScript/FEAScript-core/issues/135)): a constrained Delaunay triangulation of the
   polygon (Delaunator and Constrainautor), refined by Ruppert's algorithm with off-centers until every triangle has

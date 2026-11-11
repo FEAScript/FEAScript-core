@@ -69,9 +69,11 @@ const polygonArea = (points) =>
 const corners = (element) =>
   element.length === 6 ? [element[0], element[5], element[2]] : [element[0], element[2], element[1]];
 
-// A polygon of chained named boundaries from a list of points and one name per edge
-const chained = (points, names) =>
-  points.map((point, i) => ({ name: names[i], points: [point, points[(i + 1) % points.length]] }));
+// A path from a list of points and one name per edge: the edge i goes from point i to point i + 1
+const path = (points, names) => ({
+  start: points[0],
+  boundaries: names.map((name, i) => (i === names.length - 1 ? { name } : { name, to: points[i + 1] })),
+});
 
 /**
  * Function to measure every element: the signed area, the smallest angle and the centroid
@@ -214,10 +216,7 @@ const square = [
   [0, 1],
 ];
 const squareNames = ["bottom", "right", "top", "left"];
-const squareMesh = generateTriangleMesh(
-  { shapes: [chained(square, squareNames)] },
-  { size: 0.068, minAngle: 25 },
-);
+const squareMesh = generateTriangleMesh({ shape: path(square, squareNames) }, { size: 0.068, minAngle: 25 });
 checkQuality("square", squareMesh, { minAngle: 25, size: 0.068, area: 1 });
 checkBoundaries("square", squareMesh, square, squareNames);
 assert(
@@ -249,7 +248,7 @@ const rotate = ([x, y]) => [Math.cos(0.4) * x - Math.sin(0.4) * y, Math.sin(0.4)
 const rotated = square.map(rotate);
 const graded = (x, y) => 0.03 + 0.1 * distance([x, y], rotated[2]);
 const rotatedMesh = generateTriangleMesh(
-  { shapes: [chained(rotated, squareNames)] },
+  { shape: path(rotated, squareNames) },
   { size: graded, minAngle: 30, elementOrder: "quadratic" },
 );
 checkQuality("rotated square", rotatedMesh, { minAngle: 30, size: graded, area: 1 });
@@ -318,8 +317,8 @@ const embedded = [
 ];
 const plateMesh = generateTriangleMesh(
   {
-    shapes: [[{ name: "outer", points: [...plate, plate[0]] }]],
-    holes: [[{ name: "pin", points: [...hole, hole[0]] }]],
+    shape: { name: "outer", points: plate },
+    holes: [{ name: "pin", points: hole }],
     points: embedded,
   },
   { size: 0.152 },
@@ -357,7 +356,7 @@ assert(
   plateLines.outer.filter((line) => line.includes(rightNode)).length === 2,
   "plate: a point on an edge splits it, and is the end of two boundary sides",
 );
-const unnamedMesh = generateTriangleMesh({ shapes: [plate], holes: [hole] }, { size: 0.2 });
+const unnamedMesh = generateTriangleMesh({ shape: plate, holes: [hole] }, { size: 0.2 });
 assert(
   JSON.stringify(Object.keys(unnamedMesh.boundaryElements)) === JSON.stringify(["boundary", "hole"]),
   'plate: a plain list of points is one boundary named "boundary" for a shape and "hole" for a hole',
@@ -373,7 +372,7 @@ const wedge = [
   [1, 0],
   [1, Math.tan((5 * Math.PI) / 180)],
 ];
-const wedgeMesh = generateTriangleMesh({ shapes: [wedge] }, { size: 0.048 });
+const wedgeMesh = generateTriangleMesh({ shape: wedge }, { size: 0.048 });
 const wedgeStats = elementStats(wedgeMesh);
 assert(
   wedgeStats.every(({ signedArea }) => signedArea > 0),
@@ -401,7 +400,7 @@ basicLog("--- Heat conduction on a rotated square ---");
 for (const elementOrder of ["linear", "quadratic"]) {
   const model = new FEAScriptModel();
   model.setModelConfig("heatConductionScript", { coefficientFunctions: { thermalConductivity: 1 } });
-  model.setGeometry({ shapes: [chained(rotated, ["wall", "hot", "wall", "cold"])] });
+  model.setGeometry({ shape: path(rotated, ["wall", "hot", "wall", "cold"]) });
   model.setMeshConfig({ elements: "triangles", size: 0.2, elementOrder });
   model.addBoundaryCondition("wall", ["symmetry"]);
   model.addBoundaryCondition("hot", ["constantTemperature", 1]); // The edge at x' = 1
@@ -433,13 +432,11 @@ expectError(
   "INVALID_INPUT",
   () =>
     generateTriangleMesh({
-      shapes: [
-        [
-          [0, 0],
-          [1, 1],
-          [1, 0],
-          [0, 1],
-        ],
+      shape: [
+        [0, 0],
+        [1, 1],
+        [1, 0],
+        [0, 1],
       ],
     }),
   "crosses",
@@ -449,7 +446,7 @@ expectError(
   "INVALID_INPUT",
   () =>
     generateTriangleMesh({
-      shapes: [square],
+      shape: square,
       holes: [
         [
           [1.2, 0.5],
@@ -462,7 +459,7 @@ expectError(
 );
 expectError("hole crossing the shape", "INVALID_INPUT", () =>
   generateTriangleMesh({
-    shapes: [square],
+    shape: square,
     holes: [
       [
         [0.5, 0.5],
@@ -477,7 +474,7 @@ expectError(
   "INVALID_INPUT",
   () =>
     generateTriangleMesh({
-      shapes: [square],
+      shape: square,
       holes: [
         [
           [0.2, 0.2],
@@ -497,86 +494,72 @@ expectError(
 expectError(
   "point outside the domain",
   "INVALID_INPUT",
-  () => generateTriangleMesh({ shapes: [square], points: [[2, 2]] }),
+  () => generateTriangleMesh({ shape: square, points: [[2, 2]] }),
   "outside the domain",
 );
 expectError(
-  "boundaries that do not chain",
+  "a path that does not close",
   "INVALID_INPUT",
   () =>
     generateTriangleMesh({
-      shapes: [
-        [
-          {
-            name: "a",
-            points: [
-              [0, 0],
-              [1, 0],
-            ],
-          },
+      shape: {
+        start: [0, 0],
+        boundaries: [
+          { name: "a", to: [1, 0] },
           {
             name: "b",
-            points: [
+            to: [
               [1, 1],
               [0, 1],
-              [0, 0],
             ],
           },
         ],
-      ],
+      },
     }),
-  "chained in order",
+  "not at the start",
 );
 expectError(
-  "a shape that is not closed",
+  "a boundary without to that is not the last",
   "INVALID_INPUT",
   () =>
     generateTriangleMesh({
-      shapes: [
-        [
-          {
-            name: "a",
-            points: [
-              [0, 0],
-              [1, 0],
-            ],
-          },
-          {
-            name: "b",
-            points: [
-              [1, 0],
-              [1, 1],
-              [0, 1],
-            ],
-          },
-        ],
-      ],
+      shape: { start: [0, 0], boundaries: [{ name: "a" }, { name: "b", to: [1, 1] }] },
     }),
-  "must close the shape",
+  "only the last boundary",
 );
-expectError("two shapes", "INVALID_INPUT", () => generateTriangleMesh({ shapes: [square, plate] }), "0.5.0");
+expectError(
+  "an unknown segment kind",
+  "INVALID_INPUT",
+  () =>
+    generateTriangleMesh({
+      shape: { start: [0, 0], boundaries: [{ name: "a", arc: [1, 0] }, { name: "b" }] },
+    }),
+  "unknown setting arc",
+);
+expectError(
+  "several shapes",
+  "INVALID_INPUT",
+  () => generateTriangleMesh({ shapes: [square, plate] }),
+  "0.5.0",
+);
 expectError("minAngle out of range", "INVALID_INPUT", () =>
-  generateTriangleMesh({ shapes: [square] }, { minAngle: 60 }),
+  generateTriangleMesh({ shape: square }, { minAngle: 60 }),
 );
-expectError("size not positive", "INVALID_INPUT", () =>
-  generateTriangleMesh({ shapes: [square] }, { size: 0 }),
-);
+expectError("size not positive", "INVALID_INPUT", () => generateTriangleMesh({ shape: square }, { size: 0 }));
 expectError("unknown element order", "INVALID_INPUT", () =>
-  generateTriangleMesh({ shapes: [square] }, { elementOrder: "cubic" }),
+  generateTriangleMesh({ shape: square }, { elementOrder: "cubic" }),
 );
 expectError("too few points", "INVALID_INPUT", () =>
   generateTriangleMesh({
-    shapes: [
-      [
-        [0, 0],
-        [1, 0],
-      ],
+    shape: [
+      [0, 0],
+      [1, 0],
     ],
   }),
 );
 expectError("a line for triangles", "INVALID_INPUT", () => generateTriangleMesh({ line: 1 }));
 expectError("maxNodes reached", "MESH_TOO_FINE", () =>
-  generateTriangleMesh({ shapes: [square] }, { size: 0.015, maxNodes: 50 }),
+  generateTriangleMesh({ shape: square }, { size: 0.015, maxNodes: 50 }),
 );
 
 basicLog("");

@@ -48,11 +48,9 @@ const MAX_PASSES = 10000;
  * Function to generate a mesh of triangles in a polygon with holes, in the form that `model.setMesh(mesh)` takes
  * (the same as the meshes of importGmshMesh and generateQuadrilateralMesh)
  * @param {object} geometry - The geometry, as given to setGeometry: `{ rectangle: [width, height] }` or
- *  `{ shapes: [polygon], holes, points }`, where a polygon is its points [x, y] or `{ points, boundaries }` with
- *  one boundary name for all its edges or one name per edge (the edge i goes from point i to point i + 1, and
- *  the last edge closes the polygon). The edges with the same name form one boundary. Without names, the edges
- *  of the shape are in the boundary "boundary" and those of a hole in "hole". Points inside the domain, or on
- *  its boundary, become nodes
+ *  `{ shape, holes, points }`, where a polygon is a path `{ start, boundaries: [{ name, to }] }`, a polygon
+ *  `{ name, points }` with one name, or a plain list of points (see geometry.js). The boundaries with the same
+ *  name form one boundary. Points inside the domain, or on its boundary, become nodes
  * @param {object} [options] - The mesh settings
  * @param {number|function} [options.size] - The length of an element side, as a number or as a function (x, y)
  *  of the element center for a mesh size that varies; the largest element area is that of the equilateral

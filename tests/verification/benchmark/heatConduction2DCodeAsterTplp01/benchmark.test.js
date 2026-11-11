@@ -73,58 +73,33 @@ const generatedMesh = async () => {
   const sizeAt = (x, y) => Math.min(0.05, 0.01 + 0.2 * Math.hypot(x - 0.4, y - 0.4));
   return generateTriangleMesh(
     {
-      shapes: [
-        [
+      shape: {
+        start: [0, 0], // A
+        boundaries: [
           {
             name: "insulated",
-            points: [
-              [0, 0],
+            to: [
               [0.2, 0],
               [0.4, 0],
-            ],
-          }, // AB
-          {
-            name: "insulated",
-            points: [
-              [0.4, 0],
               [0.4, 0.2],
-              [0.4, 0.4],
-            ],
-          }, // BC
-          {
-            name: "insulated",
-            points: [
               [0.4, 0.4],
               [0.6, 0.4],
               [0.8, 0.4],
             ],
-          }, // CD
-          {
-            name: "right",
-            points: [
-              [0.8, 0.4],
-              [0.8, 0.8],
-            ],
-          }, // DE
+          }, // A-B-C-D
+          { name: "right", to: [0.8, 0.8] }, // D-E
           {
             name: "insulated",
-            points: [
-              [0.8, 0.8],
+            to: [
               [0.6, 0.8],
               [0.4, 0.8],
               [0.2, 0.8],
               [0, 0.8],
             ],
-          }, // EF
-          {
-            name: "left",
-            points: [
-              [0, 0.8],
-              [0, 0],
-            ],
-          }, // FA
+          }, // E-F
+          { name: "left" }, // F-A
         ],
-      ],
+      },
       points: [
         [0.2, 0.2],
         [0.2, 0.4],

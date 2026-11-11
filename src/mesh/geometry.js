@@ -18,12 +18,16 @@ import { FEAScriptError } from "../utilities/errors.js";
  *  - `{ line: length }`: a 1D domain from x = 0 to x = length, with the boundaries "left" and "right"
  *  - `{ rectangle: [width, height] }`: a 2D rectangle from (0, 0) to (width, height), with the boundaries
  *    "bottom", "right", "top" and "left"
- *  - `{ shapes: [polygon], holes: [polygon, ...], points: [[x, y], ...] }`: a 2D polygon, with or without holes
- *    and with points that must become nodes. A polygon is a list of named boundaries `{ name, points }`, each a
- *    polyline of [x, y] points, chained in order: a boundary starts where the previous one ends, and the last
- *    one ends where the first starts. The boundaries with the same name form one boundary of the model. A
- *    polygon may also be a plain list of points, all in one boundary named "boundary" (a shape) or "hole" (a
- *    hole)
+ *  - `{ shape, holes: [polygon, ...], points: [[x, y], ...] }`: a 2D polygon, with or without holes and with
+ *    points that must become nodes. A polygon (the shape or a hole) is written in one of three forms:
+ *     - a path: `{ start: [x, y], boundaries: [{ name, to }, ...] }`. Each boundary runs from where the previous
+ *       one ended (the first from `start`) to `to`, a point or a list of points (a polyline). The last boundary
+ *       may leave out `to`: it then closes the polygon back to `start`. Boundaries with the same name form one
+ *       boundary of the model. A boundary takes only `name` and `to` in this version; other segment kinds (arcs,
+ *       for example) can be added as other keys later
+ *     - `{ name, points: [[x, y], ...] }`: a closed polygon whose edges all have one name
+ *     - `[[x, y], ...]`: a closed polygon whose edges are in the boundary "boundary" (a shape) or "hole" (a hole)
+ *    Several shapes, meeting edge to edge as blocks, are planned for 0.5.0 under a key of their own
  * The boundary conditions are keyed by these names. The line and the rectangle also accept the numeric keys of
  * the structured meshes of FEAScript 0.3 ("0" to "3", in the order bottom, left, top, right) as aliases, with a
  * deprecation warning
@@ -46,75 +50,134 @@ export const shown = (value) => {
 };
 
 /**
- * Function to read one polygon of the input: a list of named boundaries, each a polyline of points, chained in
- * order (each boundary starts where the previous one ends, and the last one ends where the first starts), or a
- * plain list of points, all in one boundary of the default name
- * @returns {object|null} The points and one boundary name per edge, or null (with the problem recorded)
+ * Function to read one polygon of the input, in one of its three forms (see above), into its points and one
+ * boundary name per edge (the edge i goes from point i to point i + 1, and the last edge closes the polygon)
+ * @returns {object|null} `{ label, points, names }`, or null (with the problem recorded)
  */
 export function readPolygon(value, label, defaultName, problems) {
-  if (!Array.isArray(value) || value.length === 0) {
+  const isPointList = (list) => Array.isArray(list) && list.length > 0 && list.every(isPoint);
+  const points = [];
+  const names = [];
+
+  if (Array.isArray(value)) {
+    // A plain list of points
+    if (!isPointList(value)) {
+      problems.push(`${label} must be a list of [x, y] points of finite numbers; got ${shown(value)}`);
+      return null;
+    }
+    value.forEach((point) => {
+      points.push(point);
+      names.push(defaultName);
+    });
+  } else if (value && typeof value === "object" && value.points !== undefined) {
+    // { name, points }: one name for every edge
+    const unknown = Object.keys(value).filter((key) => key !== "name" && key !== "points");
+    unknown.forEach((key) =>
+      problems.push(`${label}: unknown setting ${key}; this form takes name and points`),
+    );
+    const name = value.name ?? defaultName;
+    if (typeof name !== "string" || name === "") {
+      problems.push(`${label}.name must be a word, the name of the boundary; got ${shown(value.name)}`);
+      return null;
+    }
+    if (!isPointList(value.points)) {
+      problems.push(
+        `${label}.points must be a list of [x, y] points of finite numbers; got ${shown(value.points)}`,
+      );
+      return null;
+    }
+    if (unknown.length > 0) return null;
+    value.points.forEach((point) => {
+      points.push(point);
+      names.push(name);
+    });
+  } else if (value && typeof value === "object" && value.start !== undefined) {
+    // A path: { start, boundaries: [{ name, to }, ...] }
+    const unknown = Object.keys(value).filter((key) => key !== "start" && key !== "boundaries");
+    unknown.forEach((key) =>
+      problems.push(`${label}: unknown setting ${key}; a path takes start and boundaries`),
+    );
+    if (!isPoint(value.start)) {
+      problems.push(`${label}.start must be an [x, y] point of finite numbers; got ${shown(value.start)}`);
+      return null;
+    }
+    const boundaries = value.boundaries;
+    if (!Array.isArray(boundaries) || boundaries.length === 0) {
+      problems.push(
+        `${label}.boundaries must be a list of boundaries { name, to }; got ${shown(boundaries)}`,
+      );
+      return null;
+    }
+    let ok = unknown.length === 0;
+    points.push(value.start);
+    boundaries.forEach((boundary, index) => {
+      const where = `${label}.boundaries[${index}]`;
+      if (!boundary || typeof boundary !== "object" || Array.isArray(boundary)) {
+        problems.push(`${where} must be a boundary { name, to }; got ${shown(boundary)}`);
+        ok = false;
+        return;
+      }
+      Object.keys(boundary)
+        .filter((key) => key !== "name" && key !== "to")
+        .forEach((key) => {
+          problems.push(`${where}: unknown setting ${key}; a boundary takes name and to in this version`);
+          ok = false;
+        });
+      const name = boundary.name;
+      if (typeof name !== "string" || name === "") {
+        problems.push(`${where}.name must be a word, the name of the boundary; got ${shown(name)}`);
+        ok = false;
+      }
+      const last = index === boundaries.length - 1;
+      let to = boundary.to;
+      if (to === undefined) {
+        if (!last) {
+          problems.push(
+            `${where} ("${name}") has no "to"; only the last boundary may leave it out, to close the shape`,
+          );
+          ok = false;
+          return;
+        }
+        to = [value.start];
+      } else if (isPoint(to)) {
+        to = [to];
+      } else if (!isPointList(to)) {
+        problems.push(`${where}.to must be an [x, y] point or a list of points; got ${shown(boundary.to)}`);
+        ok = false;
+        return;
+      }
+      to.forEach((point) => {
+        points.push(point);
+        names.push(name);
+      });
+    });
+    if (!ok) return null;
+    const first = points[0];
+    const end = points[points.length - 1];
+    if (first[0] !== end[0] || first[1] !== end[1]) {
+      problems.push(
+        `${label}: the last boundary ends at (${end[0]}, ${end[1]}), not at the start (${first[0]}, ${first[1]}); end it at the start, or leave out its "to" to close the shape`,
+      );
+      return null;
+    }
+    points.pop();
+  } else {
     problems.push(
-      `${label} must be an array of boundaries { name, points }, or an array of [x, y] points; got ${shown(
+      `${label} must be a path { start, boundaries: [{ name, to }] }, a polygon { name, points } or a list of [x, y] points; got ${shown(
         value,
       )}`,
     );
     return null;
   }
-  // A plain list of points: one boundary
-  const boundaries = value.every(isPoint) ? [{ name: defaultName, points: value }] : value;
-  const points = [];
-  const names = [];
-  let ok = true;
-  boundaries.forEach((boundary, index) => {
-    const where = `${label}[${index}]`;
-    if (!boundary || typeof boundary !== "object" || Array.isArray(boundary)) {
-      problems.push(`${where} must be a boundary { name, points }; got ${shown(boundary)}`);
-      ok = false;
-      return;
+
+  // A plain polygon given closed, with its first point repeated at the end
+  if (points.length > 1 && names.length === points.length) {
+    const first = points[0];
+    const end = points[points.length - 1];
+    if (first[0] === end[0] && first[1] === end[1]) {
+      points.pop();
+      names.pop();
     }
-    const name = boundary.name ?? defaultName;
-    if (typeof name !== "string" || name === "") {
-      problems.push(`${where}.name must be a word, the name of the boundary; got ${shown(boundary.name)}`);
-      ok = false;
-    }
-    const pts = boundary.points;
-    if (!Array.isArray(pts) || pts.length < 2 || !pts.every(isPoint)) {
-      problems.push(`${where}.points must be at least 2 [x, y] pairs of finite numbers; got ${shown(pts)}`);
-      ok = false;
-      return;
-    }
-    // The boundary continues the previous one: its first point is the last point of that one
-    if (points.length > 0) {
-      const last = points[points.length - 1];
-      if (last[0] !== pts[0][0] || last[1] !== pts[0][1]) {
-        problems.push(
-          `${where} ("${name}") starts at (${pts[0][0]}, ${pts[0][1]}) but the boundary before it ends at (${last[0]}, ${last[1]}); the boundaries of a shape are chained in order`,
-        );
-        ok = false;
-      }
-    }
-    // Each segment of the polyline is one edge of the polygon, named after its boundary
-    if (points.length === 0) points.push(pts[0]);
-    for (let i = 1; i < pts.length; i++) {
-      points.push(pts[i]);
-      names.push(name);
-    }
-  });
-  if (!ok) return null;
-  // The polygon closes at its first point: given by the last boundary (chained boundaries), or by the closing
-  // edge of a plain list of points
-  const first = points[0];
-  const last = points[points.length - 1];
-  const plainList = value.every(isPoint);
-  if (first[0] === last[0] && first[1] === last[1]) {
-    points.pop();
-  } else if (plainList) {
-    names.push(defaultName);
-  } else {
-    problems.push(
-      `${label}: the last boundary ends at (${last[0]}, ${last[1]}) but the first one starts at (${first[0]}, ${first[1]}); the last boundary must close the shape`,
-    );
-    return null;
   }
   if (points.length < 3) {
     problems.push(`${label} needs at least 3 points; got ${points.length}`);
@@ -268,7 +331,7 @@ function findShapeProblems(geometry) {
  * Function to read and check the geometry given to setGeometry, and to turn it into one form: the dimension,
  * the length of a line, or the shape (one polygon, with its edge names), the holes and the points of a 2D
  * domain, with the aliases of the boundary names
- * @param {object} geometry - `{ line }`, `{ rectangle }` or `{ shapes, holes, points }` (see above)
+ * @param {object} geometry - `{ line }`, `{ rectangle }` or `{ shape, holes, points }` (see above)
  * @returns {object} `{ meshDimension, length, shapes, holes, points, aliases, kind }`, with `kind` one of
  *  "line", "rectangle" and "polygon"
  * @throws {FEAScriptError} "INVALID_INPUT", listing every problem found
@@ -278,25 +341,37 @@ export function readGeometry(geometry) {
   if (!geometry || typeof geometry !== "object" || Array.isArray(geometry)) {
     throw new FEAScriptError(
       "INVALID_INPUT",
-      `The geometry must be an object: { line: length }, { rectangle: [width, height] } or { shapes: [polygon], holes, points }; got ${shown(
+      `The geometry must be an object: { line: length }, { rectangle: [width, height] } or { shape, holes, points }; got ${shown(
         geometry,
       )}.`,
     );
   }
-  const { line, rectangle, shapes, holes = [], points = [] } = geometry;
-  const forms = [line !== undefined, rectangle !== undefined, shapes !== undefined].filter(Boolean).length;
+  const { line, rectangle, shape, holes = [], points = [] } = geometry;
+  const forms = [line !== undefined, rectangle !== undefined, shape !== undefined].filter(Boolean).length;
+  if (geometry.shapes !== undefined || geometry.blocks !== undefined) {
+    throw new FEAScriptError(
+      "INVALID_INPUT",
+      "The domain is one shape in this version: { shape, holes, points }. Several shapes, meeting edge to edge as blocks, come in 0.5.0.",
+    );
+  }
   if (forms !== 1) {
     throw new FEAScriptError(
       "INVALID_INPUT",
-      `The geometry must be one of { line: length }, { rectangle: [width, height] } and { shapes: [polygon], holes, points }; got ${shown(
+      `The geometry must be one of { line: length }, { rectangle: [width, height] } and { shape, holes, points }; got ${shown(
         geometry,
       )}.`,
     );
   }
   const unknown = Object.keys(geometry).filter(
-    (key) => !["line", "rectangle", "shapes", "holes", "points"].includes(key),
+    (key) => !["line", "rectangle", "shape", "holes", "points"].includes(key),
   );
-  unknown.forEach((key) => problems.push(`Unknown geometry setting ${key}.`));
+  unknown.forEach((key) =>
+    problems.push(
+      key === "shapes" || key === "blocks"
+        ? `${key} is not supported in this version: the domain is one shape, with holes in "holes" (several blocks come in 0.5.0).`
+        : `Unknown geometry setting ${key}. Settings: line, rectangle, shape, holes, points.`,
+    ),
+  );
 
   if (line !== undefined) {
     if (!(Number.isFinite(line) && line > 0)) {
@@ -316,7 +391,7 @@ export function readGeometry(geometry) {
     };
   }
 
-  let shapeList;
+  let shapeValue;
   let aliases = {};
   let kind = "polygon";
   if (rectangle !== undefined) {
@@ -329,56 +404,26 @@ export function readGeometry(geometry) {
     }
     FEAScriptError.throwIfAny("INVALID_INPUT", problems);
     const [width, height] = rectangle;
-    shapeList = [
-      [
-        {
-          name: "bottom",
-          points: [
-            [0, 0],
-            [width, 0],
-          ],
-        },
-        {
-          name: "right",
-          points: [
-            [width, 0],
-            [width, height],
-          ],
-        },
-        {
-          name: "top",
-          points: [
-            [width, height],
-            [0, height],
-          ],
-        },
-        {
-          name: "left",
-          points: [
-            [0, height],
-            [0, 0],
-          ],
-        },
+    shapeValue = {
+      start: [0, 0],
+      boundaries: [
+        { name: "bottom", to: [width, 0] },
+        { name: "right", to: [width, height] },
+        { name: "top", to: [0, height] },
+        { name: "left" },
       ],
-    ];
+    };
     // The keys of the structured meshes of FEAScript 0.3, in their order: bottom, left, top, right
     aliases = { 0: "bottom", 1: "left", 2: "top", 3: "right" };
     kind = "rectangle";
   } else {
-    shapeList = shapes;
-    if (!Array.isArray(shapeList) || shapeList.length === 0) {
-      problems.push(`shapes must be an array with one polygon; got ${shown(shapes)}.`);
-    } else if (shapeList.length > 1) {
-      problems.push(
-        `shapes has ${shapeList.length} polygons; only one is supported in this version (several blocks come in 0.5.0). Give the domain as one polygon, with holes in "holes".`,
-      );
-    }
+    shapeValue = shape;
   }
   FEAScriptError.throwIfAny("INVALID_INPUT", problems);
 
   const normalized = { kind, meshDimension: "2D", shapes: [], holes: [], points: [], aliases };
-  const shape = readPolygon(shapeList[0], "shapes[0]", "boundary", problems);
-  if (shape) normalized.shapes.push(shape);
+  const outline = readPolygon(shapeValue, "shape", "boundary", problems);
+  if (outline) normalized.shapes.push(outline);
   if (!Array.isArray(holes)) {
     problems.push(`holes must be an array of polygons; got ${shown(holes)}`);
   } else {
@@ -477,20 +522,15 @@ export function translateOldMeshConfig(meshConfig) {
     const P2 = [sideX(angleRight, maxX, -1), maxY];
     const P3 = [sideX(angleLeft, 0, 1), maxY];
     const geometry = {
-      shapes: [
-        [
-          {
-            name: "bottom",
-            points: [
-              [0, 0],
-              [maxX, 0],
-            ],
-          },
-          { name: "right", points: [[maxX, 0], P2] },
-          { name: "top", points: [P2, P3] },
-          { name: "left", points: [P3, [0, 0]] },
+      shape: {
+        start: [0, 0],
+        boundaries: [
+          { name: "bottom", to: [maxX, 0] },
+          { name: "right", to: P2 },
+          { name: "top", to: P3 },
+          { name: "left" },
         ],
-      ],
+      },
     };
     return { geometry, meshConfig: newMeshConfig, aliases: { 0: "bottom", 1: "left", 2: "top", 3: "right" } };
   }

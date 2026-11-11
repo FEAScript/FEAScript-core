@@ -128,9 +128,9 @@ export class FEAScriptModel {
   /**
    * Method to set the geometry of the domain, which setMeshConfig then meshes
    * @param {object} geometry - `{ line: length }` (1D, boundaries "left" and "right"), `{ rectangle: [width,
-   *  height] }` (boundaries "bottom", "right", "top", "left") or `{ shapes: [polygon], holes, points }`, a
-   *  polygon with holes whose edges are named (see generateTriangleMesh). The boundary conditions are keyed by
-   *  the boundary names
+   *  height] }` (boundaries "bottom", "right", "top", "left") or `{ shape, holes, points }`, a
+   *  polygon with holes whose boundaries are named, written as a path `{ start, boundaries: [{ name, to }] }`
+   *  (see geometry.js). The boundary conditions are keyed by the boundary names
    */
   setGeometry(geometry) {
     this.geometry = readGeometry(geometry);
