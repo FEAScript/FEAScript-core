@@ -8,7 +8,7 @@ All notable changes to FEAScript-core are documented in this file. The format is
 
 ### Added
 
-- One way to set up a domain, whatever its mesh ([#136](https://github.com/FEAScript/FEAScript-core/issues/136)):
+- One way to set up a domain, whatever its mesh:
   `setGeometry()` takes the geometry, `{ line: length }`, `{ rectangle: [width, height] }` or
   `{ shape, holes, points }`, where a polygon is a path `{ start, boundaries: [{ name, to }] }` (each boundary runs
   from where the previous one ended to `to`, a point or a polyline, and the last may leave out `to` to close the
@@ -110,7 +110,7 @@ All notable changes to FEAScript-core are documented in this file. The format is
 
 - `setMeshConfig({ meshDimension, numElementsX, maxX, numElementsY, maxY, angleLeft, angleRight })`: use
   `setGeometry()` with `{ line }`, `{ rectangle }` or a four-point shape, and `setMeshConfig({ elements,
-  elementOrder, divisions })`. The old form keeps working with a warning, and is removed in 0.6.0 at the earliest
+  elementOrder, divisions })`. The old form keeps working with a warning, and is removed in 0.7.0 at the earliest
 - `setMeshConfig({ parsedMesh })`: use `setMesh(mesh)`
 - The numeric boundary keys: `"0"` to `"3"` of the structured meshes (bottom, left, top, right), `"0"` and `"1"`
   of 1D meshes (left, right), and the Gmsh physical tag minus one. They keep working as aliases of the boundary
