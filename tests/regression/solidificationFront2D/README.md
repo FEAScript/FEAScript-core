@@ -9,7 +9,7 @@ changes to the front propagation (eikonal) assembler, the Newton-Raphson method,
 for every 2D element type and order and every applicable solver method.
 
 It replicates the physical problem set up in
-[`solidificationFront2D.js`](../../../examples/frontPropagationScript/solidificationFront2D/solidificationFront2D.js)
+[`solidificationFront2D.js`](../../../examples/frontPropagation/solidificationFront2D/solidificationFront2D.js)
 and asserts known good values. The exact distance function is checked separately by the
 [planar front verification test](../../verification/analytical/frontPropagation2DPlanarFront/README.md).
 

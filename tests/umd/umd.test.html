@@ -58,7 +58,7 @@
         console[ok ? "log" : "error"](li.textContent);
       }
 
-      // Same 1D wall as examples/heatConductionScript/heatConduction1DWall: convection on the left, 5 °C on the right
+      // Same 1D wall as examples/heatConduction/heatConduction1DWall: convection on the left, 5 °C on the right
       const geometry = { line: 0.15 };
       const mesh = { elementOrder: "linear", divisions: 10 };
       const conditions = [

@@ -166,7 +166,7 @@ Here is a minimal browser-based example using the FEAScript API. Adapt paths, ph
 Furthermore, the scripts under `examples/` contain Node.js examples. You can run them from the `FEAScript-core/` directory as follows:
 
 ```bash
-node examples/heatConductionScript/heatConduction1DWall/heatConduction1DWall.js
+node examples/heatConduction/heatConduction1DWall/heatConduction1DWall.js
 ```
 
 Each script prints its computed solution to the console.

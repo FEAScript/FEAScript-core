@@ -91,6 +91,9 @@ All notable changes to FEAScript-core are documented in this file. The format is
   `"heatConduction"`, `"generalFormPDE"`, `"frontPropagation"`, `"creepingFlow"` and `"eulerBernoulliBeam"`.
   `model.solverConfig`, and the `solverConfig` of a worker result, hold the new name also when the old one is
   given
+- The example folders are named after the models, e.g. `examples/heatConduction/` instead of
+  `examples/heatConductionScript/`. Links to the old folders on `main` no longer work; links to a release tag,
+  such as `tree/0.3.1/examples/heatConductionScript`, still do
 
 - A mesh imported with `importGmshMesh` is converted to the mesh object once, with its boundaries keyed by the
   names of the physical groups, and the boundary lines are matched to element sides through a lookup table

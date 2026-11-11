@@ -8,7 +8,7 @@ This test guards the numerical output of the lid-driven cavity example against u
 changes to the Taylor-Hood creeping flow (Stokes) assembler or the flow boundary conditions.
 
 It replicates the physical problem set up in
-[`lidDrivenCavity2DCreepingFlow.js`](../../../examples/creepingFlowScript/lidDrivenCavity2DCreepingFlow/lidDrivenCavity2DCreepingFlow.js)
+[`lidDrivenCavity2DCreepingFlow.js`](../../../examples/creepingFlow/lidDrivenCavity2DCreepingFlow/lidDrivenCavity2DCreepingFlow.js)
 on structured and Gmsh quadrilaterals and on Gmsh triangles, and asserts known good values.
 
 ## Problem setup

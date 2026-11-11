@@ -11,7 +11,7 @@
  * Analytical test for HeatConduction1DVaryingCoefficients
  *
  * Guards the spatially varying `thermalConductivity` and `heatSource` coefficients of
- * heatConductionScript in 1D
+ * heatConduction in 1D
  *
  * Unlike the tests under tests/regression the expected values are not stored reference numbers
  * but closed-form solutions of the underlying PDE. Each case is chosen so the finite

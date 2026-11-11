@@ -11,7 +11,7 @@
  * Regression test for the 1D Euler-Bernoulli beam model (EulerBernoulliBeam)
  *
  * Replicates the exact setup from
- * examples/eulerBernoulliBeamScript/clampedSpringSupportedBeam1D/
+ * examples/eulerBernoulliBeam/clampedSpringSupportedBeam1D/
  * clampedSpringSupportedBeam1D.js — the "Bending of a Beam" example from J.N.
  * Reddy, "An Introduction to the Finite Element Method", 3rd ed., McGraw-Hill,
  * 2006 (FEM1D example problems, Chapter 7) — and asserts:

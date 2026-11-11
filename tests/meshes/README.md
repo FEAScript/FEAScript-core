@@ -46,7 +46,7 @@ gmsh rect.geo -save -format msh41 -o <mesh file>
 ```
 
 `rect_quad_quadratic.msh` has the same nodes and elements as `rect_quad.msh` used by the
-[`heatConduction2DFinGmsh.js`](../../examples/heatConductionScript/heatConduction2DFin/heatConduction2DFinGmsh.js) example,
+[`heatConduction2DFinGmsh.js`](../../examples/heatConduction/heatConduction2DFin/heatConduction2DFinGmsh.js) example,
 but its physical groups are tagged bottom, right, top, left; the example mesh tags them bottom, left, top, right,
 like the sides of FEAScript structured meshes.
 

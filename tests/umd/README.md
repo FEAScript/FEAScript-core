@@ -23,7 +23,7 @@ so a worker that looked beside the page would fail here.
 | Check                            | What it shows                                                                                                                |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `window.FEAScript` is defined    | The bundle runs as a classic script and exposes its exports on the global `FEAScript`                                        |
-| Main-thread solve                | The 1D wall of `examples/heatConductionScript/heatConduction1DWall` solves with `lusolve` (T = 5 °C on the right)            |
+| Main-thread solve                | The 1D wall of `examples/heatConduction/heatConduction1DWall` solves with `lusolve` (T = 5 °C on the right)            |
 | Plotly plot                      | `plotSolution` draws with the Plotly global                                                                                  |
 | Worker solve matches main thread | `FEAScriptWorker` loads `dist/feascript-worker.esm.js` beside the bundle and gives the same solution                         |
 | WebGPU solve matches LU          | `jacobi-gpu` loads its worker from `src/workers/` beside `dist/` and matches `lusolve` within `1e-3`, or SKIP without WebGPU |

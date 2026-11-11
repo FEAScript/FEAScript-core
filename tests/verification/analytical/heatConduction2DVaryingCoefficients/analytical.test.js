@@ -11,7 +11,7 @@
  * Analytical test for HeatConduction2DVaryingCoefficients
  *
  * Guards the spatially varying `thermalConductivity` and `heatSource` coefficients of
- * heatConductionScript in 2D, where the coefficients are evaluated at the physical
+ * heatConduction in 2D, where the coefficients are evaluated at the physical
  * coordinates produced by the 2D isoparametric mapping
  *
  * As in the 1D counterpart the expected values are closed-form solutions rather than stored

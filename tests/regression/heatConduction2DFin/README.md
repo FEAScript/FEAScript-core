@@ -9,9 +9,9 @@ unintended changes to the solver, assembler, Gmsh import or mesh-generation logi
 2D element type and order and every applicable solver method.
 
 It replicates the physical problem set up in
-[`heatConduction2DFin.js`](../../../examples/heatConductionScript/heatConduction2DFin/heatConduction2DFin.js)
+[`heatConduction2DFin.js`](../../../examples/heatConduction/heatConduction2DFin/heatConduction2DFin.js)
 (structured mesh) and
-[`heatConduction2DFinGmsh.js`](../../../examples/heatConductionScript/heatConduction2DFin/heatConduction2DFinGmsh.js)
+[`heatConduction2DFinGmsh.js`](../../../examples/heatConduction/heatConduction2DFin/heatConduction2DFinGmsh.js)
 (Gmsh meshes), and asserts known good values.
 
 ## Problem setup

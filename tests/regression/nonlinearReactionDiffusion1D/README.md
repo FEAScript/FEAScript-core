@@ -8,7 +8,7 @@ This test guards the numerical output of the 1D nonlinear reaction-diffusion exa
 unintended changes to the nonlinear general form PDE assemblers or the Newton-Raphson method.
 
 It replicates the physical problem set up in
-[`nonlinearReactionDiffusion1D.js`](../../../examples/generalFormPDEScript/nonlinearReactionDiffusion1D/nonlinearReactionDiffusion1D.js)
+[`nonlinearReactionDiffusion1D.js`](../../../examples/generalFormPDE/nonlinearReactionDiffusion1D/nonlinearReactionDiffusion1D.js)
 for linear and quadratic elements, and asserts known good values.
 
 ## Problem setup

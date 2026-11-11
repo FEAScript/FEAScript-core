@@ -8,7 +8,7 @@ This test guards the numerical output of the 1D Euler-Bernoulli beam example aga
 unintended changes to the beam solver, assembler, or mesh-generation logic.
 
 It replicates exactly the problem set up in
-[`clampedSpringSupportedBeam1D.js`](../../../examples/eulerBernoulliBeamScript/clampedSpringSupportedBeam1D/clampedSpringSupportedBeam1D.js) — the
+[`clampedSpringSupportedBeam1D.js`](../../../examples/eulerBernoulliBeam/clampedSpringSupportedBeam1D/clampedSpringSupportedBeam1D.js) — the
 "Bending of a Beam" example from J.N. Reddy, _An Introduction to the Finite Element Method_,
 3rd ed., McGraw-Hill, 2006 (FEM1D example problems, Chapter 7) — and asserts both a set of
 known-good baseline values and, independently of those baseline numbers, that the resulting

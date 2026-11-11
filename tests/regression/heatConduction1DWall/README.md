@@ -8,7 +8,7 @@ This test guards the numerical output of the 1D heat-conduction-through-a-wall e
 against unintended changes to the solver, assembler, or mesh-generation logic.
 
 It replicates the physical problem set up in
-[`heatConduction1DWall.js`](../../../examples/heatConductionScript/heatConduction1DWall/heatConduction1DWall.js)
+[`heatConduction1DWall.js`](../../../examples/heatConduction/heatConduction1DWall/heatConduction1DWall.js)
 for linear and quadratic elements and every applicable solver method, and asserts known good values.
 
 ## Problem setup

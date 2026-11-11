@@ -8,7 +8,7 @@ This test guards the numerical output of the 1D advection-diffusion example agai
 changes to the general form PDE assembler or the solvers.
 
 It replicates the physical problem set up in
-[`advectionDiffusion1D.js`](../../../examples/generalFormPDEScript/advectionDiffusion1D/advectionDiffusion1D.js)
+[`advectionDiffusion1D.js`](../../../examples/generalFormPDE/advectionDiffusion1D/advectionDiffusion1D.js)
 for linear and quadratic elements and every applicable solver method, and asserts known good values.
 
 ## Problem setup
