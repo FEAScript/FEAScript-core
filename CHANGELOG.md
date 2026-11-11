@@ -165,6 +165,13 @@ All notable changes to FEAScript-core are documented in this file. The format is
     First solves in Node.js and Chromium are unchanged or slightly faster.
   - Loading FEAScript from `src/` with mathjs from npm keeps the old speed until mathjs fixes it
     ([josdejong/mathjs#3792](https://github.com/josdejong/mathjs/issues/3792))
+- Contour plot values in quadratic elements with curved edges, such as the elements along the hole of the homepage
+  fin example ([#134](https://github.com/FEAScript/FEAScript-core/issues/134)). `plotInterpolatedSolution` and the
+  VTK plot located a grid point in a 9-node quadrilateral by inverting the bilinear map of its four corners, and in
+  a 6-node triangle by the barycentric coordinates of its three vertices, then evaluated the quadratic basis
+  functions at that point. Where the edges are curved, the two maps differ, and the plotted values were off by up
+  to 0.25 for a field of range about 10. Quadratic elements are now located by inverting their full isoparametric
+  map with Newton's method; linear elements are unchanged. The solution itself was not affected
 
 ## [0.3.1] - 2026-10-30
 

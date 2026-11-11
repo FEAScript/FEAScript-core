@@ -13,10 +13,14 @@
  * Covers (linear and quadratic quadrilaterals, structured and Gmsh, and triangles):
  *  - Point location on the visualization grid (adjacency search and natural coordinates)
  *  - Interpolation of the nodal values with the element basis functions
+ *  - Quadratic elements with curved edges (Gmsh meshes of a rectangle with a circular hole), where the
+ *    natural coordinates come from the full quadratic mapping of the element, not from its corner nodes
  *
  * Nodal values are set from a field that the element basis functions reproduce exactly
- * (linear field for linear elements, quadratic field for quadratic elements), so every grid
- * point inside the domain must match the field to round-off
+ * (linear field for linear elements, quadratic field for straight-sided quadratic elements), so every grid
+ * point inside the domain must match the field to round-off. An element with curved edges maps its reference
+ * element with quadratic functions, so it reproduces linear fields exactly but not quadratic ones: the curved
+ * meshes are checked with the linear field
  *
  * Run: node tests/unit/plotInterpolation.test.js (or npm test)
  */
@@ -87,6 +91,12 @@ function setMeshSource(model, source) {
   }
 }
 
+// Rectangle 4 x 2 with a hole of radius 0.5 at (2, 1). The quadratic element edges only approximate the arc, so
+// grid points within a small band around it may fall outside the mesh; every point beyond that band must be located
+const holeCentre = [2, 1];
+const holeRadius = 0.5;
+const outsideHoleBand = (x, y) => Math.hypot(x - holeCentre[0], y - holeCentre[1]) > holeRadius + 0.01;
+
 const cases = [
   { label: "linear quadrilaterals", meshConfig: structuredMesh("linear") },
   { label: "quadratic quadrilaterals", meshConfig: structuredMesh("quadratic") },
@@ -106,10 +116,25 @@ const cases = [
     label: "quadratic triangles",
     meshConfig: { elementOrder: "quadratic", mesh: await loadGmshMesh("rect_triang_quadratic.msh") },
   },
+  {
+    label: "Gmsh quadratic quadrilaterals with curved edges (rectangle with a hole)",
+    meshConfig: { elementOrder: "quadratic", mesh: await loadGmshMesh("rect_with_hole_quad_quadratic.msh") },
+    fieldName: "linear",
+    mustBeLocated: outsideHoleBand,
+  },
+  {
+    label: "quadratic triangles with curved edges (rectangle with a hole)",
+    meshConfig: {
+      elementOrder: "quadratic",
+      mesh: await loadGmshMesh("rect_with_hole_triang_quadratic.msh"),
+    },
+    fieldName: "linear",
+    mustBeLocated: outsideHoleBand,
+  },
 ];
 
-for (const { label, meshConfig } of cases) {
-  const field = fields[meshConfig.elementOrder];
+for (const { label, meshConfig, fieldName = meshConfig.elementOrder, mustBeLocated } of cases) {
+  const field = fields[fieldName];
   const model = new FEAScriptModel();
   model.setModelConfig("heatConductionScript");
   setMeshSource(model, meshConfig);
@@ -124,22 +149,32 @@ for (const { label, meshConfig } of cases) {
   assert(plottedTrace !== null, `${label}: contour trace passed to Plotly`);
 
   let insidePoints = 0;
+  let requiredPoints = 0;
+  let missedPoints = 0;
   let maxError = 0;
   plottedTrace.z.forEach((value, visNodeIndex) => {
-    if (value === null) return;
+    const x = plottedTrace.x[visNodeIndex];
+    const y = plottedTrace.y[visNodeIndex];
+    // Without a predicate the domain is a rectangle, so every grid point, including those on its edges, must get a value
+    const required = mustBeLocated ? mustBeLocated(x, y) : true;
+    if (required) requiredPoints++;
+    if (value === null) {
+      if (required) missedPoints++;
+      return;
+    }
     insidePoints++;
-    const exact = field(plottedTrace.x[visNodeIndex], plottedTrace.y[visNodeIndex]);
-    maxError = Math.max(maxError, Math.abs(value - exact));
+    maxError = Math.max(maxError, Math.abs(value - field(x, y)));
   });
 
-  // The domain is a rectangle, so every grid point, including those on its edges, must get a value
   assert(
-    insidePoints === plottedTrace.z.length,
-    `${label}: ${insidePoints} of ${plottedTrace.z.length} grid points located inside the mesh`,
+    missedPoints === 0,
+    `${label}: ${
+      requiredPoints - missedPoints
+    } of ${requiredPoints} grid points inside the domain located (${insidePoints} in all)`,
   );
   assert(
     maxError < TOLERANCE,
-    `${label}: interpolated ${meshConfig.elementOrder} field, largest deviation ${maxError.toExponential(
+    `${label}: interpolated ${fieldName} field, largest deviation ${maxError.toExponential(
       3,
     )} (tolerance ${TOLERANCE})`,
   );

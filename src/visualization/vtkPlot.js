@@ -14,7 +14,7 @@ import {
   getBoundarySegments,
   getModelMeshDimension,
 } from "../mesh/meshUtils.js";
-import { pointInsideQuadrilateral, pointInsideTriangularElement } from "../elements/elementGeometry.js";
+import { locatePointInElement } from "../elements/elementGeometry.js";
 import { BasisFunctions } from "../elements/basisFunctions.js";
 import { FEAScriptError } from "../utilities/errors.js";
 import { warnLog } from "../utilities/logging.js";
@@ -782,109 +782,31 @@ function pointSearch(
   basisFunctions,
 ) {
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
-  const nodesPerElement = meshData.nop[currentElement].length;
-
-  if (meshData.elementShape === "triangle") {
-    // Linear (3 nodes) or quadratic (6 nodes) triangular element, located through its vertex nodes
-    // Linear:       Quadratic:
-    // 1             2
-    // | \           | \
-    // |   \         1   4
-    // |     \       |     \
-    // 0 --- 2       0--3--5
-    const vertexLocalIndices = nodesPerElement === 6 ? [0, 2, 5] : [0, 1, 2];
-    const vertices = vertexLocalIndices.map((localNodeIndex) => [
-      nodesXCoordinates[meshData.nop[currentElement][localNodeIndex] - 1],
-      nodesYCoordinates[meshData.nop[currentElement][localNodeIndex] - 1],
-    ]);
-    const pointCheck = pointInsideTriangularElement(visNodeXCoordinate, visNodeYCoordinate, vertices);
-    if (pointCheck.inside) {
-      return {
-        inside: true,
-        value: solutionInterpolation(
-          model,
-          meshData,
-          result,
-          currentElement,
-          pointCheck.ksi,
-          pointCheck.eta,
-          basisFunctions,
-        ),
-      };
-    }
-  } else if (nodesPerElement === 4) {
-    const vertices = [
-      [
-        nodesXCoordinates[meshData.nop[currentElement][0] - 1],
-        nodesYCoordinates[meshData.nop[currentElement][0] - 1],
-      ],
-      [
-        nodesXCoordinates[meshData.nop[currentElement][1] - 1],
-        nodesYCoordinates[meshData.nop[currentElement][1] - 1],
-      ],
-      [
-        nodesXCoordinates[meshData.nop[currentElement][2] - 1],
-        nodesYCoordinates[meshData.nop[currentElement][2] - 1],
-      ],
-      [
-        nodesXCoordinates[meshData.nop[currentElement][3] - 1],
-        nodesYCoordinates[meshData.nop[currentElement][3] - 1],
-      ],
-    ];
-
-    const pointCheck = pointInsideQuadrilateral(visNodeXCoordinate, visNodeYCoordinate, vertices);
-    if (pointCheck.inside) {
-      return {
-        inside: true,
-        value: solutionInterpolation(
-          model,
-          meshData,
-          result,
-          currentElement,
-          pointCheck.ksi,
-          pointCheck.eta,
-          basisFunctions,
-        ),
-      };
-    }
-  } else if (nodesPerElement === 9) {
-    const vertices = [
-      [
-        nodesXCoordinates[meshData.nop[currentElement][0] - 1],
-        nodesYCoordinates[meshData.nop[currentElement][0] - 1],
-      ],
-      [
-        nodesXCoordinates[meshData.nop[currentElement][2] - 1],
-        nodesYCoordinates[meshData.nop[currentElement][2] - 1],
-      ],
-      [
-        nodesXCoordinates[meshData.nop[currentElement][6] - 1],
-        nodesYCoordinates[meshData.nop[currentElement][6] - 1],
-      ],
-      [
-        nodesXCoordinates[meshData.nop[currentElement][8] - 1],
-        nodesYCoordinates[meshData.nop[currentElement][8] - 1],
-      ],
-    ];
-
-    const pointCheck = pointInsideQuadrilateral(visNodeXCoordinate, visNodeYCoordinate, vertices);
-    if (pointCheck.inside) {
-      return {
-        inside: true,
-        value: solutionInterpolation(
-          model,
-          meshData,
-          result,
-          currentElement,
-          pointCheck.ksi,
-          pointCheck.eta,
-          basisFunctions,
-        ),
-      };
-    }
-  }
-
-  return { inside: false, value: null };
+  // All element nodes are passed, as the edges of quadratic elements may be curved
+  const elementNodes = meshData.nop[currentElement].map((globalNodeNumber) => [
+    nodesXCoordinates[globalNodeNumber - 1],
+    nodesYCoordinates[globalNodeNumber - 1],
+  ]);
+  const pointCheck = locatePointInElement(
+    visNodeXCoordinate,
+    visNodeYCoordinate,
+    elementNodes,
+    meshData.elementShape,
+    basisFunctions,
+  );
+  if (!pointCheck.inside) return { inside: false, value: null };
+  return {
+    inside: true,
+    value: solutionInterpolation(
+      model,
+      meshData,
+      result,
+      currentElement,
+      pointCheck.ksi,
+      pointCheck.eta,
+      basisFunctions,
+    ),
+  };
 }
 
 function solutionInterpolation(model, meshData, result, elementIndex, ksi, eta, basisFunctions) {

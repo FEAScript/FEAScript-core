@@ -87,3 +87,34 @@ gmsh lshape.geo -save -format msh41 -o <mesh file>
 ```
 
 Used by [`verification/benchmark/heatConduction2DCodeAsterTplp01`](../verification/benchmark/heatConduction2DCodeAsterTplp01/README.md).
+
+## Rectangle with a hole meshes
+
+[`rect_with_hole.geo`](rect_with_hole.geo) describes the domain of the homepage fin example: the rectangle
+x ∈ [0, 4], y ∈ [0, 2] without a circular hole of radius 0.5 at (2, 1). The quadratic elements along the hole
+have curved edges, which the contour plot test uses to check the point location in curved elements
+([#134](https://github.com/FEAScript/FEAScript-core/issues/134)).
+
+| Mesh file                             | Gmsh element types                  | `elementOrder` |
+| ------------------------------------- | ----------------------------------- | -------------- |
+| `rect_with_hole_quad_quadratic.msh`   | 9-node quadrilaterals, 3-node lines | `quadratic`    |
+| `rect_with_hole_triang_quadratic.msh` | 6-node triangles, 3-node lines      | `quadratic`    |
+
+| Physical tag | Name   |
+| ------------ | ------ |
+| 1            | bottom |
+| 2            | left   |
+| 3            | top    |
+| 4            | right  |
+| 5            | hole   |
+| 6            | domain |
+
+`rect_with_hole_quad_quadratic.msh` is the same file as the one of the website tutorials. `rect_with_hole.geo`
+generates it as is; for the triangle mesh, comment out `Recombine Surface{1};` first. Then run (Gmsh 4.12.1 was
+used):
+
+```bash
+gmsh rect_with_hole.geo -2 -format msh41 -o <mesh file>
+```
+
+Used by [`unit/plotInterpolation.test.js`](../unit/plotInterpolation.test.js).
