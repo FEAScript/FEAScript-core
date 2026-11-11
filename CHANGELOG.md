@@ -159,6 +159,9 @@ All notable changes to FEAScript-core are documented in this file. The format is
 - `setSolverMethod(method)` of `FEAScriptModel` and `FEAScriptWorker`: use
   `setModelConfig(model, { solver: { method } })` ([#122](https://github.com/FEAScript/FEAScript-core/issues/122)).
   It keeps working with a warning
+- Model information in the form of 0.3 passed to the plot functions, with the mesh settings (`meshDimension`,
+  `numElementsX`, ...) or an imported mesh (`parsedMesh`) in `meshConfig`: pass the model itself, the information
+  of `FEAScriptWorker.getModelInfo()`, or `{ solverConfig, mesh }`. It keeps working with a warning
 - `printVersion`: use `version` ([#128](https://github.com/FEAScript/FEAScript-core/issues/128)). `printVersion`
   is a string, so reading it cannot log a warning; it is marked `@deprecated` for editors, and keeps its value
   `"0.4.0 (RC)"` until it is removed

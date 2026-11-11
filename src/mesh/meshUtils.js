@@ -10,11 +10,11 @@
 // Internal imports
 import { getBoundarySides } from "../elements/basisFunctions.js";
 import { toMeshObject } from "../io/gmshReader.js";
-import { readGeometry, shown } from "./geometry.js";
+import { readGeometry, shown, translateOldMeshConfig } from "./geometry.js";
 import { generateLineMesh, generateQuadrilateralMesh } from "./structuredMesh.js";
 import { generateTriangleMesh } from "./triangleMesh.js";
 import { FEAScriptError } from "../utilities/errors.js";
-import { debugLog } from "../utilities/logging.js";
+import { debugLog, warnLog } from "../utilities/logging.js";
 
 /**
  * Function to check the mesh configuration of setMeshConfig: the kind of elements, their order, and their
@@ -140,6 +140,18 @@ export function getModelMesh(model) {
   if (typeof model.getMesh === "function") return model.getMesh();
   if (model.mesh) return model.mesh;
   if (model.geometry && model.meshConfig) return generateMesh(model.geometry, model.meshConfig);
+  // Model information in the form of FEAScript 0.3, as built by hand for the plots: an imported mesh as
+  // meshConfig.parsedMesh, or the structured mesh settings in meshConfig
+  const oldMeshConfig = model.meshConfig;
+  if (oldMeshConfig?.parsedMesh) {
+    warnOldModelInformation();
+    return readMesh(oldMeshConfig.parsedMesh);
+  }
+  if (oldMeshConfig?.meshDimension !== undefined || oldMeshConfig?.numElementsX !== undefined) {
+    warnOldModelInformation();
+    const { geometry, meshConfig } = translateOldMeshConfig(oldMeshConfig);
+    return generateMesh(readGeometry(geometry), readMeshConfig(meshConfig));
+  }
   throw new FEAScriptError(
     "INVALID_INPUT",
     "The model has no mesh to plot. Solve it first, or pass the model itself.",
@@ -153,7 +165,23 @@ export function getModelMesh(model) {
  */
 export function getModelMeshDimension(model) {
   if (typeof model.getMeshDimension === "function") return model.getMeshDimension();
-  return model.meshDimension ?? model.mesh?.meshDimension ?? model.geometry?.meshDimension;
+  return (
+    model.meshDimension ??
+    model.mesh?.meshDimension ??
+    model.geometry?.meshDimension ??
+    // Model information in the form of FEAScript 0.3
+    model.meshConfig?.meshDimension ??
+    model.meshConfig?.parsedMesh?.meshDimension
+  );
+}
+
+/**
+ * Function to warn that model information in the form of FEAScript 0.3 is deprecated
+ */
+function warnOldModelInformation() {
+  warnLog(
+    "Model information with the mesh settings of FEAScript 0.3 in meshConfig (meshDimension, numElementsX, parsedMesh) is deprecated and will be removed in a future version. Pass the model itself, the information of FEAScriptWorker.getModelInfo(), or { solverConfig, mesh } with the mesh object.",
+  );
 }
 
 /**

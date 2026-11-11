@@ -180,5 +180,72 @@ for (const { label, meshConfig, fieldName = meshConfig.elementOrder, mustBeLocat
   );
 }
 
+// Model information in the form of FEAScript 0.3, as built by hand for the plots (FEAScript Studio did this),
+// still plots the same values, with a deprecation warning
+{
+  const field = fields.quadratic;
+  const model = new FEAScriptModel();
+  model.setModelConfig("heatConduction");
+  setMeshSource(model, structuredMesh("quadratic"));
+  const { nodesXCoordinates, nodesYCoordinates } = prepareMesh(model);
+  const result = {
+    nodesCoordinates: { nodesXCoordinates, nodesYCoordinates },
+    solutionVector: nodesXCoordinates.map((x, nodeIndex) => field(x, nodesYCoordinates[nodeIndex])),
+  };
+  plotInterpolatedSolution(model, result, "contour", "plotDiv");
+  const reference = plottedTrace.z;
+
+  const gmshMesh = await loadGmshMesh("rect_quad_quadratic.msh");
+  const gmshModel = new FEAScriptModel();
+  gmshModel.setModelConfig("heatConduction");
+  gmshModel.setMesh(gmshMesh);
+  const gmshData = prepareMesh(gmshModel);
+  const gmshResult = {
+    nodesCoordinates: {
+      nodesXCoordinates: gmshData.nodesXCoordinates,
+      nodesYCoordinates: gmshData.nodesYCoordinates,
+    },
+    solutionVector: gmshData.nodesXCoordinates.map((x, i) => field(x, gmshData.nodesYCoordinates[i])),
+  };
+  plotInterpolatedSolution(gmshModel, gmshResult, "contour", "plotDiv");
+  const gmshReference = plottedTrace.z;
+
+  const warnings = [];
+  const { log } = console;
+  console.log = (message, ...rest) => {
+    if (typeof message === "string" && message.includes("deprecated")) warnings.push(message);
+    else log(message, ...rest);
+  };
+  try {
+    const oldStructured = {
+      solverConfig: "heatConductionScript",
+      meshConfig: {
+        meshDimension: "2D",
+        elementOrder: "quadratic",
+        numElementsX: 8,
+        numElementsY: 4,
+        maxX: 4,
+        maxY: 2,
+      },
+    };
+    plotInterpolatedSolution(oldStructured, result, "contour", "plotDiv");
+    const structuredSame = plottedTrace.z.every((value, i) => value === reference[i]);
+    const oldImported = {
+      solverConfig: "heatConductionScript",
+      meshConfig: { parsedMesh: gmshMesh, meshDimension: "2D", elementOrder: "quadratic" },
+    };
+    plotInterpolatedSolution(oldImported, gmshResult, "contour", "plotDiv");
+    const importedSame = plottedTrace.z.every((value, i) => value === gmshReference[i]);
+    assert(structuredSame, "model information with the 0.3 mesh settings plots the same values");
+    assert(importedSame, "model information with meshConfig.parsedMesh plots the same values");
+    assert(
+      warnings.some((m) => m.includes("Model information with the mesh settings of FEAScript 0.3")),
+      "model information in the 0.3 form gives a deprecation warning",
+    );
+  } finally {
+    console.log = log;
+  }
+}
+
 basicLog(`Interpolated contour plot tests: ${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
