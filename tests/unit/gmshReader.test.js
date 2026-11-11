@@ -251,7 +251,7 @@ for (const { meshFile, solverMethods } of meshCases) {
     `${meshFile}: boundary nodes have the same coordinates (largest difference ${boundaryDifference})`,
   );
 
-  // The simulation modifies the parsed mesh, so each one parses its own copy
+  // Each simulation parses its own copy of the mesh
   for (const solverMethod of solverMethods) {
     const originalSolution = runSimulation(await parseMesh(meshContent), solverMethod).solutionVector;
     const gappedSolution = runSimulation(

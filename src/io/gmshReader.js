@@ -333,8 +333,8 @@ export function toMeshObject(parsedMesh) {
   if (!parsedMesh.nodalNumbering) {
     throw new FEAScriptError("INVALID_INPUT", "No valid nodal numbering found in the parsed mesh.");
   }
-  // A mesh converted before
-  if (Array.isArray(parsedMesh.nodalNumbering) && parsedMesh.meshObject) return parsedMesh.meshObject;
+  // A mesh converted before. The import itself is left unchanged, so that it can be drawn or used again
+  if (parsedMesh.meshObject) return parsedMesh.meshObject;
 
   const quadElements = parsedMesh.nodalNumbering.quadElements || [];
   const triangleElements = parsedMesh.nodalNumbering.triangleElements || [];
@@ -488,8 +488,8 @@ export function toMeshObject(parsedMesh) {
     totalNodesX: parsedMesh.nodesXCoordinates.length,
     totalNodesY: 1,
   };
-  // Keep the result on the parsed mesh, so that a second setMesh of the same import is free
+  // Keep the result on the parsed mesh (not enumerable, so not copied or sent with it), so that a second setMesh
+  // of the same import is free
   Object.defineProperty(parsedMesh, "meshObject", { value: mesh, enumerable: false, writable: true });
-  parsedMesh.nodalNumbering = nodalNumbering;
   return mesh;
 }
