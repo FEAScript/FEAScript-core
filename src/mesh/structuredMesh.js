@@ -94,7 +94,7 @@ export function generateLineMesh(length, { elementOrder = "linear", size, divisi
     elementOrder,
     elementShape: "line",
     nodesXCoordinates,
-    nodesYCoordinates: [],
+    nodesYCoordinates: undefined, // A line has no y coordinates, as in 0.3
     nodalNumbering,
     boundaryElements,
     aliases: { 0: "left", 1: "right" },

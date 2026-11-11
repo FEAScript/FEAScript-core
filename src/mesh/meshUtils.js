@@ -169,7 +169,7 @@ export function prepareMesh(model) {
   const totalNodes = mesh.nodesXCoordinates.length;
   return {
     ...mesh,
-    nodesYCoordinates: mesh.nodesYCoordinates ?? [],
+    nodesYCoordinates: mesh.nodesYCoordinates,
     elementShape: mesh.elementShape ?? (mesh.meshDimension === "1D" ? "line" : "quad"),
     nop,
     totalElements: nop.length,
