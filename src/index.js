@@ -24,4 +24,12 @@ export {
   transformSolverOutputToMLBuffers,
 } from "./visualization/vtkPlot.js";
 export { FEAScriptWorker } from "./workers/worker.js";
+
+/** The version of FEAScript, as in its npm package (e.g. "0.4.0") */
+export const version = "0.4.0-rc.1";
+
+/**
+ * The version of FEAScript, as text
+ * @deprecated Use `version`; printVersion will be removed in a future version
+ */
 export const printVersion = "0.4.0 (RC)";

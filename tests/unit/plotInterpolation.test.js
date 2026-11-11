@@ -136,7 +136,7 @@ const cases = [
 for (const { label, meshConfig, fieldName = meshConfig.elementOrder, mustBeLocated } of cases) {
   const field = fields[fieldName];
   const model = new FEAScriptModel();
-  model.setModelConfig("heatConductionScript");
+  model.setModelConfig("heatConduction");
   setMeshSource(model, meshConfig);
   const { nodesXCoordinates, nodesYCoordinates } = prepareMesh(model);
   const result = {

@@ -13,9 +13,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 // Import FEAScript library
-import { FEAScriptModel, importGmshMesh, printVersion } from "feascript";
+import { FEAScriptModel, importGmshMesh, version } from "feascript";
 
-console.log("FEAScript Version:", printVersion);
+console.log("FEAScript Version:", version);
 
 // Get directory name for the current file
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -43,7 +43,8 @@ function flowRate(nodesCoordinates, u, xLine) {
 async function main() {
   // 1. Create the model and select the physics
   const model = new FEAScriptModel();
-  model.setModelConfig("creepingFlowScript", {
+  model.setModelConfig("creepingFlow", {
+    solver: { method: "lusolve" },
     coefficientFunctions: {
       viscosity: 1, // μ
     },
@@ -54,13 +55,12 @@ async function main() {
   model.setMesh(mesh);
 
   // 3. Apply the boundary conditions, keyed by the names of the Gmsh physical groups
-  model.addBoundaryCondition("inlet", ["constantVelocity", 1, 0]); // Inlet (x = 0)
-  model.addBoundaryCondition("walls", ["constantVelocity", 0, 0]); // Channel walls (no-slip)
-  model.addBoundaryCondition("outlet", ["stressFree"]); // Outlet (x = 8)
-  model.addBoundaryCondition("pillars", ["constantVelocity", 0, 0]); // Pillars (no-slip)
+  model.addBoundaryCondition("inlet", { type: "constantVelocity", u: 1, v: 0 }); // Inlet (x = 0)
+  model.addBoundaryCondition("walls", { type: "constantVelocity", u: 0, v: 0 }); // Channel walls (no-slip)
+  model.addBoundaryCondition("outlet", { type: "stressFree" }); // Outlet (x = 8)
+  model.addBoundaryCondition("pillars", { type: "constantVelocity", u: 0, v: 0 }); // Pillars (no-slip)
 
   // 4. Solve
-  model.setSolverMethod("lusolve");
   const { nodesCoordinates, fields } = model.solve();
 
   // 5. Print the results

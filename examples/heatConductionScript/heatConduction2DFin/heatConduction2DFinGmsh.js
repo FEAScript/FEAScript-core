@@ -13,9 +13,9 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 // Import FEAScript library
-import { FEAScriptModel, importGmshMesh, printVersion } from "feascript";
+import { FEAScriptModel, importGmshMesh, version } from "feascript";
 
-console.log("FEAScript Version:", printVersion);
+console.log("FEAScript Version:", version);
 
 // Get directory name for the current file
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -27,17 +27,17 @@ const meshContent = fs.readFileSync(meshFilePath, "utf8");
 async function main() {
   // 1. Create the model and select the physics
   const model = new FEAScriptModel();
-  model.setModelConfig("heatConductionScript");
+  model.setModelConfig("heatConduction");
 
   // 2. Load the Gmsh mesh (in Node.js, any object with an async text() method replaces a File)
   const mesh = await importGmshMesh({ text: async () => meshContent });
   model.setMesh(mesh);
 
   // 3. Apply the boundary conditions, keyed by the names of the Gmsh physical groups
-  model.addBoundaryCondition("bottom", ["constantTemperature", 200]); // Bottom
-  model.addBoundaryCondition("left", ["symmetry"]); // Left
-  model.addBoundaryCondition("top", ["convection", 1, 20]); // Top
-  model.addBoundaryCondition("right", ["constantTemperature", 200]); // Right
+  model.addBoundaryCondition("bottom", { type: "constantTemperature", temperature: 200 }); // Bottom
+  model.addBoundaryCondition("left", { type: "symmetry" }); // Left
+  model.addBoundaryCondition("top", { type: "convection", h: 1, ambientTemperature: 20 }); // Top
+  model.addBoundaryCondition("right", { type: "constantTemperature", temperature: 200 }); // Right
 
   // 4. Solve
   const { solutionVector, nodesCoordinates } = model.solve();

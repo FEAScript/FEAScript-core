@@ -131,7 +131,7 @@ Here is a minimal browser-based example using the FEAScript API. Adapt paths, ph
       const model = new FEAScriptModel();
 
       // Select physics/PDE
-      model.setModelConfig("physicsModel"); // Example: "heatConductionScript"
+      model.setModelConfig("physicsModel", { solver: { method: "lusolve" } }); // Example: "heatConduction"
 
       // Define the geometry: a line, a rectangle, or a polygon with holes and named boundaries
       model.setGeometry({ rectangle: [1.0, 0.5] }); // Boundaries "bottom", "right", "top", "left"
@@ -143,8 +143,8 @@ Here is a minimal browser-based example using the FEAScript API. Adapt paths, ph
         size: 0.1, // Length of an element side (or divisions: [10, 5] for quadrilaterals)
       });
 
-      // Add boundary conditions by boundary name, with the parameters of the condition type
-      model.addBoundaryCondition("top", ["conditionType" /* parameters */]); // Example boundary condition
+      // Add boundary conditions by boundary name: the condition type and its named parameters
+      model.addBoundaryCondition("top", { type: "conditionType" /* , parameters */ }); // Example boundary condition
 
       // Solve the problem
       const { solutionVector, nodesCoordinates } = model.solve();
@@ -156,8 +156,11 @@ Here is a minimal browser-based example using the FEAScript API. Adapt paths, ph
 
 **Note:** The code above uses placeholder values that you should replace with appropriate options, e.g.:
 
-- "physicsModel" should be replaced with an actual solver type such as "heatConductionScript" for heat conduction problems
-- "conditionType" should be replaced with an actual boundary condition type such as "constantTemperature"
+- "physicsModel" should be replaced with an actual physics model such as "heatConduction" for heat conduction problems
+- "conditionType" should be replaced with an actual boundary condition type with its parameters, such as
+  `{ type: "constantTemperature", temperature: 100 }` or `{ type: "convection", h: 1, ambientTemperature: 20 }`
+- `solver` selects the linear solver: `method` is "lusolve" (the default), "jacobi" or "frontal", and the
+  iterative methods also take `maxIterations` and `tolerance`
 - "top" is the name of a boundary of the geometry: "left" and "right" for a line, "bottom", "right", "top" and "left" for a rectangle, the names you give the edges of a polygon, or the names of the physical groups of a Gmsh mesh
 
 Furthermore, the scripts under `examples/` contain Node.js examples. You can run them from the `FEAScript-core/` directory as follows:

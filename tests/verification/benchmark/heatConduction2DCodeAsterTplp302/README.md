@@ -6,7 +6,7 @@
 
 This test replicates the Code_Aster validation test TPLP302
 ([V4.05.302](https://ericca.uqtr.ca/fr12.4/man_v/v4/v4.05.302.pdf)) and checks that
-`heatConductionScript` reproduces a 2D steady-state conduction problem with an analytical solution:
+`heatConduction` reproduces a 2D steady-state conduction problem with an analytical solution:
 a long strip heated on one end, with a temperature jump at the two heated corners.
 
 This is an independent reproduction of the TPLP302 problem and is not sponsored, endorsed, or

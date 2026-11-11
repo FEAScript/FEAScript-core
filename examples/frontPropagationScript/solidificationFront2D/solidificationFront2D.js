@@ -8,26 +8,25 @@
  */
 
 // Import FEAScript library
-import { FEAScriptModel, printVersion } from "feascript";
+import { FEAScriptModel, version } from "feascript";
 
-console.log("FEAScript Version:", printVersion);
+console.log("FEAScript Version:", version);
 
 // 1. Create the model and select the physics
 const model = new FEAScriptModel();
-model.setModelConfig("frontPropagationScript");
+model.setModelConfig("frontPropagation", { solver: { method: "lusolve" } });
 
 // 2. Define the mesh
 model.setGeometry({ rectangle: [4, 2] });
 model.setMeshConfig({ elements: "quadrilaterals", elementOrder: "quadratic", divisions: [12, 8] });
 
 // 3. Apply the boundary conditions
-model.addBoundaryCondition("bottom", ["constantValue", 0]); // Bottom
-model.addBoundaryCondition("left", ["constantValue", 0]); // Left
-model.addBoundaryCondition("top", ["zeroGradient"]); // Top
-model.addBoundaryCondition("right", ["constantValue", 0]); // Right
+model.addBoundaryCondition("bottom", { type: "constantValue", value: 0 }); // Bottom
+model.addBoundaryCondition("left", { type: "constantValue", value: 0 }); // Left
+model.addBoundaryCondition("top", { type: "zeroGradient" }); // Top
+model.addBoundaryCondition("right", { type: "constantValue", value: 0 }); // Right
 
 // 4. Solve
-model.setSolverMethod("lusolve");
 const { solutionVector, nodesCoordinates } = model.solve();
 
 // 5. Print the results

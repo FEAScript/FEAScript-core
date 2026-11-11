@@ -20,13 +20,13 @@
  */
 
 // Import FEAScript library
-import { FEAScriptModel, printVersion } from "feascript";
+import { FEAScriptModel, version } from "feascript";
 
-console.log("FEAScript Version:", printVersion);
+console.log("FEAScript Version:", version);
 
 // 1. Create the model and select the physics
 const model = new FEAScriptModel();
-model.setModelConfig("heatConductionScript", {
+model.setModelConfig("heatConduction", {
   coefficientFunctions: {
     // Bi-material: high-conductivity concrete | low-conductivity insulation
     thermalConductivity: (x) => (x < 0.075 ? 10 : 1),
@@ -39,8 +39,8 @@ model.setGeometry({ line: 0.15 });
 model.setMeshConfig({ elementOrder: "linear", divisions: 20 });
 
 // 3. Apply the boundary conditions
-model.addBoundaryCondition("left", ["convection", 25, 5]); // Left: convection
-model.addBoundaryCondition("right", ["constantTemperature", 20]); // Right: fixed temperature
+model.addBoundaryCondition("left", { type: "convection", h: 25, ambientTemperature: 5 }); // Left: convection
+model.addBoundaryCondition("right", { type: "constantTemperature", temperature: 20 }); // Right: fixed temperature
 
 // 4. Solve
 const { solutionVector, nodesCoordinates } = model.solve();

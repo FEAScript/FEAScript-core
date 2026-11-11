@@ -11,13 +11,17 @@
  * Unit tests for FEAScriptModel input and output
  *
  * Input checks, which throw a FEAScriptError (INVALID_INPUT unless noted) instead of giving a wrong result:
- *  - An unknown (e.g. misspelled) condition type, a missing condition value and a value that is not a number
+ *  - Condition objects: an unknown (e.g. misspelled) type, no type, a missing or unknown parameter, and a
+ *    parameter that is not a number; the removed "constantTemp" names its replacement
+ *  - The array form of 0.3 and plain strings still solve, with a warning that gives the object form, and give
+ *    the same solution; a condition that is neither throws when added
  *  - Every problem of the input is reported at once, in one error
  *  - A condition on a boundary, or a beam node, that is not in the mesh
- *  - The supported condition types, and the deprecated "constantTemp", still solve
- *  - A condition given as a plain string is wrapped in an array, with a warning, and gives the same solution;
- *    a condition that is not an array throws when added
- *  - Euler-Bernoulli beam conditions that are not an array of conditions, or of an unknown type
+ *  - Euler-Bernoulli beam conditions: one object or a list per node, the array form of 0.3, a missing
+ *    parameter, an array that is not an array of conditions, and an unknown type
+ *  - The model names of 0.3 ("heatConductionScript") still solve, with a warning
+ *  - Solver options: the method, iteration limit and tolerance reach the solver; setSolverMethod() still works
+ *    with a warning; an unknown method or option and a negative tolerance throw
  *  - A missing or misspelled model, a missing coefficient function, and a coefficient that the model does not
  *    use (e.g. misspelled)
  *  - A coefficient function that returns NaN, with every solver method (NON_FINITE_VALUES)
@@ -47,6 +51,8 @@
  *  - A call made while the worker starts goes through as soon as the worker is ready
  *  - A worker that fails to start reports the failure to the waiting call, without waiting for the timeout
  *
+ * Version: the version export is the version of package.json, and the deprecated printVersion is still exported
+ *
  * Solver failures, which throw a FEAScriptError instead of returning an empty or a wrong result:
  *  - A solver method that the model does not support, whichever model and method
  *  - A method that does not converge
@@ -64,6 +70,8 @@ import { FEAScriptWorker } from "../../src/workers/worker.js";
 import * as Comlink from "../../src/vendor/comlink.mjs";
 import { FEAScriptError } from "../../src/utilities/errors.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
+import { version, printVersion } from "../../src/index.js";
+import { readFileSync } from "fs";
 
 // Applies a geometry with its mesh configuration to a model
 const applyMesh = (model, { geometry, meshConfig }) => {
@@ -86,6 +94,16 @@ function assert(condition, message) {
     basicLog(`PASS: ${message}`);
     passed++;
   }
+}
+
+// Version export
+{
+  const packageVersion = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url))).version;
+  assert(
+    version === packageVersion,
+    `version (${version}) is the version of package.json (${packageVersion})`,
+  );
+  assert(typeof printVersion === "string", "the deprecated printVersion is still exported");
 }
 
 // Input checks
@@ -133,7 +151,7 @@ function assert(condition, message) {
 
   function solveHeatConduction(boundaryConditions, { meshConfig = mesh1D, coefficientFunctions } = {}) {
     const model = new FEAScriptModel();
-    model.setModelConfig("heatConductionScript", coefficientFunctions ? { coefficientFunctions } : {});
+    model.setModelConfig("heatConduction", coefficientFunctions ? { coefficientFunctions } : {});
     applyMesh(model, meshConfig);
     Object.entries(boundaryConditions).forEach(([key, condition]) =>
       model.addBoundaryCondition(key, condition),
@@ -146,9 +164,9 @@ function assert(condition, message) {
     coefficientFunctions = { A: (x) => 1, B: (x) => 0, C: (x) => 0, D: (x) => 1 },
   ) {
     const model = new FEAScriptModel();
-    model.setModelConfig("generalFormPDEScript", { coefficientFunctions });
+    model.setModelConfig("generalFormPDE", { coefficientFunctions });
     applyMesh(model, mesh1D);
-    model.addBoundaryCondition("left", ["constantValue", 1]);
+    model.addBoundaryCondition("left", { type: "constantValue", value: 1 });
     model.addBoundaryCondition("right", rightCondition);
     return model.solve();
   }
@@ -156,74 +174,158 @@ function assert(condition, message) {
   const solveBeam = (conditions) =>
     attempt(() => {
       const model = new FEAScriptModel();
-      model.setModelConfig("eulerBernoulliBeamScript", { coefficientFunctions: { EI: (x) => 1 } });
+      model.setModelConfig("eulerBernoulliBeam", { coefficientFunctions: { EI: (x) => 1 } });
       model.setGeometry({ line: 1 });
       model.setMeshConfig({ elementOrder: "linear", divisions: 2 });
       Object.entries(conditions).forEach(([key, condition]) => model.addBoundaryCondition(key, condition));
       return model.solve();
     });
 
-  // Boundary condition types
+  // Boundary condition objects
   {
+    const supported = attempt(() =>
+      solveHeatConduction({
+        left: { type: "convection", h: 1, ambientTemperature: 25 },
+        right: { type: "constantTemperature", temperature: 5 },
+      }),
+    );
+    assert(
+      supported.failure === null &&
+        supported.errors.length === 0 &&
+        !supported.warnings.some((m) => m.includes("deprecated")),
+      "heat conduction condition objects solve, without warnings",
+    );
+
     const misspelled = attempt(() =>
-      solveHeatConduction({ 0: ["convektion", 1, 25], 1: ["constantTemperature", 5] }),
+      solveHeatConduction({
+        0: { type: "convektion", h: 1, ambientTemperature: 25 },
+        1: { type: "constantTemperature", temperature: 5 },
+      }),
     );
     assert(
       threw(misspelled, "INVALID_INPUT", 'Unknown boundary condition type "convektion"', "boundary 0"),
       "misspelled condition type throws INVALID_INPUT",
     );
 
-    const supported = attempt(() =>
-      solveHeatConduction({ 0: ["convection", 1, 25], 1: ["constantTemperature", 5] }),
-    );
+    const noType = attempt(() => solveHeatConduction({ 0: { temperature: 1 }, 1: { type: "symmetry" } }));
     assert(
-      supported.failure === null && supported.errors.length === 0,
-      "supported heat conduction condition types solve",
+      threw(noType, "INVALID_INPUT", "needs a type"),
+      "a condition object without a type throws INVALID_INPUT",
     );
 
-    const deprecated = attempt(() => solveHeatConduction({ 0: ["symmetry"], 1: ["constantTemp", 5] }));
-    assert(deprecated.failure === null, 'deprecated "constantTemp" still solves');
-  }
-
-  // Plain string and non-array conditions
-  {
-    const arrayRun = attempt(() => solveGeneralForm(["zeroGradient"]));
-    const stringRun = attempt(() => solveGeneralForm("zeroGradient"));
-    assert(
-      stringRun.warnings.some((m) => m.includes('use ["zeroGradient"] instead of "zeroGradient"')),
-      "plain string condition gives a warning",
+    const missingParameter = attempt(() =>
+      solveHeatConduction({ 0: { type: "convection", h: 1 }, 1: { type: "symmetry" } }),
     );
-    assert(stringRun.failure === null, "plain string condition solves");
-    const largestDifference = Math.max(
-      ...Array.from(arrayRun.result.solutionVector).map((value, index) =>
-        Math.abs(value - stringRun.result.solutionVector[index]),
+    assert(
+      threw(
+        missingParameter,
+        "INVALID_INPUT",
+        '"convection" on boundary 0 needs the parameter ambientTemperature',
       ),
+      "a missing parameter throws INVALID_INPUT",
     );
-    assert(largestDifference === 0, "plain string condition gives the same solution as the array form");
+
+    const unknownParameter = attempt(() =>
+      solveHeatConduction({
+        0: { type: "constantTemperature", temperature: 1, value: 2 },
+        1: { type: "symmetry" },
+      }),
+    );
+    assert(
+      threw(unknownParameter, "INVALID_INPUT", "has no parameter value", "Its parameters: temperature"),
+      "an unknown (e.g. misspelled) parameter throws INVALID_INPUT",
+    );
+
+    const twoParameterProblems = attempt(() =>
+      solveHeatConduction({
+        0: { type: "convection", hh: 1, ambientTemperature: 20 },
+        1: { type: "symmetry" },
+      }),
+    );
+    assert(
+      threw(twoParameterProblems, "INVALID_INPUT", "2 problems found"),
+      "every problem of a condition object is reported at once",
+    );
+
+    const stringValue = attempt(() =>
+      solveHeatConduction({
+        0: { type: "constantTemperature", temperature: "5" },
+        1: { type: "constantTemperature", temperature: 5 },
+      }),
+    );
+    assert(
+      threw(stringValue, "INVALID_INPUT", "(temperature)", 'must be a finite number; got "5"'),
+      "a parameter given as a string throws INVALID_INPUT, naming the parameter",
+    );
+
+    const removed = attempt(() =>
+      solveHeatConduction({ 0: { type: "symmetry" }, 1: { type: "constantTemp", temperature: 5 } }),
+    );
+    assert(
+      threw(
+        removed,
+        "INVALID_INPUT",
+        'Unknown boundary condition type "constantTemp"',
+        'renamed "constantTemperature"',
+      ),
+      'the removed "constantTemp" throws INVALID_INPUT, naming "constantTemperature"',
+    );
 
     const numberRun = attempt(() => new FEAScriptModel().addBoundaryCondition("0", 5));
     assert(
-      threw(numberRun, "INVALID_INPUT", "must be an array with the condition type first"),
-      "a condition that is not an array throws INVALID_INPUT when added",
+      threw(numberRun, "INVALID_INPUT", "must be an object with its type and parameters"),
+      "a condition that is not an object throws INVALID_INPUT when added",
     );
   }
 
-  // Boundary condition values
+  // The array form of FEAScript 0.3 and plain strings, kept with a warning
   {
+    const objectRun = attempt(() => solveGeneralForm({ type: "zeroGradient" }));
+    const arrayRun = attempt(() => solveGeneralForm(["zeroGradient"]));
+    const stringRun = attempt(() => solveGeneralForm("zeroGradient"));
+    assert(
+      arrayRun.warnings.some((m) => m.includes('use { type: "zeroGradient" } instead of ["zeroGradient"]')),
+      "array form condition gives a warning with the object form",
+    );
+    assert(
+      stringRun.warnings.some((m) => m.includes('use { type: "zeroGradient" } instead of "zeroGradient"')),
+      "plain string condition gives a warning with the object form",
+    );
+    const sameSolution = (run) =>
+      run.failure === null &&
+      Array.from(run.result.solutionVector).every(
+        (value, index) => value === objectRun.result.solutionVector[index],
+      );
+    assert(sameSolution(arrayRun), "array form condition gives the same solution as the object form");
+    assert(sameSolution(stringRun), "plain string condition gives the same solution as the object form");
+
+    const convectionArray = attempt(() =>
+      solveHeatConduction({ 0: ["convection", 1, 25], 1: ["constantTemperature", 5] }),
+    );
+    assert(
+      convectionArray.failure === null &&
+        convectionArray.warnings.some((m) =>
+          m.includes(
+            'use { type: "convection", h: 1, ambientTemperature: 25 } instead of ["convection",1,25]',
+          ),
+        ),
+      "array form with values gives a warning that names each value",
+    );
+
+    const misspelled = attempt(() =>
+      solveHeatConduction({ 0: ["convektion", 1, 25], 1: ["constantTemperature", 5] }),
+    );
+    assert(
+      threw(misspelled, "INVALID_INPUT", 'Unknown boundary condition type "convektion"', "boundary 0"),
+      "array form: misspelled condition type throws INVALID_INPUT",
+    );
+
     const missingValue = attempt(() =>
       solveHeatConduction({ 0: ["constantTemperature"], 1: ["constantTemperature", 5] }),
     );
     assert(
       threw(missingValue, "INVALID_INPUT", '"constantTemperature" on boundary 0 needs 1 number'),
-      "a missing condition value throws INVALID_INPUT",
-    );
-
-    const stringValue = attempt(() =>
-      solveHeatConduction({ 0: ["constantTemperature", "5"], 1: ["constantTemperature", 5] }),
-    );
-    assert(
-      threw(stringValue, "INVALID_INPUT", 'must be a finite number; got "5"'),
-      "a condition value given as a string throws INVALID_INPUT",
+      "array form: a missing condition value throws INVALID_INPUT",
     );
 
     const twoProblems = attempt(() =>
@@ -233,12 +335,26 @@ function assert(condition, message) {
       threw(twoProblems, "INVALID_INPUT", "2 problems found") && twoProblems.failure.details.length === 2,
       "every input problem is reported at once, in one error",
     );
+
+    const removed = attempt(() => solveHeatConduction({ 0: ["symmetry"], 1: ["constantTemp", 5] }));
+    assert(
+      threw(
+        removed,
+        "INVALID_INPUT",
+        'Unknown boundary condition type "constantTemp"',
+        'renamed "constantTemperature"',
+      ),
+      'array form: the removed "constantTemp" throws INVALID_INPUT, naming "constantTemperature"',
+    );
   }
 
   // Boundaries that are not in the mesh
   {
     const missingBoundary = attempt(() =>
-      solveHeatConduction({ left: ["constantTemperature", 1], top: ["constantTemperature", 5] }),
+      solveHeatConduction({
+        left: { type: "constantTemperature", temperature: 1 },
+        top: { type: "constantTemperature", temperature: 5 },
+      }),
     );
     assert(
       threw(
@@ -253,21 +369,58 @@ function assert(condition, message) {
 
   // Euler-Bernoulli beam conditions
   {
+    const single = solveBeam({ 1: { type: "fixed" }, 3: { type: "force", force: -1 } });
+    const list = solveBeam({ 1: [{ type: "fixed" }], 3: [{ type: "force", force: -1 }] });
+    const arrays = solveBeam({ 1: [["fixed"]], 3: [["force", -1]] });
     assert(
-      solveBeam({ 1: [["fixed"]], 3: [["force", -1]] }).failure === null,
-      'beam condition [["fixed"]] solves',
+      single.failure === null && !single.warnings.some((m) => m.includes("deprecated")),
+      "beam condition objects solve, without warnings",
+    );
+    assert(
+      list.failure === null &&
+        Array.from(list.result.solutionVector).every((value, i) => value === single.result.solutionVector[i]),
+      "a list of beam condition objects gives the same solution as single objects",
+    );
+    assert(
+      arrays.failure === null &&
+        arrays.warnings.some((m) =>
+          m.includes('use { type: "force", force: -1 } instead of [["force",-1]]'),
+        ) &&
+        Array.from(arrays.result.solutionVector).every(
+          (value, i) => value === single.result.solutionVector[i],
+        ),
+      'beam array form [["fixed"]] gives a warning and the same solution',
+    );
+    const springAndForce = solveBeam({
+      1: { type: "fixed" },
+      3: [
+        { type: "spring", stiffness: 200 },
+        { type: "force", force: -1 },
+      ],
+    });
+    assert(
+      springAndForce.failure === null,
+      "a beam node with a list of conditions (spring and force) solves",
+    );
+    assert(
+      threw(
+        solveBeam({ 1: { type: "fixed" }, 3: { type: "spring", referenceDeflection: 0.1 } }),
+        "INVALID_INPUT",
+        "needs the parameter stiffness",
+      ),
+      "a beam spring without its stiffness throws INVALID_INPUT",
     );
     assert(
       threw(
         solveBeam({ 1: ["fixed"], 3: [["force", -1]] }),
         "INVALID_INPUT",
-        "must be an array of conditions",
+        "must be a condition object or a list of them",
       ),
-      'beam condition ["fixed"] (not an array of conditions) throws INVALID_INPUT',
+      'beam array form ["fixed"] (not an array of conditions) throws INVALID_INPUT',
     );
     assert(
       threw(
-        solveBeam({ 1: [["fixed"]], 9: [["force", -1]] }),
+        solveBeam({ 1: { type: "fixed" }, 9: { type: "force", force: -1 } }),
         "INVALID_INPUT",
         "Node 9 does not exist",
         "nodes 1 to 3",
@@ -280,15 +433,103 @@ function assert(condition, message) {
         "INVALID_INPUT",
         '"force" on node 3 needs 1 number',
       ),
-      "a beam force without a value throws INVALID_INPUT",
+      "beam array form: a force without a value throws INVALID_INPUT",
     );
     assert(
       threw(
-        solveBeam({ 1: [["clamped"]], 3: [["force", -1]] }),
+        solveBeam({ 1: { type: "clamped" }, 3: { type: "force", force: -1 } }),
         "INVALID_INPUT",
         'Unknown boundary condition type "clamped"',
       ),
       "an unknown beam condition type throws INVALID_INPUT",
+    );
+  }
+
+  // Model names
+  {
+    const run = (modelName) =>
+      attempt(() => {
+        const model = new FEAScriptModel();
+        model.setModelConfig(modelName);
+        applyMesh(model, mesh1D);
+        model.addBoundaryCondition("left", { type: "constantTemperature", temperature: 1 });
+        model.addBoundaryCondition("right", { type: "constantTemperature", temperature: 5 });
+        return model.solve();
+      });
+    const newName = run("heatConduction");
+    const oldName = run("heatConductionScript");
+    assert(
+      newName.failure === null && !newName.warnings.some((m) => m.includes("deprecated")),
+      'model "heatConduction" solves, without warnings',
+    );
+    assert(
+      oldName.failure === null &&
+        oldName.warnings.some(
+          (m) => m.includes('"heatConductionScript" is deprecated') && m.includes('Use "heatConduction"'),
+        ) &&
+        Array.from(oldName.result.solutionVector).every(
+          (value, i) => value === newName.result.solutionVector[i],
+        ),
+      'the model name of 0.3, "heatConductionScript", gives a warning and the same solution',
+    );
+  }
+
+  // Solver options
+  {
+    const run = (setUp) =>
+      attempt(() => {
+        const model = new FEAScriptModel();
+        setUp(model);
+        applyMesh(model, mesh1D);
+        model.addBoundaryCondition("left", { type: "constantTemperature", temperature: 1 });
+        model.addBoundaryCondition("right", { type: "constantTemperature", temperature: 5 });
+        return model.solve();
+      });
+    const lusolve = run((model) => model.setModelConfig("heatConduction"));
+    const jacobi = run((model) =>
+      model.setModelConfig("heatConduction", { solver: { method: "jacobi", tolerance: 1e-12 } }),
+    );
+    assert(
+      jacobi.failure === null &&
+        !jacobi.warnings.some((m) => m.includes("deprecated")) &&
+        Array.from(jacobi.result.solutionVector).every(
+          (value, i) => Math.abs(value - lusolve.result.solutionVector[i]) < 1e-9,
+        ),
+      'solver: { method: "jacobi", tolerance } solves, without warnings, as lusolve',
+    );
+    const fewIterations = run((model) =>
+      model.setModelConfig("heatConduction", { solver: { method: "jacobi", maxIterations: 1 } }),
+    );
+    assert(
+      threw(fewIterations, "NOT_CONVERGED"),
+      "solver maxIterations reaches the Jacobi solver (1 iteration does not converge)",
+    );
+    const oldMethod = run((model) => {
+      model.setModelConfig("heatConduction");
+      model.setSolverMethod("jacobi");
+    });
+    assert(
+      oldMethod.failure === null &&
+        oldMethod.warnings.some(
+          (m) => m.includes("setSolverMethod() is deprecated") && m.includes('solver: { method: "jacobi" }'),
+        ),
+      "setSolverMethod() still works, with a warning that gives the solver option",
+    );
+    const problems = attempt(() =>
+      new FEAScriptModel().setModelConfig("heatConduction", {
+        solver: { method: "gauss", tolerance: -1, preconditoner: "ic0" },
+      }),
+    );
+    assert(
+      threw(
+        problems,
+        "INVALID_INPUT",
+        "3 problems found",
+        'Unknown solver method "gauss"',
+        "tolerance must be a positive number",
+        "Unknown solver option preconditoner",
+      ),
+      "an unknown solver method, a negative tolerance and an unknown solver option throw INVALID_INPUT at once",
     );
   }
 
@@ -316,7 +557,7 @@ function assert(condition, message) {
     );
 
     const missingFunction = attempt(() =>
-      solveGeneralForm(["zeroGradient"], { A: (x) => 1, B: (x) => 0, C: (x) => 0 }),
+      solveGeneralForm({ type: "zeroGradient" }, { A: (x) => 1, B: (x) => 0, C: (x) => 0 }),
     );
     assert(
       threw(missingFunction, "INVALID_INPUT", "needs the coefficient function D"),
@@ -325,7 +566,10 @@ function assert(condition, message) {
 
     const misspelledCoefficient = attempt(() =>
       solveHeatConduction(
-        { 0: ["constantTemperature", 1], 1: ["constantTemperature", 5] },
+        {
+          0: { type: "constantTemperature", temperature: 1 },
+          1: { type: "constantTemperature", temperature: 5 },
+        },
         { coefficientFunctions: { thermalConductivty: 2 } },
       ),
     );
@@ -333,20 +577,23 @@ function assert(condition, message) {
       threw(
         misspelledCoefficient,
         "INVALID_INPUT",
-        "Coefficient thermalConductivty is not used by heatConductionScript",
+        "Coefficient thermalConductivty is not used by heatConduction",
         "Coefficients of this model: thermalConductivity, heatSource",
       ),
       "a coefficient that the model does not use (misspelled) throws INVALID_INPUT",
     );
 
     const nonlinearNameWhenLinear = attempt(() =>
-      solveGeneralForm(["zeroGradient"], {
-        A: (x) => 1,
-        B: (x) => 0,
-        C: (x) => 0,
-        D: (x) => 1,
-        dDdu: (x, u) => 0,
-      }),
+      solveGeneralForm(
+        { type: "zeroGradient" },
+        {
+          A: (x) => 1,
+          B: (x) => 0,
+          C: (x) => 0,
+          D: (x) => 1,
+          dDdu: (x, u) => 0,
+        },
+      ),
     );
     assert(
       nonlinearNameWhenLinear.failure === null,
@@ -355,7 +602,10 @@ function assert(condition, message) {
 
     const nanSource = attempt(() =>
       solveHeatConduction(
-        { 0: ["constantTemperature", 1], 1: ["constantTemperature", 5] },
+        {
+          0: { type: "constantTemperature", temperature: 1 },
+          1: { type: "constantTemperature", temperature: 5 },
+        },
         { coefficientFunctions: { heatSource: (x) => (x > 0.5 ? NaN : 0) } },
       ),
     );
@@ -366,13 +616,13 @@ function assert(condition, message) {
     for (const solverMethod of ["jacobi", "frontal"]) {
       const run = attempt(() => {
         const model = new FEAScriptModel();
-        model.setModelConfig("heatConductionScript", {
+        model.setModelConfig("heatConduction", {
+          solver: { method: solverMethod },
           coefficientFunctions: { heatSource: (x) => (x > 0.5 ? NaN : 0) },
         });
         applyMesh(model, mesh1D);
-        model.addBoundaryCondition("left", ["constantTemperature", 1]);
-        model.addBoundaryCondition("right", ["constantTemperature", 5]);
-        model.setSolverMethod(solverMethod);
+        model.addBoundaryCondition("left", { type: "constantTemperature", temperature: 1 });
+        model.addBoundaryCondition("right", { type: "constantTemperature", temperature: 5 });
         return model.solve();
       });
       assert(
@@ -384,7 +634,10 @@ function assert(condition, message) {
 
   // Mesh settings
   {
-    const bcs = { left: ["constantTemperature", 1], right: ["constantTemperature", 5] };
+    const bcs = {
+      left: { type: "constantTemperature", temperature: 1 },
+      right: { type: "constantTemperature", temperature: 5 },
+    };
     const zeroElements = attempt(() =>
       solveHeatConduction(bcs, {
         meshConfig: { ...mesh1D, meshConfig: { elementOrder: "linear", divisions: 0 } },
@@ -414,10 +667,10 @@ function assert(condition, message) {
     // The mesh settings of FEAScript 0.3 keep working, with a warning
     const oldForm = attempt(() => {
       const model = new FEAScriptModel();
-      model.setModelConfig("heatConductionScript");
+      model.setModelConfig("heatConduction");
       model.setMeshConfig({ meshDimension: "1D", elementOrder: "linear", numElementsX: 4, maxX: 1 });
-      model.addBoundaryCondition("0", ["constantTemperature", 1]);
-      model.addBoundaryCondition("1", ["constantTemperature", 5]);
+      model.addBoundaryCondition("0", { type: "constantTemperature", temperature: 1 });
+      model.addBoundaryCondition("1", { type: "constantTemperature", temperature: 5 });
       return model.solve();
     });
     const newForm = solveHeatConduction(bcs);
@@ -430,7 +683,7 @@ function assert(condition, message) {
 
     const dimension3D = attempt(() => {
       const model = new FEAScriptModel();
-      model.setModelConfig("heatConductionScript");
+      model.setModelConfig("heatConduction");
       model.setMeshConfig({ meshDimension: "3D", elementOrder: "linear", numElementsX: 4, maxX: 1 });
       return model.solve();
     });
@@ -441,11 +694,11 @@ function assert(condition, message) {
 
     const linearFlow = attempt(() => {
       const model = new FEAScriptModel();
-      model.setModelConfig("creepingFlowScript");
+      model.setModelConfig("creepingFlow");
       model.setGeometry({ rectangle: [1, 1] });
       model.setMeshConfig({ elements: "quadrilaterals", elementOrder: "linear", divisions: [2, 2] });
       ["bottom", "left", "top", "right"].forEach((key) =>
-        model.addBoundaryCondition(key, ["constantVelocity", 0, 0]),
+        model.addBoundaryCondition(key, { type: "constantVelocity", u: 0, v: 0 }),
       );
       return model.solve();
     });
@@ -498,21 +751,24 @@ function assert(condition, message) {
   const cases = [
     {
       label: "heat conduction 1D",
-      modelConfig: ["heatConductionScript"],
+      modelConfig: ["heatConduction"],
       meshConfig: mesh1D,
-      boundaryConditions: { left: ["constantTemperature", 0], right: ["constantTemperature", 1] },
+      boundaryConditions: {
+        left: { type: "constantTemperature", temperature: 0 },
+        right: { type: "constantTemperature", temperature: 1 },
+      },
       solverMethods: ["lusolve", "jacobi", "frontal"],
       degreesOfFreedom: 5,
     },
     {
       label: "heat conduction 2D",
-      modelConfig: ["heatConductionScript"],
+      modelConfig: ["heatConduction"],
       meshConfig: mesh2D,
       boundaryConditions: {
-        bottom: ["constantTemperature", 200],
-        left: ["symmetry"],
-        top: ["convection", 1, 20],
-        right: ["constantTemperature", 200],
+        bottom: { type: "constantTemperature", temperature: 200 },
+        left: { type: "symmetry" },
+        top: { type: "convection", h: 1, ambientTemperature: 20 },
+        right: { type: "constantTemperature", temperature: 200 },
       },
       solverMethods: ["lusolve", "jacobi", "frontal"],
       degreesOfFreedom: 15,
@@ -520,13 +776,13 @@ function assert(condition, message) {
     },
     {
       label: "front propagation 2D",
-      modelConfig: ["frontPropagationScript"],
+      modelConfig: ["frontPropagation"],
       meshConfig: mesh2D,
       boundaryConditions: {
-        bottom: ["constantValue", 0],
-        left: ["constantValue", 0],
-        top: ["zeroGradient"],
-        right: ["constantValue", 0],
+        bottom: { type: "constantValue", value: 0 },
+        left: { type: "constantValue", value: 0 },
+        top: { type: "zeroGradient" },
+        right: { type: "constantValue", value: 0 },
       },
       solverMethods: ["lusolve", "frontal"],
       degreesOfFreedom: 15,
@@ -535,18 +791,21 @@ function assert(condition, message) {
     {
       label: "general form PDE 1D",
       modelConfig: [
-        "generalFormPDEScript",
+        "generalFormPDE",
         { coefficientFunctions: { A: () => 1, B: () => 0, C: () => 0, D: () => 1 } },
       ],
       meshConfig: mesh1D,
-      boundaryConditions: { left: ["constantValue", 0], right: ["constantValue", 0] },
+      boundaryConditions: {
+        left: { type: "constantValue", value: 0 },
+        right: { type: "constantValue", value: 0 },
+      },
       solverMethods: ["lusolve", "jacobi"],
       degreesOfFreedom: 5,
     },
     {
       label: "nonlinear general form PDE 1D",
       modelConfig: [
-        "generalFormPDEScript",
+        "generalFormPDE",
         {
           nonlinear: true,
           coefficientFunctions: {
@@ -559,22 +818,22 @@ function assert(condition, message) {
         },
       ],
       meshConfig: mesh1D,
-      boundaryConditions: { left: ["constantValue", 1], right: ["zeroGradient"] },
+      boundaryConditions: { left: { type: "constantValue", value: 1 }, right: { type: "zeroGradient" } },
       solverMethods: ["lusolve", "frontal"],
       degreesOfFreedom: 5,
     },
     {
       label: "creeping flow 2D",
-      modelConfig: ["creepingFlowScript"],
+      modelConfig: ["creepingFlow"],
       meshConfig: {
         geometry: { rectangle: [1, 1] },
         meshConfig: { elements: "quadrilaterals", elementOrder: "quadratic", divisions: [2, 2] },
       },
       boundaryConditions: {
-        bottom: ["constantVelocity", 0, 0],
-        left: ["constantVelocity", 0, 0],
-        top: ["constantVelocity", 1, 0],
-        right: ["constantVelocity", 0, 0],
+        bottom: { type: "constantVelocity", u: 0, v: 0 },
+        left: { type: "constantVelocity", u: 0, v: 0 },
+        top: { type: "constantVelocity", u: 1, v: 0 },
+        right: { type: "constantVelocity", u: 0, v: 0 },
       },
       solverMethods: ["lusolve"],
       // 25 velocity nodes (u and v) and 9 pressure nodes
@@ -582,9 +841,9 @@ function assert(condition, message) {
     },
     {
       label: "Euler-Bernoulli beam 1D",
-      modelConfig: ["eulerBernoulliBeamScript", { coefficientFunctions: { EI: () => 1, q: () => -1 } }],
+      modelConfig: ["eulerBernoulliBeam", { coefficientFunctions: { EI: () => 1, q: () => -1 } }],
       meshConfig: { ...mesh1D, meshConfig: { elementOrder: "linear", divisions: 2 } },
-      boundaryConditions: { 1: [["fixed"]], 3: [["force", -1]] },
+      boundaryConditions: { 1: [{ type: "fixed" }], 3: [{ type: "force", force: -1 }] },
       solverMethods: ["lusolve"],
       // Deflection and rotation at 3 nodes
       degreesOfFreedom: 6,
@@ -593,12 +852,11 @@ function assert(condition, message) {
 
   function runSimulation({ modelConfig, meshConfig, boundaryConditions }, solverMethod) {
     const model = new FEAScriptModel();
-    model.setModelConfig(...modelConfig);
+    model.setModelConfig(...modelConfig, { solver: { method: solverMethod } });
     applyMesh(model, meshConfig);
     Object.entries(boundaryConditions).forEach(([boundaryKey, condition]) => {
       model.addBoundaryCondition(boundaryKey, condition);
     });
-    model.setSolverMethod(solverMethod);
     return { model, result: model.solve({ maxIterations: 200000, tolerance: 1e-10 }) };
   }
 
@@ -708,7 +966,7 @@ function assert(condition, message) {
   const testCases = [
     {
       label: "General form PDE (linear)",
-      modelConfig: "generalFormPDEScript",
+      modelConfig: "generalFormPDE",
       options: {
         coefficientFunctions: {
           A: (x) => 1,
@@ -718,11 +976,11 @@ function assert(condition, message) {
         },
       },
       meshConfig: { geometry: { line: 1.0 }, meshConfig: { elementOrder: "quadratic", divisions: 20 } },
-      boundaryConditions: { left: ["constantValue", 1], right: ["zeroGradient"] },
+      boundaryConditions: { left: { type: "constantValue", value: 1 }, right: { type: "zeroGradient" } },
     },
     {
       label: "General form PDE (nonlinear)",
-      modelConfig: "generalFormPDEScript",
+      modelConfig: "generalFormPDE",
       options: {
         nonlinear: true,
         maxIterations: 50,
@@ -736,11 +994,11 @@ function assert(condition, message) {
         },
       },
       meshConfig: { geometry: { line: 10.0 }, meshConfig: { elementOrder: "linear", divisions: 20 } },
-      boundaryConditions: { left: ["constantValue", 1], right: ["zeroGradient"] },
+      boundaryConditions: { left: { type: "constantValue", value: 1 }, right: { type: "zeroGradient" } },
     },
     {
       label: "Euler-Bernoulli beam",
-      modelConfig: "eulerBernoulliBeamScript",
+      modelConfig: "eulerBernoulliBeam",
       options: {
         coefficientFunctions: {
           EI: (x) => 2.0e6,
@@ -749,17 +1007,17 @@ function assert(condition, message) {
       },
       meshConfig: { geometry: { line: 10 }, meshConfig: { elementOrder: "linear", divisions: 2 } },
       boundaryConditions: {
-        1: [["fixed"]],
-        2: [["pinned"], ["moment", 1250]],
+        1: [{ type: "fixed" }],
+        2: [{ type: "pinned" }, { type: "moment", moment: 1250 }],
         3: [
-          ["spring", 200],
-          ["force", -2500],
+          { type: "spring", stiffness: 200 },
+          { type: "force", force: -2500 },
         ],
       },
     },
     {
       label: "Heat conduction (varying k and Q)",
-      modelConfig: "heatConductionScript",
+      modelConfig: "heatConduction",
       options: {
         coefficientFunctions: {
           thermalConductivity: (x, y) => 1 + x + y,
@@ -771,15 +1029,15 @@ function assert(condition, message) {
         meshConfig: { elements: "quadrilaterals", elementOrder: "quadratic", divisions: [8, 4] },
       },
       boundaryConditions: {
-        bottom: ["constantTemperature", 200],
-        left: ["symmetry"],
-        top: ["convection", 1, 20],
-        right: ["constantTemperature", 200],
+        bottom: { type: "constantTemperature", temperature: 200 },
+        left: { type: "symmetry" },
+        top: { type: "convection", h: 1, ambientTemperature: 20 },
+        right: { type: "constantTemperature", temperature: 200 },
       },
     },
     {
       label: "Creeping flow (varying viscosity)",
-      modelConfig: "creepingFlowScript",
+      modelConfig: "creepingFlow",
       options: {
         coefficientFunctions: {
           viscosity: (x, y) => 1 + x * y,
@@ -790,10 +1048,10 @@ function assert(condition, message) {
         meshConfig: { elements: "quadrilaterals", elementOrder: "quadratic", divisions: [4, 2] },
       },
       boundaryConditions: {
-        bottom: ["constantVelocity", 0, 0],
-        left: ["constantVelocity", 0, 0],
-        top: ["constantVelocity", 1, 0],
-        right: ["constantVelocity", 0, 0],
+        bottom: { type: "constantVelocity", u: 0, v: 0 },
+        left: { type: "constantVelocity", u: 0, v: 0 },
+        top: { type: "constantVelocity", u: 1, v: 0 },
+        right: { type: "constantVelocity", u: 0, v: 0 },
       },
     },
   ];
@@ -852,20 +1110,20 @@ function assert(condition, message) {
   };
   const heatModel = new FEAScriptModel();
   const heatResult = solveQuietly(() => {
-    heatModel.setModelConfig("heatConductionScript");
+    heatModel.setModelConfig("heatConduction");
     heatModel.setGeometry({ line: 1 });
     heatModel.setMeshConfig({ elementOrder: "linear", divisions: 4 });
-    heatModel.addBoundaryCondition("left", ["constantTemperature", 1]);
-    heatModel.addBoundaryCondition("right", ["constantTemperature", 5]);
+    heatModel.addBoundaryCondition("left", { type: "constantTemperature", temperature: 1 });
+    heatModel.addBoundaryCondition("right", { type: "constantTemperature", temperature: 5 });
     return heatModel.solve();
   });
   const beamModel = new FEAScriptModel();
   const beamResult = solveQuietly(() => {
-    beamModel.setModelConfig("eulerBernoulliBeamScript", { coefficientFunctions: { EI: (x) => 1 } });
+    beamModel.setModelConfig("eulerBernoulliBeam", { coefficientFunctions: { EI: (x) => 1 } });
     beamModel.setGeometry({ line: 1 });
     beamModel.setMeshConfig({ elementOrder: "linear", divisions: 2 });
-    beamModel.addBoundaryCondition("1", [["fixed"]]);
-    beamModel.addBoundaryCondition("3", [["force", -1]]);
+    beamModel.addBoundaryCondition("1", { type: "fixed" });
+    beamModel.addBoundaryCondition("3", { type: "force", force: -1 });
     return beamModel.solve();
   });
 
@@ -940,25 +1198,29 @@ function assert(condition, message) {
 
   const beamModel = (solverMethod) => {
     const model = new FEAScriptModel();
-    model.setModelConfig("eulerBernoulliBeamScript", { coefficientFunctions: { EI: () => 1e5 } });
+    model.setModelConfig("eulerBernoulliBeam", {
+      solver: { method: solverMethod },
+      coefficientFunctions: { EI: () => 1e5 },
+    });
     model.setGeometry({ line: 4 });
     model.setMeshConfig({ elementOrder: "linear", divisions: 4 });
-    model.addBoundaryCondition("1", [["fixed"]]);
-    model.addBoundaryCondition("5", [["force", -1000]]);
-    model.setSolverMethod(solverMethod);
+    model.addBoundaryCondition("1", { type: "fixed" });
+    model.addBoundaryCondition("5", { type: "force", force: -1000 });
     return model;
   };
 
   const flowModel = (solverMethod) => {
     const model = new FEAScriptModel();
-    model.setModelConfig("creepingFlowScript", { coefficientFunctions: { viscosity: 1 } });
+    model.setModelConfig("creepingFlow", {
+      solver: { method: solverMethod },
+      coefficientFunctions: { viscosity: 1 },
+    });
     model.setGeometry({ rectangle: [1, 1] });
     model.setMeshConfig({ elements: "quadrilaterals", elementOrder: "quadratic", divisions: [2, 2] });
-    model.addBoundaryCondition("bottom", ["constantVelocity", 0, 0]);
-    model.addBoundaryCondition("left", ["constantVelocity", 0, 0]);
-    model.addBoundaryCondition("top", ["constantVelocity", 1, 0]);
-    model.addBoundaryCondition("right", ["constantVelocity", 0, 0]);
-    model.setSolverMethod(solverMethod);
+    model.addBoundaryCondition("bottom", { type: "constantVelocity", u: 0, v: 0 });
+    model.addBoundaryCondition("left", { type: "constantVelocity", u: 0, v: 0 });
+    model.addBoundaryCondition("top", { type: "constantVelocity", u: 1, v: 0 });
+    model.addBoundaryCondition("right", { type: "constantVelocity", u: 0, v: 0 });
     return model;
   };
 
@@ -966,7 +1228,6 @@ function assert(condition, message) {
     ["Beam with frontal", beamModel("frontal")],
     ["Creeping flow with frontal", flowModel("frontal")],
     ["Creeping flow with jacobi", flowModel("jacobi")],
-    ["Beam with an unknown method", beamModel("gauss")],
     ["Beam with jacobi-gpu in solve()", beamModel("jacobi-gpu")],
   ];
   for (const [name, model] of unsupported) {
@@ -993,12 +1254,14 @@ function assert(condition, message) {
 
   for (const solverMethod of ["frontal", "lusolve"]) {
     const model = new FEAScriptModel();
-    model.setModelConfig("heatConductionScript", { coefficientFunctions: { thermalConductivity: () => 0 } });
+    model.setModelConfig("heatConduction", {
+      solver: { method: solverMethod },
+      coefficientFunctions: { thermalConductivity: () => 0 },
+    });
     model.setGeometry({ line: 1 });
     model.setMeshConfig({ elementOrder: "linear", divisions: 4 });
-    model.addBoundaryCondition("left", ["constantTemperature", 1]);
-    model.addBoundaryCondition("right", ["convection", 1, 0]);
-    model.setSolverMethod(solverMethod);
+    model.addBoundaryCondition("left", { type: "constantTemperature", temperature: 1 });
+    model.addBoundaryCondition("right", { type: "convection", h: 1, ambientTemperature: 0 });
     const failure = failureOf(() => model.solve());
     assert(
       failure?.code === "SINGULAR_MATRIX",

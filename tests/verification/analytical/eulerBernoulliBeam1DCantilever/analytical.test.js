@@ -97,7 +97,7 @@ const meshData = prepareMesh({
 });
 const { jacobianMatrix, residualVector } = assembleEulerBernoulliBeamMat(
   meshData,
-  { 1: [["fixed"]], 2: [["force", P]] },
+  { 1: [["fixed"]], 2: [["force", P]] }, // The internal array form of the assembler
   { EI: () => EI },
 );
 const { solutionVector } = solveLinearSystem("lusolve", jacobianMatrix, residualVector);

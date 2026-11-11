@@ -44,12 +44,11 @@ function setMeshSource(model, source) {
 async function runSimulation(meshSource, boundaryConditions) {
   const model = new FEAScriptModel();
 
-  model.setModelConfig("creepingFlowScript");
+  model.setModelConfig("creepingFlow", { solver: { method: "lusolve" } });
   setMeshSource(model, meshSource);
   Object.entries(boundaryConditions).forEach(([boundaryKey, condition]) => {
     model.addBoundaryCondition(boundaryKey, condition);
   });
-  model.setSolverMethod("lusolve");
 
   const { solutionVector, nodesCoordinates } = model.solve();
 
@@ -108,10 +107,10 @@ basicLog("================================");
 basicLog("Starting analytical test for creeping flow in 2D (Couette flow)...");
 
 const boundaryConditions = {
-  bottom: ["constantVelocity", 0, 0],
-  left: ["stressFree"],
-  top: ["constantVelocity", LID_VELOCITY, 0],
-  right: ["stressFree"],
+  bottom: { type: "constantVelocity", u: 0, v: 0 },
+  left: { type: "stressFree" },
+  top: { type: "constantVelocity", u: LID_VELOCITY, v: 0 },
+  right: { type: "stressFree" },
 };
 
 // Q2-Q1 quadrilaterals (structured mesh)

@@ -64,7 +64,7 @@ export function assembleCreepingFlowMatrix(meshData, boundaryConditions, coeffic
     throw new FEAScriptError(
       "UNSUPPORTED_MESH",
       "Creeping flow requires a 2D mesh. For fully developed 1D channel flow (μ u″ = dp/dx), " +
-        "use generalFormPDEScript or heatConductionScript.",
+        "use generalFormPDE or heatConduction.",
     );
   }
   if (elementOrder !== "quadratic") {

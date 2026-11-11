@@ -6,7 +6,7 @@
 
 This test replicates the NAFEMS T4 benchmark, also documented as a DIANA FEA tutorial
 ([2DHeatTransferConvection.pdf](https://tutorials.dianafea.com/2DHeatTransferConvection.pdf)),
-and checks that `heatConductionScript` reproduces the published target temperature for a 2D
+and checks that `heatConduction` reproduces the published target temperature for a 2D
 steady-state conduction problem with a convective (Robin) boundary condition.
 
 This is an independent reproduction of the NAFEMS T4 problem and is not sponsored, endorsed, or

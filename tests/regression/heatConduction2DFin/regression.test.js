@@ -39,19 +39,19 @@ const PATCH_TOLERANCE = 1e-10;
 
 // The same boundary names for the structured and the Gmsh meshes
 const boundaryConditions = {
-  bottom: ["constantTemperature", 200],
-  left: ["symmetry"],
-  top: ["convection", 1, 20],
-  right: ["constantTemperature", 200],
+  bottom: { type: "constantTemperature", temperature: 200 },
+  left: { type: "symmetry" },
+  top: { type: "convection", h: 1, ambientTemperature: 20 },
+  right: { type: "constantTemperature", temperature: 200 },
 };
 
 // Patch test (Gmsh meshes): insulated sides give 1D conduction with T(0) = 200 and -dT/dy = h (T - T∞)
 // at y = 2. The exact solution T = 200 - 60y is linear, so every element type must reproduce it
 const patchBoundaryConditions = {
-  bottom: ["constantTemperature", 200],
-  right: ["symmetry"],
-  top: ["convection", 1, 20],
-  left: ["symmetry"],
+  bottom: { type: "constantTemperature", temperature: 200 },
+  right: { type: "symmetry" },
+  top: { type: "convection", h: 1, ambientTemperature: 20 },
+  left: { type: "symmetry" },
 };
 
 const structuredMesh = (elementOrder) => ({
@@ -129,12 +129,11 @@ function setMeshSource(model, source) {
 function runSimulation(meshSource, boundaryConditions, solverMethod) {
   const model = new FEAScriptModel();
 
-  model.setModelConfig("heatConductionScript");
+  model.setModelConfig("heatConduction", { solver: { method: solverMethod } });
   setMeshSource(model, meshSource);
   Object.entries(boundaryConditions).forEach(([boundaryKey, condition]) => {
     model.addBoundaryCondition(boundaryKey, condition);
   });
-  model.setSolverMethod(solverMethod);
 
   const { solutionVector, nodesCoordinates } = model.solve({ maxIterations: 200000, tolerance: 1e-8 });
 

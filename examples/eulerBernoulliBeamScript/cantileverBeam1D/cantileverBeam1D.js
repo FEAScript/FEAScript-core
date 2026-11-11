@@ -11,9 +11,9 @@
 // tip deflection and rotation are w(L) = P L³ / (3 EI) and θ(L) = P L² / (2 EI)
 
 // Import FEAScript library
-import { FEAScriptModel, printVersion } from "feascript";
+import { FEAScriptModel, version } from "feascript";
 
-console.log("FEAScript Version:", printVersion);
+console.log("FEAScript Version:", version);
 
 const beamLength = 4; // L (m)
 const bendingStiffness = 1.0e5; // EI (N·m²)
@@ -21,7 +21,8 @@ const tipLoad = -1000; // P (N), downward
 
 // 1. Create the model and select the physics
 const model = new FEAScriptModel();
-model.setModelConfig("eulerBernoulliBeamScript", {
+model.setModelConfig("eulerBernoulliBeam", {
+  solver: { method: "lusolve" },
   coefficientFunctions: {
     EI: (x) => bendingStiffness, // Bending stiffness
   },
@@ -32,11 +33,10 @@ model.setGeometry({ line: beamLength });
 model.setMeshConfig({ elementOrder: "linear", divisions: 4 });
 
 // 3. Apply the boundary conditions (keyed by node number)
-model.addBoundaryCondition("1", [["fixed"]]); // Clamped support at x = 0
-model.addBoundaryCondition("5", [["force", tipLoad]]); // Tip load at x = L (last node)
+model.addBoundaryCondition("1", { type: "fixed" }); // Clamped support at x = 0
+model.addBoundaryCondition("5", { type: "force", force: tipLoad }); // Tip load at x = L (last node)
 
 // 4. Solve
-model.setSolverMethod("lusolve");
 const { fields } = model.solve();
 
 // 5. Print the results

@@ -5,7 +5,7 @@
 ## Purpose
 
 This test guards the spatially varying `thermalConductivity` and `heatSource` coefficients of
-`heatConductionScript` in 1D, covering the matrix assembler, the frontal assembler, and the
+`heatConduction` in 1D, covering the matrix assembler, the frontal assembler, and the
 coefficient forwarding performed by `solveAsync`.
 
 It differs from the tests under `tests/regression` in that no stored reference value is used. A

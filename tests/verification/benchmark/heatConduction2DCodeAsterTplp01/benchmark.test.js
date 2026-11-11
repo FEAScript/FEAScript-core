@@ -117,13 +117,15 @@ async function runSimulation(meshSource) {
 
   const model = new FEAScriptModel();
 
-  model.setModelConfig("heatConductionScript", { coefficientFunctions: { thermalConductivity: 1 } });
+  model.setModelConfig("heatConduction", {
+    solver: { method: "lusolve" },
+    coefficientFunctions: { thermalConductivity: 1 },
+  });
   model.setMesh(mesh);
 
-  model.addBoundaryCondition("left", ["constantTemperature", 10]); // Left edge (FA)
-  model.addBoundaryCondition("right", ["constantTemperature", 0]); // Right edge (DE)
-  model.addBoundaryCondition("insulated", ["symmetry"]); // Edges AB, BC, CD, EF, insulated
-  model.setSolverMethod("lusolve");
+  model.addBoundaryCondition("left", { type: "constantTemperature", temperature: 10 }); // Left edge (FA)
+  model.addBoundaryCondition("right", { type: "constantTemperature", temperature: 0 }); // Right edge (DE)
+  model.addBoundaryCondition("insulated", { type: "symmetry" }); // Edges AB, BC, CD, EF, insulated
 
   const { solutionVector, nodesCoordinates } = model.solve();
   const { nodesXCoordinates, nodesYCoordinates } = nodesCoordinates;

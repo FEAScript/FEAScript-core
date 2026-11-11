@@ -32,14 +32,13 @@ const INTERIOR_LIMIT = 1.5; // x <= 1.5 is 50 boundary layer widths away from th
 function runSimulation(elementOrder, solverMethod, frontValue = 0, numElementsX = 20) {
   const model = new FEAScriptModel();
 
-  model.setModelConfig("frontPropagationScript");
+  model.setModelConfig("frontPropagation", { solver: { method: solverMethod } });
   model.setGeometry({ line: 2 });
   model.setMeshConfig({ elementOrder, divisions: numElementsX });
 
   // Front starts at the left boundary
-  model.addBoundaryCondition("left", ["constantValue", frontValue]);
-  model.addBoundaryCondition("right", ["zeroGradient"]);
-  model.setSolverMethod(solverMethod);
+  model.addBoundaryCondition("left", { type: "constantValue", value: frontValue });
+  model.addBoundaryCondition("right", { type: "zeroGradient" });
 
   const { solutionVector, nodesCoordinates } = model.solve();
   return {

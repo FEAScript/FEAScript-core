@@ -55,7 +55,10 @@ function seriesTemperature(x, y) {
 function runSimulation(numElementsX, numElementsY) {
   const model = new FEAScriptModel();
 
-  model.setModelConfig("heatConductionScript", { coefficientFunctions: { thermalConductivity: 1 } });
+  model.setModelConfig("heatConduction", {
+    solver: { method: "lusolve" },
+    coefficientFunctions: { thermalConductivity: 1 },
+  });
   model.setGeometry({ rectangle: [WIDTH, LENGTH] });
   model.setMeshConfig({
     elements: "quadrilaterals",
@@ -63,11 +66,10 @@ function runSimulation(numElementsX, numElementsY) {
     divisions: [numElementsX, numElementsY],
   });
 
-  model.addBoundaryCondition("bottom", ["constantTemperature", BOTTOM_TEMPERATURE]); // Bottom edge (AB)
-  model.addBoundaryCondition("left", ["constantTemperature", 0]); // Left edge (AD)
+  model.addBoundaryCondition("bottom", { type: "constantTemperature", temperature: BOTTOM_TEMPERATURE }); // Bottom edge (AB)
+  model.addBoundaryCondition("left", { type: "constantTemperature", temperature: 0 }); // Left edge (AD)
   // Top edge (CD) is insulated and left unspecified (natural, zero-flux boundary)
-  model.addBoundaryCondition("right", ["constantTemperature", 0]); // Right edge (BC)
-  model.setSolverMethod("lusolve");
+  model.addBoundaryCondition("right", { type: "constantTemperature", temperature: 0 }); // Right edge (BC)
 
   const { solutionVector, nodesCoordinates } = model.solve();
   const { nodesXCoordinates, nodesYCoordinates } = nodesCoordinates;

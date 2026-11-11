@@ -45,7 +45,8 @@ const cases = [
 function runSimulation(elementOrder, solverMethod) {
   const model = new FEAScriptModel();
 
-  model.setModelConfig("generalFormPDEScript", {
+  model.setModelConfig("generalFormPDE", {
+    solver: { method: solverMethod },
     coefficientFunctions: {
       A: (x) => 1, // Diffusion coefficient
       B: (x) => -10, // Advection coefficient
@@ -56,9 +57,8 @@ function runSimulation(elementOrder, solverMethod) {
   model.setGeometry({ line: 1.0 });
   model.setMeshConfig({ elementOrder, divisions: 20 });
 
-  model.addBoundaryCondition("left", ["constantValue", 1]);
-  model.addBoundaryCondition("right", ["zeroGradient"]);
-  model.setSolverMethod(solverMethod);
+  model.addBoundaryCondition("left", { type: "constantValue", value: 1 });
+  model.addBoundaryCondition("right", { type: "zeroGradient" });
 
   return model.solve({ maxIterations: 200000, tolerance: 1e-8 });
 }

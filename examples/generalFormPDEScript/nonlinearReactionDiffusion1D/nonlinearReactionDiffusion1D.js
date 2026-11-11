@@ -8,16 +8,17 @@
  */
 
 // Import FEAScript library
-import { FEAScriptModel, printVersion } from "feascript";
+import { FEAScriptModel, version } from "feascript";
 
-console.log("FEAScript Version:", printVersion);
+console.log("FEAScript Version:", version);
 
 // Reaction rate coefficient for the nonlinear source term
 const Da = 1;
 
 // 1. Create the model and select the physics
 const model = new FEAScriptModel();
-model.setModelConfig("generalFormPDEScript", {
+model.setModelConfig("generalFormPDE", {
+  solver: { method: "lusolve" },
   nonlinear: true, // Solve with the Newton-Raphson method
   coefficientFunctions: {
     // Equation d²u/dx² - Da * u² = 0
@@ -34,11 +35,10 @@ model.setGeometry({ line: 10.0 });
 model.setMeshConfig({ elementOrder: "linear", divisions: 20 });
 
 // 3. Apply the boundary conditions
-model.addBoundaryCondition("left", ["constantValue", 1]); // Left
-model.addBoundaryCondition("right", ["zeroGradient"]); // Right
+model.addBoundaryCondition("left", { type: "constantValue", value: 1 }); // Left
+model.addBoundaryCondition("right", { type: "zeroGradient" }); // Right
 
 // 4. Solve
-model.setSolverMethod("lusolve");
 const { solutionVector, nodesCoordinates } = model.solve({
   maxIterations: 100,
   tolerance: 1e-5,

@@ -32,32 +32,68 @@ import { runFrontalSolver } from "./solvers/frontalSolver.js";
 import { FEAScriptError } from "./utilities/errors.js";
 import { basicLog, debugLog, warnLog } from "./utilities/logging.js";
 
-// Boundary condition types of each model, with the [smallest, largest] count of numbers after the type
-// (the Euler-Bernoulli beam conditions are given per node, as an array of conditions)
-const boundaryConditionValueCounts = {
-  heatConductionScript: { constantTemperature: [1, 1], convection: [2, 2], symmetry: [0, 0] },
-  generalFormPDEScript: { constantValue: [1, 1], zeroGradient: [0, 0] },
-  frontPropagationScript: { constantValue: [1, 1], zeroGradient: [0, 0] },
-  creepingFlowScript: { constantVelocity: [2, 2], stressFree: [0, 0] },
-  eulerBernoulliBeamScript: {
-    fixed: [0, 0],
-    pinned: [0, 0],
-    rotationFixed: [0, 0],
-    deflection: [0, 1],
-    rotation: [0, 1],
-    force: [1, 1],
-    moment: [1, 1],
-    spring: [1, 2],
+// Model names. The names of FEAScript 0.3, with the "Script" suffix, still work with a warning
+const deprecatedModelNames = {
+  heatConductionScript: "heatConduction",
+  generalFormPDEScript: "generalFormPDE",
+  frontPropagationScript: "frontPropagation",
+  creepingFlowScript: "creepingFlow",
+  eulerBernoulliBeamScript: "eulerBernoulliBeam",
+};
+
+// Boundary condition types of each model, with the names of their parameters in the order of the internal array
+// form [type, ...values]. An optional parameter may be left out (the Euler-Bernoulli beam conditions are given per
+// node, as a list of conditions)
+const boundaryConditionParameters = {
+  heatConduction: {
+    constantTemperature: [{ name: "temperature" }],
+    convection: [{ name: "h" }, { name: "ambientTemperature" }],
+    symmetry: [],
+  },
+  generalFormPDE: { constantValue: [{ name: "value" }], zeroGradient: [] },
+  frontPropagation: { constantValue: [{ name: "value" }], zeroGradient: [] },
+  creepingFlow: { constantVelocity: [{ name: "u" }, { name: "v" }], stressFree: [] },
+  eulerBernoulliBeam: {
+    fixed: [],
+    pinned: [],
+    rotationFixed: [],
+    deflection: [{ name: "deflection", optional: true }],
+    rotation: [{ name: "rotation", optional: true }],
+    force: [{ name: "force" }],
+    moment: [{ name: "moment" }],
+    spring: [{ name: "stiffness" }, { name: "referenceDeflection", optional: true }],
   },
 };
 
+// The parameters of each boundary condition type, whatever the model (a type has the same parameters in every
+// model that has it)
+const parametersByType = Object.assign({}, ...Object.values(boundaryConditionParameters));
+
+// Boundary condition types that were removed, with what replaces them
+const removedBoundaryConditionTypes = {
+  constantTemp: 'renamed "constantTemperature" in FEAScript 0.3.0, and the old name was removed in 0.4.0',
+};
+
+// Boundary condition types of each model, with the [smallest, largest] count of numbers after the type
+const boundaryConditionValueCounts = Object.fromEntries(
+  Object.entries(boundaryConditionParameters).map(([modelName, types]) => [
+    modelName,
+    Object.fromEntries(
+      Object.entries(types).map(([type, parameters]) => [
+        type,
+        [parameters.filter((parameter) => !parameter.optional).length, parameters.length],
+      ]),
+    ),
+  ]),
+);
+
 // Coefficient functions of each model: the required ones must be functions, the optional ones may also be numbers
 const coefficientFunctionNames = {
-  heatConductionScript: { required: [], optional: ["thermalConductivity", "heatSource"] },
-  generalFormPDEScript: { required: ["A", "B", "C", "D"], optional: [], nonlinear: ["dDdu"] },
-  frontPropagationScript: { required: [], optional: [] },
-  creepingFlowScript: { required: [], optional: ["viscosity"] },
-  eulerBernoulliBeamScript: { required: ["EI"], optional: [], functions: ["c0", "q"] },
+  heatConduction: { required: [], optional: ["thermalConductivity", "heatSource"] },
+  generalFormPDE: { required: ["A", "B", "C", "D"], optional: [], nonlinear: ["dDdu"] },
+  frontPropagation: { required: [], optional: [] },
+  creepingFlow: { required: [], optional: ["viscosity"] },
+  eulerBernoulliBeam: { required: ["EI"], optional: [], functions: ["c0", "q"] },
 };
 
 // Text of a value in a message: strings in quotes, so that "5" and 5 can be told apart
@@ -65,12 +101,91 @@ const describeValue = (value) => (typeof value === "string" ? `"${value}"` : Str
 
 // Solver methods of solve() for each model. "jacobi-gpu" runs through solveAsync()
 const supportedSolverMethods = {
-  heatConductionScript: ["lusolve", "jacobi", "frontal"],
-  generalFormPDEScript: ["lusolve", "jacobi", "frontal"],
-  frontPropagationScript: ["lusolve", "jacobi", "frontal"],
-  creepingFlowScript: ["lusolve"],
-  eulerBernoulliBeamScript: ["lusolve", "jacobi"],
+  heatConduction: ["lusolve", "jacobi", "frontal"],
+  generalFormPDE: ["lusolve", "jacobi", "frontal"],
+  frontPropagation: ["lusolve", "jacobi", "frontal"],
+  creepingFlow: ["lusolve"],
+  eulerBernoulliBeam: ["lusolve", "jacobi"],
 };
+
+// Every solver method, for the check of the solver options
+const solverMethods = ["lusolve", "jacobi", "frontal", "jacobi-gpu"];
+
+// Keys of the solver options
+const solverOptionKeys = ["method", "maxIterations", "tolerance"];
+
+/**
+ * Function to write a boundary condition in the array form as a condition object, for messages
+ * @param {array} condition - The condition in the array form [type, ...values]
+ * @returns {string} The condition as an object literal, e.g. { type: "convection", h: 1, ambientTemperature: 20 }
+ */
+function describeConditionAsObject(condition) {
+  const [type, ...values] = condition;
+  const parameters = parametersByType[type] ?? [];
+  const entries = values
+    .slice(0, parameters.length)
+    .map((value, valueIndex) => `${parameters[valueIndex].name}: ${describeValue(value)}`);
+  return `{ ${[`type: ${describeValue(type)}`, ...entries].join(", ")} }`;
+}
+
+/**
+ * Function to convert a condition object { type, ...parameters } to the internal array form [type, ...values]
+ * @param {object} condition - The condition object
+ * @param {string} place - Where the condition is, for messages (e.g. "boundary left")
+ * @returns {array} The condition in the array form
+ * @throws {FEAScriptError} INVALID_INPUT, listing each problem (no or unknown type, unknown or missing parameter)
+ */
+function conditionObjectToArray(condition, place) {
+  const { type, ...parameterValues } = condition;
+  if (typeof type !== "string") {
+    throw new FEAScriptError(
+      "INVALID_INPUT",
+      `Boundary condition on ${place} needs a type, e.g. { type: "constantValue", value: 0 }; got ${JSON.stringify(
+        condition,
+      )}.`,
+    );
+  }
+  const parameters = parametersByType[type];
+  if (!parameters) {
+    const removedNote = removedBoundaryConditionTypes[type]
+      ? ` ("${type}" was ${removedBoundaryConditionTypes[type]})`
+      : "";
+    throw new FEAScriptError(
+      "INVALID_INPUT",
+      `Unknown boundary condition type ${describeValue(
+        type,
+      )} on ${place}${removedNote}. Known types: ${Object.keys(parametersByType).join(", ")}.`,
+    );
+  }
+  const problems = [];
+  const parameterNames = parameters.map((parameter) => parameter.name);
+  Object.keys(parameterValues)
+    .filter((name) => !parameterNames.includes(name))
+    .forEach((name) => {
+      problems.push(
+        `Boundary condition "${type}" on ${place} has no parameter ${name}. Its parameters: ${
+          parameterNames.length > 0 ? parameterNames.join(", ") : "none"
+        }.`,
+      );
+    });
+  const values = [];
+  parameters.forEach(({ name, optional }, parameterIndex) => {
+    if (parameterValues[name] !== undefined) {
+      values.push(parameterValues[name]);
+    } else if (!optional) {
+      problems.push(`Boundary condition "${type}" on ${place} needs the parameter ${name}.`);
+    } else if (
+      parameters.slice(parameterIndex + 1).some((later) => parameterValues[later.name] !== undefined)
+    ) {
+      // An optional parameter can be left out of the array form only at its end
+      problems.push(
+        `Boundary condition "${type}" on ${place} needs the parameter ${name} when a later one is given.`,
+      );
+    }
+  });
+  FEAScriptError.throwIfAny("INVALID_INPUT", problems);
+  return [type, ...values];
+}
 
 /**
  * Class to implement finite element analysis in JavaScript
@@ -87,6 +202,7 @@ export class FEAScriptModel {
     this.mesh = null; // The mesh object: set by setMesh, or generated from the geometry at the first solve
     this.boundaryConditions = {};
     this.solverMethod = "lusolve"; // Default solver method
+    this.solverOptions = null; // The solver options of setModelConfig
     this.coefficientFunctions = null; // Add storage for coefficient functions
     warnLog(
       "FEAScript is provided “as is” without any warranty. The authors are not responsible for any damages or losses that may result from using the software. See the license for more details: https://github.com/FEAScript/FEAScript-core/blob/main/LICENSE",
@@ -96,11 +212,31 @@ export class FEAScriptModel {
 
   /**
    * Method to set the model configuration
-   * @param {string} modelConfig - Parameter specifying the type of model
+   * @param {string} modelConfig - The model: "heatConduction", "generalFormPDE", "frontPropagation",
+   *  "creepingFlow" or "eulerBernoulliBeam" (the names of FEAScript 0.3, with the "Script" suffix, are deprecated)
    * @param {object} [options] - Optional additional configuration
+   * @param {object} [options.coefficientFunctions] - The coefficients of the model
+   * @param {boolean} [options.nonlinear] - Solve the general form PDE with the Newton-Raphson method
+   * @param {number} [options.maxIterations] - Iteration limit of the Newton-Raphson method (and of the iterative
+   *  linear solvers, unless options.solver gives one)
+   * @param {number} [options.tolerance] - Tolerance of the Newton-Raphson method (and of the iterative linear
+   *  solvers, unless options.solver gives one)
+   * @param {object} [options.solver] - The linear solver, { method, maxIterations, tolerance } (see setSolverOptions)
    */
   setModelConfig(modelConfig, options = {}) {
+    if (Object.prototype.hasOwnProperty.call(deprecatedModelNames, modelConfig)) {
+      const modelName = deprecatedModelNames[modelConfig];
+      warnLog(
+        `Model name "${modelConfig}" is deprecated and will be removed in a future version. Use "${modelName}".`,
+      );
+      modelConfig = modelName;
+    }
     this.solverConfig = modelConfig;
+
+    // The linear solver: its method, and the iteration limit and tolerance of the iterative methods
+    if (options?.solver !== undefined) {
+      this.setSolverOptions(options.solver);
+    }
 
     // Store coefficient functions if provided
     if (options?.coefficientFunctions !== undefined) {
@@ -226,7 +362,7 @@ export class FEAScriptModel {
    * @returns {object} The boundary conditions by boundary name
    */
   resolveBoundaryConditions(meshData) {
-    if (this.solverConfig === "eulerBernoulliBeamScript") return this.boundaryConditions;
+    if (this.solverConfig === "eulerBernoulliBeam") return this.boundaryConditions;
     const resolved = {};
     Object.entries(this.boundaryConditions).forEach(([key, condition]) => {
       const name = meshData.boundaryElements[key] !== undefined ? key : meshData.aliases[key];
@@ -240,38 +376,118 @@ export class FEAScriptModel {
     return resolved;
   }
 
-  addBoundaryCondition(boundaryKey, condition) {
-    // A condition without parameters may be given as a plain string, e.g. "zeroGradient" instead of ["zeroGradient"]
-    if (typeof condition === "string") {
-      warnLog(
-        `Boundary condition for boundary ${boundaryKey} should be an array: use ["${condition}"] instead of "${condition}".`,
-      );
-      condition = [condition];
-    }
-    if (!Array.isArray(condition)) {
+  /**
+   * Method to set the solver options. Called by setModelConfig with its `solver` option
+   * @param {object} solver - The solver options
+   * @param {string} [solver.method="lusolve"] - "lusolve", "jacobi", "frontal", or "jacobi-gpu" (with solveAsync)
+   * @param {number} [solver.maxIterations] - Iteration limit of the iterative linear solvers (Jacobi)
+   * @param {number} [solver.tolerance] - Tolerance of the iterative linear solvers, on the residual relative to the
+   *  right-hand side
+   * @throws {FEAScriptError} INVALID_INPUT, listing each problem
+   */
+  setSolverOptions(solver) {
+    if (solver === null || typeof solver !== "object" || Array.isArray(solver)) {
       throw new FEAScriptError(
         "INVALID_INPUT",
-        `Boundary condition for boundary ${boundaryKey} must be an array with the condition type first, e.g. ["constantValue", 0]; got ${describeValue(
+        `The solver options must be an object, e.g. { method: "jacobi", tolerance: 1e-8 }; got ${describeValue(
+          solver,
+        )}.`,
+      );
+    }
+    const problems = [];
+    Object.keys(solver)
+      .filter((key) => !solverOptionKeys.includes(key))
+      .forEach((key) =>
+        problems.push(`Unknown solver option ${key}. Solver options: ${solverOptionKeys.join(", ")}.`),
+      );
+    if (solver.method !== undefined && !solverMethods.includes(solver.method)) {
+      problems.push(
+        `Unknown solver method ${describeValue(solver.method)}. Solver methods: ${solverMethods.join(", ")}.`,
+      );
+    }
+    if (
+      solver.maxIterations !== undefined &&
+      !(Number.isInteger(solver.maxIterations) && solver.maxIterations > 0)
+    ) {
+      problems.push(
+        `Solver option maxIterations must be a positive integer; got ${describeValue(solver.maxIterations)}.`,
+      );
+    }
+    if (solver.tolerance !== undefined && !(typeof solver.tolerance === "number" && solver.tolerance > 0)) {
+      problems.push(
+        `Solver option tolerance must be a positive number; got ${describeValue(solver.tolerance)}.`,
+      );
+    }
+    FEAScriptError.throwIfAny("INVALID_INPUT", problems);
+
+    if (solver.method !== undefined) this.solverMethod = solver.method;
+    this.solverOptions = { ...solver };
+    debugLog(`solver options set: ${JSON.stringify(this.solverOptions)}`);
+  }
+
+  /**
+   * Method to get the iteration limit and tolerance of the linear solver: those of the solve call, else those of
+   * the solver options, else those of setModelConfig
+   * @param {object} [options] - The options of the solve call
+   * @returns {object} The maxIterations and tolerance of the linear solver
+   */
+  getLinearSolverOptions(options = {}) {
+    return {
+      maxIterations: options.maxIterations ?? this.solverOptions?.maxIterations ?? this.maxIterations,
+      tolerance: options.tolerance ?? this.solverOptions?.tolerance ?? this.tolerance,
+    };
+  }
+
+  /**
+   * Method to add a boundary condition
+   * @param {string} boundaryKey - The boundary name (for the Euler-Bernoulli beam, the 1-based node number)
+   * @param {object|object[]} condition - The condition as an object with its type and named parameters, e.g.
+   *  { type: "convection", h: 1, ambientTemperature: 20 }; for the Euler-Bernoulli beam, one such object or a list
+   *  of them for the node. The array form of FEAScript 0.3, e.g. ["convection", 1, 20], is deprecated
+   * @throws {FEAScriptError} INVALID_INPUT for a condition object with no or an unknown type, or with an unknown
+   *  or missing parameter
+   */
+  addBoundaryCondition(boundaryKey, condition) {
+    const place = `boundary ${boundaryKey}`;
+    const isConditionObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+
+    // A condition without parameters given as a plain string, e.g. "zeroGradient"
+    if (typeof condition === "string") {
+      warnLog(
+        `Boundary condition for boundary ${boundaryKey} should be an object: use { type: "${condition}" } instead of "${condition}".`,
+      );
+      condition = { type: condition };
+    }
+
+    if (isConditionObject(condition)) {
+      condition = conditionObjectToArray(condition, place);
+      // Each node of the Euler-Bernoulli beam takes a list of conditions
+      if (this.solverConfig === "eulerBernoulliBeam") condition = [condition];
+    } else if (Array.isArray(condition) && condition.length > 0 && condition.every(isConditionObject)) {
+      // A list of condition objects, for a node of the Euler-Bernoulli beam
+      condition = condition.map((nodeCondition) => conditionObjectToArray(nodeCondition, place));
+    } else if (Array.isArray(condition)) {
+      // The array form of FEAScript 0.3, kept with a warning that gives the object form
+      const conditions = condition.length > 0 && condition.every(Array.isArray) ? condition : [condition];
+      const objectForms = conditions.map(describeConditionAsObject);
+      warnLog(
+        `The array form of boundary conditions is deprecated and will be removed in a future version. For boundary ${boundaryKey}, use ${
+          objectForms.length > 1 ? `[${objectForms.join(", ")}]` : objectForms[0]
+        } instead of ${JSON.stringify(condition)}.`,
+      );
+    } else {
+      throw new FEAScriptError(
+        "INVALID_INPUT",
+        `Boundary condition for boundary ${boundaryKey} must be an object with its type and parameters, e.g. { type: "constantValue", value: 0 }; got ${describeValue(
           condition,
         )}.`,
       );
     }
 
-    // Normalize deprecated boundary condition type strings and emit deprecation warnings
-    const deprecatedBoundaryConditionTypes = {
-      constantTemp: "constantTemperature",
-    };
-    const originalType = condition[0];
-    if (Object.prototype.hasOwnProperty.call(deprecatedBoundaryConditionTypes, originalType)) {
-      const normalizedType = deprecatedBoundaryConditionTypes[originalType];
-      warnLog(
-        `Boundary condition type "${originalType}" is deprecated and will be removed in a future version. ` +
-          `Use "${normalizedType}" instead.`,
-      );
-      condition = [normalizedType, ...condition.slice(1)];
-    }
     this.boundaryConditions[boundaryKey] = condition;
-    debugLog(`boundaryConditions added for boundary: ${boundaryKey}, type: ${condition[0]}`);
+    debugLog(
+      `boundaryConditions added for boundary: ${boundaryKey}, condition: ${JSON.stringify(condition)}`,
+    );
   }
 
   /**
@@ -330,10 +546,13 @@ export class FEAScriptModel {
     const checkCondition = (condition, place) => {
       const [type, ...values] = condition;
       if (!Object.prototype.hasOwnProperty.call(valueCounts, type)) {
+        const removedNote = removedBoundaryConditionTypes[type]
+          ? ` ("${type}" was ${removedBoundaryConditionTypes[type]})`
+          : "";
         problems.push(
           `Unknown boundary condition type ${describeValue(type)} on ${place} for ${
             this.solverConfig
-          }. Supported types: ${supportedTypes}.`,
+          }${removedNote}. Supported types: ${supportedTypes}.`,
         );
         return;
       }
@@ -347,10 +566,11 @@ export class FEAScriptModel {
       }
       values.slice(0, largestCount).forEach((value, valueIndex) => {
         if (typeof value !== "number" || !Number.isFinite(value)) {
+          const parameterName = parametersByType[type][valueIndex].name;
           problems.push(
             `Value ${
               valueIndex + 1
-            } of boundary condition "${type}" on ${place} must be a finite number; got ${describeValue(
+            } (${parameterName}) of boundary condition "${type}" on ${place} must be a finite number; got ${describeValue(
               value,
             )}.`,
           );
@@ -359,10 +579,10 @@ export class FEAScriptModel {
     };
 
     Object.entries(this.boundaryConditions).forEach(([key, condition]) => {
-      if (this.solverConfig === "eulerBernoulliBeamScript") {
+      if (this.solverConfig === "eulerBernoulliBeam") {
         if (!condition.every(Array.isArray)) {
           problems.push(
-            `Boundary conditions of node ${key} must be an array of conditions, e.g. [["fixed"]] or [["pinned"], ["moment", 1250]].`,
+            `Boundary conditions of node ${key} must be a condition object or a list of them, e.g. { type: "fixed" } or [{ type: "pinned" }, { type: "moment", moment: 1250 }]; in the array form of 0.3, an array of conditions, e.g. [["fixed"]]. Set the model with setModelConfig() before adding the conditions.`,
           );
           return;
         }
@@ -439,7 +659,7 @@ export class FEAScriptModel {
    */
   validateBoundaries(meshData, boundaryConditions = this.boundaryConditions) {
     const problems = [];
-    if (this.solverConfig === "eulerBernoulliBeamScript") {
+    if (this.solverConfig === "eulerBernoulliBeam") {
       const totalNodes = meshData.totalNodesX;
       Object.keys(boundaryConditions).forEach((nodeKey) => {
         const nodeNumber = Number(nodeKey);
@@ -491,7 +711,16 @@ export class FEAScriptModel {
     );
   }
 
+  /**
+   * Method to set the solver method
+   * @deprecated Use setModelConfig(model, { solver: { method } }); setSolverMethod will be removed in a future
+   *  version
+   * @param {string} solverMethod - The solver method
+   */
   setSolverMethod(solverMethod) {
+    warnLog(
+      `setSolverMethod() is deprecated and will be removed in a future version. Use setModelConfig(model, { solver: { method: "${solverMethod}" } }).`,
+    );
     this.solverMethod = solverMethod;
     debugLog(`solverMethod set to: ${solverMethod}`);
   }
@@ -539,7 +768,7 @@ export class FEAScriptModel {
     basicLog("Beginning solving process...");
     console.time("totalSolvingTime");
     basicLog(`Using solver ${this.solverConfig}`);
-    if (this.solverConfig === "heatConductionScript") {
+    if (this.solverConfig === "heatConduction") {
       // Check if using frontal solver
       if (this.solverMethod === "frontal") {
         const thermalBoundaryConditions = new ThermalBoundaryConditions(
@@ -567,13 +796,15 @@ export class FEAScriptModel {
           boundaryConditions,
           this.coefficientFunctions,
         ));
-        const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector, {
-          maxIterations: options.maxIterations ?? this.maxIterations,
-          tolerance: options.tolerance ?? this.tolerance,
-        });
+        const linearSystemResult = solveLinearSystem(
+          this.solverMethod,
+          jacobianMatrix,
+          residualVector,
+          this.getLinearSolverOptions(options),
+        );
         solutionVector = linearSystemResult.solutionVector;
       }
-    } else if (this.solverConfig === "frontPropagationScript") {
+    } else if (this.solverConfig === "frontPropagation") {
       // Initialize eikonalActivationFlag
       let eikonalActivationFlag = 0; // TODO: make activationFlag a generic variable (not only for eikonal)
       const eikonalExteralIterations = 5; // Number of incremental steps for the eikonal equation
@@ -588,6 +819,8 @@ export class FEAScriptModel {
         // TODO: Consider using different maxIterations/tolerance for Newton-Raphson and linear solver
         maxIterations: options.maxIterations ?? this.maxIterations,
         tolerance: options.tolerance ?? this.tolerance,
+        // The iterative linear solver of each Newton-Raphson iteration takes the solver options
+        linearSolverOptions: { ...this.solverOptions, method: undefined },
         // Used only by the frontal solver
         assembleFront: (elementArgs) =>
           assembleFrontPropagationFront({
@@ -633,7 +866,7 @@ export class FEAScriptModel {
           );
         }
       }
-    } else if (this.solverConfig === "generalFormPDEScript") {
+    } else if (this.solverConfig === "generalFormPDE") {
       // Check if using frontal solver for the linear PDE (the nonlinear PDE uses it inside Newton-Raphson)
       if (this.solverMethod === "frontal" && !this.nonlinear) {
         const genericBoundaryConditions = new GenericBoundaryConditions(
@@ -662,6 +895,8 @@ export class FEAScriptModel {
           solverMethod: this.solverMethod,
           maxIterations: options.maxIterations ?? this.maxIterations,
           tolerance: options.tolerance ?? this.tolerance,
+          // The iterative linear solver of each Newton-Raphson iteration takes the solver options
+          linearSolverOptions: { ...this.solverOptions, method: undefined },
           // Used only by the frontal solver
           assembleFront: (elementArgs) =>
             assembleGeneralFormPDENonlinearFront({
@@ -707,13 +942,15 @@ export class FEAScriptModel {
           this.coefficientFunctions,
         ));
 
-        const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector, {
-          maxIterations: options.maxIterations ?? this.maxIterations,
-          tolerance: options.tolerance ?? this.tolerance,
-        });
+        const linearSystemResult = solveLinearSystem(
+          this.solverMethod,
+          jacobianMatrix,
+          residualVector,
+          this.getLinearSolverOptions(options),
+        );
         solutionVector = linearSystemResult.solutionVector;
       }
-    } else if (this.solverConfig === "creepingFlowScript") {
+    } else if (this.solverConfig === "creepingFlow") {
       // Use regular linear solver methods for steady creeping flow
       const creepingFlowResult = assembleCreepingFlowMatrix(
         meshData,
@@ -726,8 +963,7 @@ export class FEAScriptModel {
       // The pressure rows of the saddle-point matrix have zeros on the diagonal. The LU decomposition fills in
       // much less with a column ordering of AᵀA and a small pivoting threshold (3 to 4 times faster)
       const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector, {
-        maxIterations: options.maxIterations ?? this.maxIterations,
-        tolerance: options.tolerance ?? this.tolerance,
+        ...this.getLinearSolverOptions(options),
         ordering: 3,
         pivotThreshold: 0.001,
       });
@@ -735,7 +971,7 @@ export class FEAScriptModel {
 
       // Split the solution vector into velocity and pressure fields
       fields = extractCreepingFlowFields(solutionVector, meshData, creepingFlowResult.pressureNodeIndices);
-    } else if (this.solverConfig === "eulerBernoulliBeamScript") {
+    } else if (this.solverConfig === "eulerBernoulliBeam") {
       // Use regular linear solver methods for the 1D Euler-Bernoulli beam model
       const beamResult = assembleEulerBernoulliBeamMat(
         meshData,
@@ -745,10 +981,12 @@ export class FEAScriptModel {
       jacobianMatrix = beamResult.jacobianMatrix;
       residualVector = beamResult.residualVector;
 
-      const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector, {
-        maxIterations: options.maxIterations ?? this.maxIterations,
-        tolerance: options.tolerance ?? this.tolerance,
-      });
+      const linearSystemResult = solveLinearSystem(
+        this.solverMethod,
+        jacobianMatrix,
+        residualVector,
+        this.getLinearSolverOptions(options),
+      );
       solutionVector = linearSystemResult.solutionVector;
 
       // Split the solution vector into deflection and rotation fields (2 DOFs per node)
@@ -775,9 +1013,9 @@ export class FEAScriptModel {
     const refuse = () =>
       new FEAScriptError(
         "UNSUPPORTED_SOLVER",
-        `solveAsync() supports heatConductionScript with "jacobi-gpu", not ${this.solverConfig} with "${this.solverMethod}"`,
+        `solveAsync() supports heatConduction with "jacobi-gpu", not ${this.solverConfig} with "${this.solverMethod}"`,
       );
-    if (this.solverConfig !== "heatConductionScript") throw refuse();
+    if (this.solverConfig !== "heatConduction") throw refuse();
 
     let jacobianMatrix = [];
     let residualVector = [];
@@ -797,7 +1035,7 @@ export class FEAScriptModel {
     console.time("totalSolvingTime");
 
     basicLog(`Using solver: ${this.solverConfig}`);
-    if (this.solverConfig === "heatConductionScript") {
+    if (this.solverConfig === "heatConduction") {
       ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(
         meshData,
         boundaryConditions,
@@ -815,8 +1053,7 @@ export class FEAScriptModel {
         residualVector,
         {
           computeEngine,
-          maxIterations: options.maxIterations ?? this.maxIterations,
-          tolerance: options.tolerance ?? this.tolerance,
+          ...this.getLinearSolverOptions(options),
         },
       );
       solutionVector = x;

@@ -8,24 +8,23 @@
  */
 
 // Import FEAScript library
-import { FEAScriptModel, printVersion } from "feascript";
+import { FEAScriptModel, version } from "feascript";
 
-console.log("FEAScript Version:", printVersion);
+console.log("FEAScript Version:", version);
 
 // 1. Create the model and select the physics
 const model = new FEAScriptModel();
-model.setModelConfig("heatConductionScript");
+model.setModelConfig("heatConduction", { solver: { method: "jacobi" } });
 
 // 2. Define the mesh
 model.setGeometry({ line: 0.15 });
 model.setMeshConfig({ elementOrder: "linear", divisions: 10 });
 
 // 3. Apply the boundary conditions
-model.addBoundaryCondition("left", ["convection", 1, 25]); // Left
-model.addBoundaryCondition("right", ["constantTemperature", 5]); // Right
+model.addBoundaryCondition("left", { type: "convection", h: 1, ambientTemperature: 25 }); // Left
+model.addBoundaryCondition("right", { type: "constantTemperature", temperature: 5 }); // Right
 
 // 4. Solve
-model.setSolverMethod("jacobi");
 const { solutionVector, nodesCoordinates } = model.solve();
 
 // 5. Print the results

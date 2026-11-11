@@ -62,19 +62,15 @@
       const geometry = { line: 0.15 };
       const mesh = { elementOrder: "linear", divisions: 10 };
       const conditions = [
-        ["left", ["convection", 1, 25]],
-        ["right", ["constantTemperature", 5]],
+        ["left", { type: "convection", h: 1, ambientTemperature: 25 }],
+        ["right", { type: "constantTemperature", temperature: 5 }],
       ];
       const expectedRight = 5;
 
       async function run() {
         // 1. The bundle defines a FEAScript global
         const hasGlobal = typeof FEAScript === "object" && typeof FEAScript.FEAScriptModel === "function";
-        report(
-          "window.FEAScript is defined",
-          hasGlobal,
-          hasGlobal ? `version ${FEAScript.printVersion}` : "",
-        );
+        report("window.FEAScript is defined", hasGlobal, hasGlobal ? `version ${FEAScript.version}` : "");
         if (!hasGlobal) return;
         const { FEAScriptModel, FEAScriptWorker, plotSolution } = FEAScript;
 
@@ -82,11 +78,10 @@
         let mainSolution;
         try {
           const model = new FEAScriptModel();
-          model.setModelConfig("heatConductionScript");
+          model.setModelConfig("heatConduction", { solver: { method: "lusolve" } });
           model.setGeometry(geometry);
           model.setMeshConfig(mesh);
           for (const [boundary, condition] of conditions) model.addBoundaryCondition(boundary, condition);
-          model.setSolverMethod("lusolve");
           const result = model.solve();
           mainSolution = Array.from(result.solutionVector);
           const right = mainSolution[mainSolution.length - 1];
@@ -101,12 +96,11 @@
         try {
           const worker = new FEAScriptWorker();
           await worker.ping();
-          await worker.setModelConfig("heatConductionScript");
+          await worker.setModelConfig("heatConduction", { solver: { method: "lusolve" } });
           await worker.setGeometry(geometry);
           await worker.setMeshConfig(mesh);
           for (const [boundary, condition] of conditions)
             await worker.addBoundaryCondition(boundary, condition);
-          await worker.setSolverMethod("lusolve");
           const result = await worker.solve();
           const workerSolution = Array.from(result.solutionVector);
           const maxDiff = mainSolution
@@ -131,13 +125,17 @@
               { name: "left" },
             ],
           };
-          const meshConfig = { elements: "triangles", elementOrder: "quadratic", size: (x, y) => 0.3 + 0.1 * y };
+          const meshConfig = {
+            elements: "triangles",
+            elementOrder: "quadratic",
+            size: (x, y) => 0.3 + 0.1 * y,
+          };
           const setUp = async (model) => {
-            await model.setModelConfig("heatConductionScript");
+            await model.setModelConfig("heatConduction");
             await model.setGeometry({ shape });
             await model.setMeshConfig(meshConfig);
-            await model.addBoundaryCondition("bottom", ["constantTemperature", 200]);
-            await model.addBoundaryCondition("top", ["convection", 1, 20]);
+            await model.addBoundaryCondition("bottom", { type: "constantTemperature", temperature: 200 });
+            await model.addBoundaryCondition("top", { type: "convection", h: 1, ambientTemperature: 20 });
           };
           const mainModel = new FEAScriptModel();
           await setUp(mainModel);
@@ -147,7 +145,9 @@
           await setUp(worker);
           const workerResult = await worker.solve();
           const maxDiff = Math.max(
-            ...Array.from(workerResult.solutionVector, (value, i) => Math.abs(value - mainResult.solutionVector[i])),
+            ...Array.from(workerResult.solutionVector, (value, i) =>
+              Math.abs(value - mainResult.solutionVector[i]),
+            ),
           );
           report(
             "Worker triangles with a size function match the main thread",
@@ -171,12 +171,11 @@
           try {
             const createModel = (solverMethod) => {
               const model = new FEAScriptModel();
-              model.setModelConfig("heatConductionScript");
+              model.setModelConfig("heatConduction", { solver: { method: solverMethod } });
               model.setGeometry(geometry);
               model.setMeshConfig({ ...mesh, divisions: 4 });
-              model.addBoundaryCondition("left", ["constantTemperature", 25]);
-              model.addBoundaryCondition("right", ["constantTemperature", 5]);
-              model.setSolverMethod(solverMethod);
+              model.addBoundaryCondition("left", { type: "constantTemperature", temperature: 25 });
+              model.addBoundaryCondition("right", { type: "constantTemperature", temperature: 5 });
               return model;
             };
             const reference = Array.from(createModel("lusolve").solve().solutionVector);

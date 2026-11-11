@@ -135,8 +135,9 @@ export class FEAScriptWorker {
 
   /**
    * Function to add a boundary condition to the worker
-   * @param {string} boundaryKey - The key identifying the boundary
-   * @param {array} condition - The boundary condition to add
+   * @param {string} boundaryKey - The boundary name (for the Euler-Bernoulli beam, the 1-based node number)
+   * @param {object|object[]} condition - The condition object, as in FEAScriptModel.addBoundaryCondition, e.g.
+   *  { type: "convection", h: 1, ambientTemperature: 20 }
    * @returns {Promise<boolean>} Resolves when the boundary condition is added
    */
   async addBoundaryCondition(boundaryKey, condition) {
@@ -146,6 +147,8 @@ export class FEAScriptWorker {
 
   /**
    * Function to set the solver method in the worker
+   * @deprecated Use setModelConfig(model, { solver: { method } }); setSolverMethod will be removed in a future
+   *  version
    * @param {string} solverMethod - The solver method to set
    * @returns {Promise<boolean>} Resolves when the solver method is set
    */

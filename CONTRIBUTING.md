@@ -156,7 +156,7 @@ Include the `.mailmap` change in your PR.
 Before submitting a pull request, test your modifications by running the FEAScript library from a local directory. For example, you can load the library in your HTML file as follows:
 
 ```javascript
-import { FEAScriptModel, plotSolution, printVersion } from "[USER_DIRECTORY]/FEAScript-core/src/index.js";
+import { FEAScriptModel, plotSolution, version } from "[USER_DIRECTORY]/FEAScript-core/src/index.js";
 ```
 
 FEAScript can be run on a local server. You **must** start the server from the workspace root directory (the folder that contains both `FEAScript-core/` and `FEAScript-website/`), not from inside either subfolder. The HTML files use relative paths such as `../feascript-website.css` and `../../FEAScript-core/src/index.js` that only resolve correctly from that root.

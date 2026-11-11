@@ -56,8 +56,41 @@ All notable changes to FEAScript-core are documented in this file. The format is
 - The frontal solver runs the nonlinear general form PDE (`nonlinear: true`) inside Newton–Raphson
   ([#101](https://github.com/FEAScript/FEAScript-core/issues/101)), as it does front propagation. It stopped with
   `"UNSUPPORTED_SOLVER"` before
+- Boundary conditions as objects with named parameters
+  ([#123](https://github.com/FEAScript/FEAScript-core/issues/123)), e.g.
+  `addBoundaryCondition("top", { type: "convection", h: 1, ambientTemperature: 20 })` instead of
+  `["convection", 1, 20]`. The parameters of each type:
+  - Heat conduction: `{ type: "constantTemperature", temperature }`,
+    `{ type: "convection", h, ambientTemperature }` and `{ type: "symmetry" }`
+  - General form PDE and front propagation: `{ type: "constantValue", value }` and `{ type: "zeroGradient" }`
+  - Creeping flow: `{ type: "constantVelocity", u, v }` and `{ type: "stressFree" }`
+  - Euler-Bernoulli beam, one object or a list of them per node: `{ type: "fixed" }`, `{ type: "pinned" }`,
+    `{ type: "rotationFixed" }`, `{ type: "deflection", deflection }`, `{ type: "rotation", rotation }`,
+    `{ type: "force", force }`, `{ type: "moment", moment }` and
+    `{ type: "spring", stiffness, referenceDeflection }`. The deflection, the rotation and the reference
+    deflection default to 0
+
+  A condition object with no type, an unknown type, or a missing or unknown (e.g. misspelled) parameter throws
+  `FEAScriptError` `"INVALID_INPUT"` when it is added, listing every problem. A value that is not a number is
+  reported with the name of its parameter
+- Solver options in `setModelConfig` ([#122](https://github.com/FEAScript/FEAScript-core/issues/122)):
+  `setModelConfig("heatConduction", { solver: { method: "jacobi", maxIterations: 20000, tolerance: 1e-10 } })`.
+  The `method` is `"lusolve"` (the default), `"jacobi"`, `"frontal"` or `"jacobi-gpu"` (with `solveAsync()`), and
+  `maxIterations` and `tolerance` apply to the iterative linear solvers, also inside Newton-Raphson. The
+  top-level `maxIterations` and `tolerance` of `setModelConfig` keep setting Newton-Raphson, and the linear solver
+  when `solver` does not set them. An unknown method or option, or an iteration limit or tolerance that is not
+  positive, throws `FEAScriptError` `"INVALID_INPUT"`. Preconditioners will be added as solver options with the
+  PCG solver ([#115](https://github.com/FEAScript/FEAScript-core/issues/115),
+  [#116](https://github.com/FEAScript/FEAScript-core/issues/116))
+- `version`, the version of FEAScript as in its npm package, e.g. `"0.4.0"`
+  ([#128](https://github.com/FEAScript/FEAScript-core/issues/128))
 
 ### Changed
+
+- Model names without the `Script` suffix ([#124](https://github.com/FEAScript/FEAScript-core/issues/124)):
+  `"heatConduction"`, `"generalFormPDE"`, `"frontPropagation"`, `"creepingFlow"` and `"eulerBernoulliBeam"`.
+  `model.solverConfig`, and the `solverConfig` of a worker result, hold the new name also when the old one is
+  given
 
 - A mesh imported with `importGmshMesh` is converted to the mesh object once, with its boundaries keyed by the
   names of the physical groups, and the boundary lines are matched to element sides through a lookup table
@@ -115,9 +148,24 @@ All notable changes to FEAScript-core are documented in this file. The format is
 - The numeric boundary keys: `"0"` to `"3"` of the structured meshes (bottom, left, top, right), `"0"` and `"1"`
   of 1D meshes (left, right), and the Gmsh physical tag minus one. They keep working as aliases of the boundary
   names, with a warning
+- The model names with the `Script` suffix, e.g. `"heatConductionScript"`: use `"heatConduction"`
+  ([#124](https://github.com/FEAScript/FEAScript-core/issues/124)). They keep working with a warning
+- The array form of boundary conditions, e.g. `["convection", 1, 20]`, and conditions given as a plain string, e.g.
+  `"zeroGradient"`: use the condition objects ([#123](https://github.com/FEAScript/FEAScript-core/issues/123)). They
+  keep working, with a warning that gives the object form of the condition
+- `setSolverMethod(method)` of `FEAScriptModel` and `FEAScriptWorker`: use
+  `setModelConfig(model, { solver: { method } })` ([#122](https://github.com/FEAScript/FEAScript-core/issues/122)).
+  It keeps working with a warning
+- `printVersion`: use `version` ([#128](https://github.com/FEAScript/FEAScript-core/issues/128)). `printVersion`
+  is a string, so reading it cannot log a warning; it is marked `@deprecated` for editors, and keeps its value
+  `"0.4.0 (RC)"` until it is removed
 
 ### Removed
 
+- The `"constantTemp"` boundary condition, deprecated in 0.3.0
+  ([#129](https://github.com/FEAScript/FEAScript-core/issues/129)): use
+  `{ type: "constantTemperature", temperature }`. It now throws `FEAScriptError` `"INVALID_INPUT"`, with a message
+  that names its replacement
 - The NAFEMS T4 Node.js example: the benchmark is covered by its test
   (`tests/verification/benchmark/heatConduction2DNafemsT4`) and by the verification pages of the documentation
 

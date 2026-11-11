@@ -8,13 +8,14 @@
  */
 
 // Import FEAScript library
-import { FEAScriptModel, printVersion } from "feascript";
+import { FEAScriptModel, version } from "feascript";
 
-console.log("FEAScript Version:", printVersion);
+console.log("FEAScript Version:", version);
 
 // 1. Create the model and select the physics
 const model = new FEAScriptModel();
-model.setModelConfig("generalFormPDEScript", {
+model.setModelConfig("generalFormPDE", {
+  solver: { method: "lusolve" },
   coefficientFunctions: {
     // Equation d²u/dx² - 10 du/dx = 10 * exp(-200 * (x - 0.5)²)
     A: (x) => 1, // Diffusion coefficient
@@ -29,11 +30,10 @@ model.setGeometry({ line: 1.0 });
 model.setMeshConfig({ elementOrder: "quadratic", divisions: 20 });
 
 // 3. Apply the boundary conditions
-model.addBoundaryCondition("left", ["constantValue", 1]); // Left
-model.addBoundaryCondition("right", ["zeroGradient"]); // Right
+model.addBoundaryCondition("left", { type: "constantValue", value: 1 }); // Left
+model.addBoundaryCondition("right", { type: "zeroGradient" }); // Right
 
 // 4. Solve
-model.setSolverMethod("lusolve");
 const { solutionVector, nodesCoordinates } = model.solve();
 
 // 5. Print the results

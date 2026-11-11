@@ -19,7 +19,8 @@ import { runFrontalSolver } from "./frontalSolver.js";
  * @param {object} context - Context object containing simulation data and options. When
  *  `solverMethod` is "frontal", it must also contain `assembleFront` (element assembler, which
  *  receives the current iterate as `solutionVector`) and `boundaryConditionsHandler`
- *  (see runFrontalSolver)
+ *  (see runFrontalSolver). An optional `linearSolverOptions` ({ maxIterations, tolerance }) is passed to the
+ *  linear solver of each iteration
  * @returns {object} An object containing:
  *  - solutionVector: The solution vector (Float64Array)
  *  - iterations: The number of iterations performed
@@ -71,7 +72,12 @@ export function newtonRaphson(assembleMat, context = {}) {
       ));
 
       // Solve the linear system based on the specified solver method
-      const linearSystemResult = solveLinearSystem(context.solverMethod, jacobianMatrix, residualVector);
+      const linearSystemResult = solveLinearSystem(
+        context.solverMethod,
+        jacobianMatrix,
+        residualVector,
+        context.linearSolverOptions,
+      );
       deltaX = linearSystemResult.solutionVector;
     }
 

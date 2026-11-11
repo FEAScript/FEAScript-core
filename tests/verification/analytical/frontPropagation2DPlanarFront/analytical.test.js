@@ -52,15 +52,14 @@ function setMeshSource(model, source) {
 function runSimulation(meshSource, solverMethod) {
   const model = new FEAScriptModel();
 
-  model.setModelConfig("frontPropagationScript");
+  model.setModelConfig("frontPropagation", { solver: { method: solverMethod } });
   setMeshSource(model, meshSource);
 
   // Front starts at the bottom boundary
-  model.addBoundaryCondition("bottom", ["constantValue", 0]);
-  model.addBoundaryCondition("left", ["zeroGradient"]);
-  model.addBoundaryCondition("top", ["zeroGradient"]);
-  model.addBoundaryCondition("right", ["zeroGradient"]);
-  model.setSolverMethod(solverMethod);
+  model.addBoundaryCondition("bottom", { type: "constantValue", value: 0 });
+  model.addBoundaryCondition("left", { type: "zeroGradient" });
+  model.addBoundaryCondition("top", { type: "zeroGradient" });
+  model.addBoundaryCondition("right", { type: "zeroGradient" });
 
   const { solutionVector, nodesCoordinates } = model.solve();
   return {

@@ -12,8 +12,8 @@ import { FEAScriptError } from "../utilities/errors.js";
 
 // Field plotted when none is requested, for models that return named fields
 const defaultFields = {
-  creepingFlowScript: "velocityMagnitude",
-  eulerBernoulliBeamScript: "w",
+  creepingFlow: "velocityMagnitude",
+  eulerBernoulliBeam: "w",
 };
 
 /**

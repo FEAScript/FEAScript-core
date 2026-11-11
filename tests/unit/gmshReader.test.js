@@ -82,10 +82,10 @@ const meshCases = [
 
 // The physical groups of the meshes: bottom, right, top and left (tags 1 to 4)
 const boundaryConditions = {
-  bottom: ["constantTemperature", 200],
-  right: ["constantTemperature", 200],
-  top: ["convection", 1, 20],
-  left: ["symmetry"],
+  bottom: { type: "constantTemperature", temperature: 200 },
+  right: { type: "constantTemperature", temperature: 200 },
+  top: { type: "convection", h: 1, ambientTemperature: 20 },
+  left: { type: "symmetry" },
 };
 
 const readMeshFile = (meshFile) => fs.readFileSync(path.join(meshesDirectory, meshFile), "utf8");
@@ -103,12 +103,11 @@ const largestDifference = (a, b) => {
 
 function runSimulation(parsedMesh, solverMethod) {
   const model = new FEAScriptModel();
-  model.setModelConfig("heatConductionScript");
+  model.setModelConfig("heatConduction", { solver: { method: solverMethod } });
   model.setMesh(parsedMesh);
   Object.entries(boundaryConditions).forEach(([boundaryKey, condition]) => {
     model.addBoundaryCondition(boundaryKey, condition);
   });
-  model.setSolverMethod(solverMethod);
   return model.solve({ maxIterations: 200000, tolerance: 1e-10 });
 }
 
@@ -149,7 +148,7 @@ for (const { meshFile, elementOrder } of meshCases) {
   // The deprecated keys (tag minus one) give the same solution as the names
   const namedSolution = runSimulation(await parseMesh(meshContent), "lusolve").solutionVector;
   const aliasModel = new FEAScriptModel();
-  aliasModel.setModelConfig("heatConductionScript");
+  aliasModel.setModelConfig("heatConduction");
   aliasModel.setMesh(await parseMesh(meshContent));
   Object.entries({
     0: boundaryConditions.bottom,
@@ -288,7 +287,7 @@ for (const { meshFile, solverMethods } of meshCases) {
   };
   const solveWith = (parsedMesh, conditions) => {
     const model = new FEAScriptModel();
-    model.setModelConfig("heatConductionScript");
+    model.setModelConfig("heatConduction");
     model.setMesh(parsedMesh);
     Object.entries(conditions).forEach(([key, condition]) => model.addBoundaryCondition(key, condition));
     try {

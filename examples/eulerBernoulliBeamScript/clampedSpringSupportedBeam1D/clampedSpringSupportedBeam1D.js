@@ -8,13 +8,14 @@
  */
 
 // Import FEAScript library
-import { FEAScriptModel, printVersion } from "feascript";
+import { FEAScriptModel, version } from "feascript";
 
-console.log("FEAScript Version:", printVersion);
+console.log("FEAScript Version:", version);
 
 // 1. Create the model and select the physics
 const model = new FEAScriptModel();
-model.setModelConfig("eulerBernoulliBeamScript", {
+model.setModelConfig("eulerBernoulliBeam", {
+  solver: { method: "lusolve" },
   coefficientFunctions: {
     EI: (x) => 2.0e6, // Bending stiffness
     q: (x) => (x <= 5 ? -1000 : 0),
@@ -26,15 +27,14 @@ model.setGeometry({ line: 10 });
 model.setMeshConfig({ elementOrder: "linear", divisions: 2 });
 
 // 3. Apply the boundary conditions
-model.addBoundaryCondition("1", [["fixed"]]); // Clamped support
-model.addBoundaryCondition("2", [["pinned"], ["moment", 1250]]); // Roller + applied moment
+model.addBoundaryCondition("1", { type: "fixed" }); // Clamped support
+model.addBoundaryCondition("2", [{ type: "pinned" }, { type: "moment", moment: 1250 }]); // Roller + applied moment
 model.addBoundaryCondition("3", [
-  ["spring", 200],
-  ["force", -2500],
+  { type: "spring", stiffness: 200 },
+  { type: "force", force: -2500 },
 ]); // Spring support + point load
 
 // 4. Solve
-model.setSolverMethod("lusolve");
 const { nodesCoordinates, fields } = model.solve();
 
 // 5. Print the results

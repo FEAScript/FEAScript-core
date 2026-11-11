@@ -45,7 +45,8 @@ const cases = [
 function runSimulation(elementOrder, solverMethod) {
   const model = new FEAScriptModel();
 
-  model.setModelConfig("generalFormPDEScript", {
+  model.setModelConfig("generalFormPDE", {
+    solver: { method: solverMethod },
     nonlinear: true, // Solve with the Newton-Raphson method
     coefficientFunctions: {
       A: (x) => 1, // Diffusion coefficient
@@ -58,9 +59,8 @@ function runSimulation(elementOrder, solverMethod) {
   model.setGeometry({ line: 10.0 });
   model.setMeshConfig({ elementOrder, divisions: 20 });
 
-  model.addBoundaryCondition("left", ["constantValue", 1]);
-  model.addBoundaryCondition("right", ["zeroGradient"]);
-  model.setSolverMethod(solverMethod);
+  model.addBoundaryCondition("left", { type: "constantValue", value: 1 });
+  model.addBoundaryCondition("right", { type: "zeroGradient" });
 
   return model.solve();
 }

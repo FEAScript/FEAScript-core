@@ -399,13 +399,15 @@ basicLog("--- Heat conduction on a rotated square ---");
 
 for (const elementOrder of ["linear", "quadratic"]) {
   const model = new FEAScriptModel();
-  model.setModelConfig("heatConductionScript", { coefficientFunctions: { thermalConductivity: 1 } });
+  model.setModelConfig("heatConduction", {
+    solver: { method: "lusolve" },
+    coefficientFunctions: { thermalConductivity: 1 },
+  });
   model.setGeometry({ shape: path(rotated, ["wall", "hot", "wall", "cold"]) });
   model.setMeshConfig({ elements: "triangles", size: 0.2, elementOrder });
-  model.addBoundaryCondition("wall", ["symmetry"]);
-  model.addBoundaryCondition("hot", ["constantTemperature", 1]); // The edge at x' = 1
-  model.addBoundaryCondition("cold", ["constantTemperature", 0]); // The edge at x' = 0
-  model.setSolverMethod("lusolve");
+  model.addBoundaryCondition("wall", { type: "symmetry" });
+  model.addBoundaryCondition("hot", { type: "constantTemperature", temperature: 1 }); // The edge at x' = 1
+  model.addBoundaryCondition("cold", { type: "constantTemperature", temperature: 0 }); // The edge at x' = 0
   const { solutionVector, nodesCoordinates } = model.solve();
   const largestError = Math.max(
     ...solutionVector.map((temperature, i) => {

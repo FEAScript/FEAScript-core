@@ -25,7 +25,7 @@ FEAScript website.
 
 ## Model overview
 
-The 1D Euler-Bernoulli beam solver (`eulerBernoulliBeamScript`) assembles the fourth-order beam
+The 1D Euler-Bernoulli beam solver (`eulerBernoulliBeam`) assembles the fourth-order beam
 bending equation
 
 ```
@@ -52,7 +52,7 @@ model.setMeshConfig({ elementOrder: "linear", divisions: 2 });
 ### Coefficient functions
 
 ```javascript
-model.setModelConfig("eulerBernoulliBeamScript", {
+model.setModelConfig("eulerBernoulliBeam", {
   coefficientFunctions: {
     EI: (x) => 2.0e6, // Bending stiffness E*I(x) [required]
     c0: (x) => 0, // Elastic foundation modulus [optional, defaults to 0]
@@ -66,27 +66,27 @@ model.setModelConfig("eulerBernoulliBeamScript", {
 Unlike the scalar 1D models (which tag only the two ends of the domain as boundary `"0"`/`"1"`),
 beam problems commonly need essential and natural conditions at interior nodes as well (e.g. a
 midspan support, or a point load applied partway along the beam). Boundary conditions for the beam
-solver are therefore keyed by the **1-based global node number**, and each key maps to an **array**
-of condition tuples, since a node can carry more than one condition at once (e.g. a spring support
-plus a point load):
+solver are therefore keyed by the **1-based global node number**. Each node takes one condition
+object, or a **list** of them, since a node can carry more than one condition at once (e.g. a spring
+support plus a point load):
 
 ```javascript
-model.addBoundaryCondition("1", [["fixed"]]); // w=0, theta=0 (clamped)
-model.addBoundaryCondition("2", [["pinned"], ["moment", 1250]]); // w=0, plus an applied moment
+model.addBoundaryCondition("1", { type: "fixed" }); // w=0, theta=0 (clamped)
+model.addBoundaryCondition("2", [{ type: "pinned" }, { type: "moment", moment: 1250 }]); // w=0, plus an applied moment
 model.addBoundaryCondition("3", [
-  ["spring", 200],
-  ["force", -2500],
+  { type: "spring", stiffness: 200 },
+  { type: "force", force: -2500 },
 ]); // elastic support, plus a point load
 ```
 
-| Condition type                          | Kind          | Effect                                                                        |
-| --------------------------------------- | ------------- | ----------------------------------------------------------------------------- |
-| `["fixed"]`                             | Essential     | `w = 0` and `theta = 0` (clamped support)                                     |
-| `["pinned"]` / `["deflection", v]`      | Essential     | `w = v` (default `v = 0`; roller/pin support)                                 |
-| `["rotationFixed"]` / `["rotation", v]` | Essential     | `theta = v` (default `v = 0`)                                                 |
-| `["force", v]`                          | Natural       | Applies a concentrated transverse force `v` at the node                       |
-| `["moment", v]`                         | Natural       | Applies a concentrated moment `v` at the node                                 |
-| `["spring", k, uRef]`                   | Mixed (Robin) | Transverse elastic support of stiffness `k` about `uRef` (default `uRef = 0`) |
+| Condition                                                      | Kind          | Effect                                                                                      |
+| -------------------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------- |
+| `{ type: "fixed" }`                                            | Essential     | `w = 0` and `theta = 0` (clamped support)                                                   |
+| `{ type: "pinned" }` / `{ type: "deflection", deflection }`    | Essential     | `w = deflection` (default 0; roller/pin support)                                            |
+| `{ type: "rotationFixed" }` / `{ type: "rotation", rotation }` | Essential     | `theta = rotation` (default 0)                                                              |
+| `{ type: "force", force }`                                     | Natural       | Applies a concentrated transverse force at the node                                         |
+| `{ type: "moment", moment }`                                   | Natural       | Applies a concentrated moment at the node                                                   |
+| `{ type: "spring", stiffness, referenceDeflection }`           | Mixed (Robin) | Transverse elastic support of stiffness `stiffness` about `referenceDeflection` (default 0) |
 
 ## Running the Node.js examples
 

@@ -98,8 +98,8 @@ class workerWrapper {
 
   /**
    * Function to add a boundary condition to the FEAScriptModel
-   * @param {string} boundaryKey - The key identifying the boundary
-   * @param {array} condition - The boundary condition to add
+   * @param {string} boundaryKey - The boundary name (for the Euler-Bernoulli beam, the 1-based node number)
+   * @param {object|object[]} condition - The condition object, as in FEAScriptModel.addBoundaryCondition
    * @returns {boolean} Returns true if the boundary condition is added successfully
    * @throws Will throw an error if the boundary condition fails to add
    */
@@ -115,6 +115,7 @@ class workerWrapper {
 
   /**
    * Function to set the solver method in the FEAScriptModel
+   * @deprecated Use setModelConfig(model, { solver: { method } })
    * @param {string} solverMethod - The solver method to set
    * @returns {boolean} Returns true if the solver method is set successfully
    * @throws Will throw an error if the solver method fails to set

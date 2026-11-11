@@ -29,14 +29,13 @@ const TOLERANCE = 1e-10;
 function runSimulation(coefficientFunctions, boundaryConditions) {
   const model = new FEAScriptModel();
 
-  model.setModelConfig("heatConductionScript", { coefficientFunctions });
+  model.setModelConfig("heatConduction", { solver: { method: "lusolve" }, coefficientFunctions });
   model.setGeometry({ rectangle: [1, 1] });
   model.setMeshConfig({ elements: "quadrilaterals", elementOrder: "quadratic", divisions: [4, 3] });
 
   Object.entries(boundaryConditions).forEach(([boundaryKey, condition]) => {
     model.addBoundaryCondition(boundaryKey, condition);
   });
-  model.setSolverMethod("lusolve");
 
   const { solutionVector, nodesCoordinates } = model.solve();
 
@@ -107,8 +106,8 @@ assertMatchesAnalyticalSolution(
   runSimulation(
     { thermalConductivity: (x, y) => 1 + x, heatSource: -1 },
     {
-      left: ["constantTemp", 0], // Left boundary (x = 0)
-      right: ["constantTemp", 1], // Right boundary (x = 1)
+      left: { type: "constantTemperature", temperature: 0 }, // Left boundary (x = 0)
+      right: { type: "constantTemperature", temperature: 1 }, // Right boundary (x = 1)
     },
   ),
   (x, y) => x,
@@ -126,8 +125,8 @@ assertMatchesAnalyticalSolution(
   runSimulation(
     { thermalConductivity: (x, y) => 1 + y, heatSource: -1 },
     {
-      bottom: ["constantTemp", 0], // Bottom boundary (y = 0)
-      top: ["constantTemp", 1], // Top boundary (y = 1)
+      bottom: { type: "constantTemperature", temperature: 0 }, // Bottom boundary (y = 0)
+      top: { type: "constantTemperature", temperature: 1 }, // Top boundary (y = 1)
     },
   ),
   (x, y) => y,

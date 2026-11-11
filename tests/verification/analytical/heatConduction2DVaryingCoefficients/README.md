@@ -5,7 +5,7 @@
 ## Purpose
 
 This test guards the spatially varying `thermalConductivity` and `heatSource` coefficients of
-`heatConductionScript` in 2D, where the coefficients are evaluated at the physical coordinates
+`heatConduction` in 2D, where the coefficients are evaluated at the physical coordinates
 produced by the 2D isoparametric mapping.
 
 The 2D assembly path is a separate implementation from the 1D one, with its own Gauss loop and

@@ -12,16 +12,17 @@
 // Taylor-Hood elements reproduce exactly
 
 // Import FEAScript library
-import { FEAScriptModel, printVersion } from "feascript";
+import { FEAScriptModel, version } from "feascript";
 
-console.log("FEAScript Version:", printVersion);
+console.log("FEAScript Version:", version);
 
 const wallVelocity = 1; // U
 const channelHeight = 2; // H
 
 // 1. Create the model and select the physics
 const model = new FEAScriptModel();
-model.setModelConfig("creepingFlowScript", {
+model.setModelConfig("creepingFlow", {
+  solver: { method: "lusolve" },
   coefficientFunctions: {
     viscosity: 1, // μ
   },
@@ -32,13 +33,12 @@ model.setGeometry({ rectangle: [4, channelHeight] });
 model.setMeshConfig({ elements: "quadrilaterals", elementOrder: "quadratic", divisions: [4, 2] });
 
 // 3. Apply the boundary conditions
-model.addBoundaryCondition("bottom", ["constantVelocity", 0, 0]); // Bottom: fixed wall
-model.addBoundaryCondition("left", ["stressFree"]); // Left: open end
-model.addBoundaryCondition("top", ["constantVelocity", wallVelocity, 0]); // Top: moving wall
-model.addBoundaryCondition("right", ["stressFree"]); // Right: open end
+model.addBoundaryCondition("bottom", { type: "constantVelocity", u: 0, v: 0 }); // Bottom: fixed wall
+model.addBoundaryCondition("left", { type: "stressFree" }); // Left: open end
+model.addBoundaryCondition("top", { type: "constantVelocity", u: wallVelocity, v: 0 }); // Top: moving wall
+model.addBoundaryCondition("right", { type: "stressFree" }); // Right: open end
 
 // 4. Solve
-model.setSolverMethod("lusolve");
 const { nodesCoordinates, fields } = model.solve();
 
 // 5. Print the results

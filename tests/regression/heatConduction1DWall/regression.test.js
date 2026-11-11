@@ -40,13 +40,12 @@ const cases = [
 function runSimulation({ elementOrder, solverMethod }) {
   const model = new FEAScriptModel();
 
-  model.setModelConfig("heatConductionScript");
+  model.setModelConfig("heatConduction", { solver: { method: solverMethod } });
   model.setGeometry({ line: 0.15 });
   model.setMeshConfig({ elementOrder, divisions: 10 });
 
-  model.addBoundaryCondition("left", ["convection", 1, 25]);
-  model.addBoundaryCondition("right", ["constantTemperature", 5]);
-  model.setSolverMethod(solverMethod);
+  model.addBoundaryCondition("left", { type: "convection", h: 1, ambientTemperature: 25 });
+  model.addBoundaryCondition("right", { type: "constantTemperature", temperature: 5 });
 
   return model.solve({ maxIterations: 200000, tolerance: 1e-8 });
 }

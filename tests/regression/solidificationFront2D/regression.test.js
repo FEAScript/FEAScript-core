@@ -100,15 +100,14 @@ function setMeshSource(model, source) {
 function runSimulation(meshSource, solverMethod) {
   const model = new FEAScriptModel();
 
-  model.setModelConfig("frontPropagationScript");
+  model.setModelConfig("frontPropagation", { solver: { method: solverMethod } });
   setMeshSource(model, meshSource);
 
   // Fixed bottom, left and right sides, free top side; the boundary names are the same for both mesh kinds
-  model.addBoundaryCondition("bottom", ["constantValue", 0]);
-  model.addBoundaryCondition("left", ["constantValue", 0]);
-  model.addBoundaryCondition("top", ["zeroGradient"]);
-  model.addBoundaryCondition("right", ["constantValue", 0]);
-  model.setSolverMethod(solverMethod);
+  model.addBoundaryCondition("bottom", { type: "constantValue", value: 0 });
+  model.addBoundaryCondition("left", { type: "constantValue", value: 0 });
+  model.addBoundaryCondition("top", { type: "zeroGradient" });
+  model.addBoundaryCondition("right", { type: "constantValue", value: 0 });
 
   return model.solve();
 }

@@ -85,15 +85,16 @@ function setMeshSource(model, source) {
 function runSimulation(meshSource, modelOptions = {}) {
   const model = new FEAScriptModel();
 
-  model.setModelConfig("creepingFlowScript", modelOptions);
+  model.setModelConfig("creepingFlow", { solver: { method: "lusolve" }, ...modelOptions });
   setMeshSource(model, meshSource);
   ["bottom", "left", "top", "right"].forEach((boundaryName) => {
     model.addBoundaryCondition(
       boundaryName,
-      boundaryName === "top" ? ["constantVelocity", 1, 0] : ["constantVelocity", 0, 0],
+      boundaryName === "top"
+        ? { type: "constantVelocity", u: 1, v: 0 }
+        : { type: "constantVelocity", u: 0, v: 0 },
     );
   });
-  model.setSolverMethod("lusolve");
 
   return model.solve();
 }

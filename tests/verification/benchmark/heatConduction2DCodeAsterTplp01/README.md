@@ -6,7 +6,7 @@
 
 This test replicates the Code_Aster validation test TPLP01
 ([V4.05.001](https://ericca.uqtr.ca/fr12.4/man_v/v4/v4.05.001.pdf)) and checks that
-`heatConductionScript` handles a domain with a re-entrant corner, where the temperature gradient is
+`heatConduction` handles a domain with a re-entrant corner, where the temperature gradient is
 singular, on Gmsh meshes of both quadratic triangles and quadratic quadrilaterals.
 
 TPLP01 takes the problem and its reference values from the VPCS validation guide (Société Française

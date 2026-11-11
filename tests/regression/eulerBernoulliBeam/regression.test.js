@@ -48,7 +48,8 @@ const appliedForce = -2500;
 function runSimulation() {
   const model = new FEAScriptModel();
 
-  model.setModelConfig("eulerBernoulliBeamScript", {
+  model.setModelConfig("eulerBernoulliBeam", {
+    solver: { method: "lusolve" },
     coefficientFunctions: {
       EI: (x) => EI,
       q: (x) => (x <= distributedLoadSpan[1] ? distributedLoad : 0),
@@ -57,13 +58,12 @@ function runSimulation() {
   model.setGeometry({ line: 10 });
   model.setMeshConfig({ elementOrder: "linear", divisions: 2 });
 
-  model.addBoundaryCondition("1", [["fixed"]]);
-  model.addBoundaryCondition("2", [["pinned"], ["moment", appliedMoment]]);
+  model.addBoundaryCondition("1", { type: "fixed" });
+  model.addBoundaryCondition("2", [{ type: "pinned" }, { type: "moment", moment: appliedMoment }]);
   model.addBoundaryCondition("3", [
-    ["spring", springConstant],
-    ["force", appliedForce],
+    { type: "spring", stiffness: springConstant },
+    { type: "force", force: appliedForce },
   ]);
-  model.setSolverMethod("lusolve");
 
   return model.solve();
 }

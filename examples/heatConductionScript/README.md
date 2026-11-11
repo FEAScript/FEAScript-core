@@ -54,7 +54,7 @@ functions of the physical coordinates. They are evaluated at each Gauss point du
 isoparametric mapping loop, so any piecewise or smooth spatial variation is fully supported.
 
 ```javascript
-model.setModelConfig("heatConductionScript", {
+model.setModelConfig("heatConduction", {
   coefficientFunctions: {
     // Scalar (uniform)
     thermalConductivity: 10,
