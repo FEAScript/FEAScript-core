@@ -144,6 +144,13 @@ All notable changes to FEAScript-core are documented in this file. The format is
   the condition applied last won, so one corner of a moving lid leaked fluid through a side wall. With the
   pressure fixed at one node, this gave a spurious flow near that node. Zero-velocity (no-slip) conditions now
   take precedence at shared nodes, and the lid-driven cavity is now mirror-symmetric
+- Sparse LU (`lusolve`) solves after the first in a process ran 2 to 3 times slower in Node.js and Chromium
+  ([#136](https://github.com/FEAScript/FEAScript-core/issues/136)). This includes every Newton-Raphson iteration
+  after the first. The inner loop of the mathjs sparse LU calls generic functions that V8 stops inlining after the
+  first factorization. The bundles now use plain arithmetic there, with the same solution bit for bit. On one core
+  of an AMD Ryzen 5 9600X, a repeated solve of the 32×32 lid-driven cavity takes 1.3 s instead of 3.2 s. Firefox
+  was not affected. Loading FEAScript from `src/` with mathjs from npm still has the slowdown, until mathjs fixes
+  it ([josdejong/mathjs#3792](https://github.com/josdejong/mathjs/issues/3792))
 
 ## [0.3.1] - 2026-10-30
 

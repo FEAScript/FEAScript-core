@@ -40,7 +40,29 @@ const umdScriptUrlIntro =
   'document.currentScript.src ? document.currentScript.src : typeof location !== "undefined" ? ' +
   'location.href : typeof __filename !== "undefined" ? "file://" + __filename : "";';
 
+// The inner loop of the mathjs sparse LU (csSpsolve) calls the generic divideScalar, multiply and subtract for every
+// entry. In V8 (Node.js, Chromium), once csAmd has called multiply with sparse matrices, these calls are no longer
+// inlined, and every LU solve after the first in a process (each Newton-Raphson iteration, each repeated solve) ran 2
+// to 3 times slower. FEAScript only gives mathjs matrices of numbers, so plain arithmetic gives the same result, bit
+// for bit. Reported to mathjs as josdejong/mathjs#3792; drop this once a mathjs release fixes it
+const csSpsolveNumbers = {
+  name: "mathjs-csspsolve-numbers",
+  transform(code, id) {
+    if (!/mathjs[\\/]lib[\\/]esm[\\/]function[\\/]algebra[\\/]sparse[\\/]csSpsolve\.js$/.test(id)) return null;
+    const replacements = [
+      ["x[j] = divideScalar(x[j], gvalues[lo ? p0 : p1 - 1]);", "x[j] = x[j] / gvalues[lo ? p0 : p1 - 1];"],
+      ["x[i] = subtract(x[i], multiply(gvalues[p], x[j]));", "x[i] = x[i] - gvalues[p] * x[j];"],
+    ];
+    for (const [from, to] of replacements) {
+      if (!code.includes(from)) this.error(`mathjs csSpsolve has changed; review the plain-arithmetic patch: ${from}`);
+      code = code.replace(from, to);
+    }
+    return { code, map: null };
+  },
+};
+
 const plugins = [
+  csSpsolveNumbers,
   rewriteWorkerUrl,
   umdScriptUrl,
   resolve({
