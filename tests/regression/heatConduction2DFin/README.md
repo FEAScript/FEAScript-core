@@ -24,8 +24,8 @@ It replicates the physical problem set up in
 | Top (y = 2)    | Convection, h = 1, T∞ = 20 °C    |
 | Left (x = 0)   | Symmetry (zero flux)             |
 
-The boundary keys differ between the meshes: the structured mesh uses 0 bottom, 1 left, 2 top,
-3 right, and the Gmsh meshes use 0 bottom, 1 right, 2 top, 3 left.
+The boundaries are keyed by name (bottom, right, top, left) for the structured mesh and the Gmsh
+meshes alike.
 
 | Mesh                                                             | Solver methods                 |
 | ---------------------------------------------------------------- | ------------------------------ |

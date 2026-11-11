@@ -25,7 +25,7 @@
 ## Features
 
 - **Physics models:** creeping (Stokes) flow, Euler–Bernoulli beam bending, front propagation, heat conduction, general-form PDE (linear and nonlinear)
-- **Meshing:** simple 1D/2D mesh generation, triangle mesh generation in a polygon with holes (Delaunay refinement, with named boundaries), unstructured mesh import from Gmsh (`.msh`) with quadrilateral and triangular elements (linear and quadratic)
+- **Geometry and meshing:** a geometry (line, rectangle, or polygon with holes) with named boundaries, meshed with quadrilaterals (mapped grid) or triangles (Delaunay refinement, graded by position), and unstructured mesh import from Gmsh (`.msh`) with quadrilateral and triangular elements (linear and quadratic)
 - **Solvers:** frontal, Jacobi (CPU/WebGPU) and LU, Newton–Raphson for nonlinear systems
 - **Spatially varying coefficients:** `thermalConductivity(x, y)` and `heatSource(x, y)` can be scalars or functions, evaluated at each Gauss point
 - **Performance:** web worker support for multi-threaded computation
@@ -133,18 +133,18 @@ Here is a minimal browser-based example using the FEAScript API. Adapt paths, ph
       // Select physics/PDE
       model.setModelConfig("physicsModel"); // Example: "heatConductionScript"
 
-      // Configure the mesh
+      // Define the geometry: a line, a rectangle, or a polygon with holes and named boundaries
+      model.setGeometry({ rectangle: [1.0, 0.5] }); // Boundaries "bottom", "right", "top", "left"
+
+      // Configure the mesh: quadrilaterals (rectangles) or triangles (any polygon), and the element size
       model.setMeshConfig({
-        meshDimension: "1D", // Choose either "1D" or "2D"
+        elements: "quadrilaterals", // Choose either "quadrilaterals" or "triangles"
         elementOrder: "linear", // Choose either "linear" or "quadratic"
-        numElementsX: 10, // Number of elements in x-direction
-        numElementsY: 6, // Number of elements in y-direction (for 2D only)
-        maxX: 1.0, // Domain length in x-direction
-        maxY: 0.5, // Domain length in y-direction (for 2D only)
+        size: 0.1, // Length of an element side (or divisions: [10, 5] for quadrilaterals)
       });
 
-      // Add boundary conditions with appropriate parameters
-      model.addBoundaryCondition("boundaryIndex", ["conditionType" /* parameters */]); // Example boundary condition
+      // Add boundary conditions by boundary name, with the parameters of the condition type
+      model.addBoundaryCondition("top", ["conditionType" /* parameters */]); // Example boundary condition
 
       // Solve the problem
       const { solutionVector, nodesCoordinates } = model.solve();
@@ -158,7 +158,7 @@ Here is a minimal browser-based example using the FEAScript API. Adapt paths, ph
 
 - "physicsModel" should be replaced with an actual solver type such as "heatConductionScript" for heat conduction problems
 - "conditionType" should be replaced with an actual boundary condition type such as "constantTemperature"
-- "boundaryIndex" should be replaced with a string identifying the boundary
+- "top" is the name of a boundary of the geometry: "left" and "right" for a line, "bottom", "right", "top" and "left" for a rectangle, the names you give the edges of a polygon, or the names of the physical groups of a Gmsh mesh
 
 Furthermore, the scripts under `examples/` contain Node.js examples. You can run them from the `FEAScript-core/` directory as follows:
 

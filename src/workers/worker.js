@@ -106,9 +106,30 @@ export class FEAScriptWorker {
    * @param {object} meshConfig - The mesh configuration to set
    * @returns {Promise<boolean>} Resolves when the configuration is set
    */
+  /**
+   * Function to set the geometry in the worker
+   * @param {object} geometry - The geometry, as in FEAScriptModel.setGeometry
+   * @returns {Promise<boolean>} Resolves when the geometry is set
+   */
+  async setGeometry(geometry) {
+    await this.ensureInitialized();
+    return this.feaWorker.setGeometry(geometry);
+  }
+
+  /**
+   * Function to set the mesh in the worker directly (a mesh of importGmshMesh, generateTriangleMesh or
+   * generateQuadrilateralMesh)
+   * @param {object} mesh - The mesh object, as in FEAScriptModel.setMesh
+   * @returns {Promise<boolean>} Resolves when the mesh is set
+   */
+  async setMesh(mesh) {
+    await this.ensureInitialized();
+    return this.feaWorker.setMesh(mesh);
+  }
+
   async setMeshConfig(meshConfig) {
     await this._ensureReady();
-    return this.feaWorker.setMeshConfig(meshConfig);
+    return this.feaWorker.setMeshConfig(serializeFunctions(meshConfig));
   }
 
   /**

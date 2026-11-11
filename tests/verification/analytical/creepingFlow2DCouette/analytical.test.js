@@ -31,11 +31,21 @@ const TOLERANCE = 1e-10;
 const LID_VELOCITY = 1;
 const HEIGHT = 2;
 
-async function runSimulation(meshConfig, boundaryConditions) {
+// A mesh source is either a geometry with its mesh configuration, or a mesh object (e.g. imported from Gmsh)
+function setMeshSource(model, source) {
+  if (source.mesh) {
+    model.setMesh(source.mesh);
+  } else {
+    model.setGeometry(source.geometry);
+    model.setMeshConfig(source.meshConfig);
+  }
+}
+
+async function runSimulation(meshSource, boundaryConditions) {
   const model = new FEAScriptModel();
 
   model.setModelConfig("creepingFlowScript");
-  model.setMeshConfig(meshConfig);
+  setMeshSource(model, meshSource);
   Object.entries(boundaryConditions).forEach(([boundaryKey, condition]) => {
     model.addBoundaryCondition(boundaryKey, condition);
   });
@@ -97,46 +107,33 @@ basicLog("");
 basicLog("================================");
 basicLog("Starting analytical test for creeping flow in 2D (Couette flow)...");
 
-// Q2-Q1 quadrilaterals (structured mesh: 0 bottom, 1 left, 2 top, 3 right)
+const boundaryConditions = {
+  bottom: ["constantVelocity", 0, 0],
+  left: ["stressFree"],
+  top: ["constantVelocity", LID_VELOCITY, 0],
+  right: ["stressFree"],
+};
+
+// Q2-Q1 quadrilaterals (structured mesh)
 checkCouette(
   "Q2-Q1 quadrilaterals",
   await runSimulation(
     {
-      meshDimension: "2D",
-      elementOrder: "quadratic",
-      numElementsX: 4,
-      numElementsY: 2,
-      maxX: 4,
-      maxY: HEIGHT,
+      geometry: { rectangle: [4, HEIGHT] },
+      meshConfig: { elements: "quadrilaterals", elementOrder: "quadratic", divisions: [4, 2] },
     },
-    {
-      0: ["constantVelocity", 0, 0],
-      1: ["stressFree"],
-      2: ["constantVelocity", LID_VELOCITY, 0],
-      3: ["stressFree"],
-    },
+    boundaryConditions,
   ),
 );
 
-// Gmsh meshes (physical tags: 1 bottom, 2 right, 3 top, 4 left, stored as boundary keys 0-3)
+// Gmsh meshes (physical groups bottom, right, top, left)
 for (const [label, meshFile] of [
   ["Gmsh Q2-Q1 quadrilaterals", "rect_quad_quadratic.msh"],
   ["Gmsh P2-P1 triangles", "rect_triang_quadratic.msh"],
 ]) {
   const meshContent = fs.readFileSync(path.join(meshesDirectory, meshFile), "utf8");
-  const parsedMesh = await importGmshMesh({ text: async () => meshContent });
-  checkCouette(
-    label,
-    await runSimulation(
-      { parsedMesh, meshDimension: "2D", elementOrder: "quadratic" },
-      {
-        0: ["constantVelocity", 0, 0],
-        1: ["stressFree"],
-        2: ["constantVelocity", LID_VELOCITY, 0],
-        3: ["stressFree"],
-      },
-    ),
-  );
+  const mesh = await importGmshMesh({ text: async () => meshContent });
+  checkCouette(label, await runSimulation({ mesh }, boundaryConditions));
 }
 
 basicLog("");

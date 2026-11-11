@@ -25,6 +25,7 @@
 
 import { assembleEulerBernoulliBeamMat } from "../../../../src/physics/eulerBernoulliBeam.js";
 import { prepareMesh } from "../../../../src/mesh/meshUtils.js";
+import { generateLineMesh } from "../../../../src/mesh/structuredMesh.js";
 import { solveLinearSystem } from "../../../../src/solvers/linearSystemSolver.js";
 import { basicLog, errorLog } from "../../../../src/utilities/logging.js";
 
@@ -77,10 +78,7 @@ for (const [EI, L] of [
   [7.5e4, 2.5],
 ]) {
   const meshData = prepareMesh({
-    meshDimension: "1D",
-    elementOrder: "linear",
-    numElementsX: 1,
-    maxX: L,
+    getMesh: () => generateLineMesh(L, { elementOrder: "linear", divisions: 1 }),
   });
   const { jacobianMatrix } = assembleEulerBernoulliBeamMat(meshData, {}, { EI: () => EI });
   const diff = maxAbsDiff(jacobianMatrix.toDense(), closedFormBeamStiffness(EI, L));
@@ -95,10 +93,7 @@ const EI = 1.0e5;
 const P = -1000; // Downward tip load
 
 const meshData = prepareMesh({
-  meshDimension: "1D",
-  elementOrder: "linear",
-  numElementsX: 1,
-  maxX: L,
+  getMesh: () => generateLineMesh(L, { elementOrder: "linear", divisions: 1 }),
 });
 const { jacobianMatrix, residualVector } = assembleEulerBernoulliBeamMat(
   meshData,

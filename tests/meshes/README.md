@@ -16,14 +16,15 @@ Mesh files are named `<geometry>_<element shape>_<element order>.msh`, with elem
 | `rect_triang_linear.msh`    | 3-node triangles, 2-node lines      | `linear`       |
 | `rect_triang_quadratic.msh` | 6-node triangles, 3-node lines      | `quadratic`    |
 
-Physical groups (stored as boundary keys `tag − 1`), the same in all `rect` meshes:
+Physical groups, the same in all `rect` meshes. The boundary conditions are keyed by the name; the tag minus
+one is kept as a deprecated alias:
 
-| Physical tag | Name   | Boundary key |
-| ------------ | ------ | ------------ |
-| 1            | bottom | 0            |
-| 2            | right  | 1            |
-| 3            | top    | 2            |
-| 4            | left   | 3            |
+| Physical tag | Name   | Deprecated key |
+| ------------ | ------ | -------------- |
+| 1            | bottom | 0              |
+| 2            | right  | 1              |
+| 3            | top    | 2              |
+| 4            | left   | 3              |
 | 5            | domain | —            |
 
 ## Regenerating the meshes

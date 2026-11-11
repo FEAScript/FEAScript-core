@@ -13,6 +13,8 @@ import Delaunator from "delaunator";
 import { incircle, orient2d } from "robust-predicates";
 
 // Internal imports
+import { toMeshObject } from "../io/gmshReader.js";
+import { insideLoops, readGeometry, shown } from "./geometry.js";
 import { FEAScriptError } from "../utilities/errors.js";
 import { basicLog, debugLog } from "../utilities/logging.js";
 
@@ -43,145 +45,65 @@ const EMBEDDED = 3; // A point of the input that must become a node
 const MAX_PASSES = 10000;
 
 /**
- * Function to generate a mesh of triangles in a polygon with holes, with the result in the format of
- * importGmshMesh, so that it is used with `model.setMeshConfig({ parsedMesh })`
- * @param {object} options - The geometry and the mesh settings
- * @param {array|object} options.polygon - The outer boundary: the points [x, y] of a polygon, or
- *  { points, boundaries } where `boundaries` is the name of all its edges, or one name per edge (the edge i goes
- *  from point i to point i + 1, and the last edge closes the polygon). A name groups the edges into a boundary
- *  for the boundary conditions. Without names, every edge is in the boundary "boundary"
- * @param {array} [options.holes=[]] - The holes, each a polygon in the same format; the default name is "hole"
- * @param {array} [options.points=[]] - Points [x, y] inside the domain, or on its boundary, that become nodes
- * @param {number|function} [options.maxArea] - The largest element area, as a number or as a function (x, y) of
- *  the element center, for a mesh size that varies. Without it, only the angles are refined
+ * Function to generate a mesh of triangles in a polygon with holes, in the form that `model.setMesh(mesh)` takes
+ * (the same as the meshes of importGmshMesh and generateQuadrilateralMesh)
+ * @param {object} geometry - The geometry, as given to setGeometry: `{ rectangle: [width, height] }` or
+ *  `{ shapes: [polygon], holes, points }`, where a polygon is its points [x, y] or `{ points, boundaries }` with
+ *  one boundary name for all its edges or one name per edge (the edge i goes from point i to point i + 1, and
+ *  the last edge closes the polygon). The edges with the same name form one boundary. Without names, the edges
+ *  of the shape are in the boundary "boundary" and those of a hole in "hole". Points inside the domain, or on
+ *  its boundary, become nodes
+ * @param {object} [options] - The mesh settings
+ * @param {number|function} [options.size] - The length of an element side, as a number or as a function (x, y)
+ *  of the element center for a mesh size that varies; the largest element area is that of the equilateral
+ *  triangle of this side. Without it, only the angles are refined
  * @param {number} [options.minAngle=20] - The smallest angle of the elements, in degrees. Ruppert's refinement
  *  always stops below 20.7 degrees, and usually up to about 33; above that, it may reach maxNodes
  * @param {string} [options.elementOrder="linear"] - "linear" (3-node) or "quadratic" (6-node) triangles
  * @param {number} [options.maxNodes=100000] - The limit on the number of vertices (the corner nodes of the
  *  elements) before the refinement stops with an error
- * @returns {object} The mesh in the format of importGmshMesh. The boundaries are the physical groups, tagged 1, 2,
- *  3... in the order their names first appear (outer polygon, then holes), so the boundary keys of the model are
- *  "0", "1", "2"... in that order
- * @throws {FEAScriptError} "INVALID_INPUT" for a polygon that is not simple, a point outside the domain or a
- *  setting out of range; "MESH_TOO_FINE" when the refinement passes maxNodes
+ * @returns {object} The mesh object: the boundaries are keyed by their names
+ * @throws {FEAScriptError} "INVALID_INPUT" for a polygon that is not simple, a hole or a point outside the
+ *  domain or a setting out of range; "MESH_TOO_FINE" when the refinement passes maxNodes
  */
-export function generateTriangleMesh({
-  polygon,
-  holes = [],
-  points = [],
-  maxArea,
-  minAngle = 20,
-  elementOrder = "linear",
-  maxNodes = 100000,
-} = {}) {
-  const input = readInput({ polygon, holes, points, maxArea, minAngle, elementOrder, maxNodes });
+export function generateTriangleMesh(
+  geometry,
+  { size, minAngle = 20, elementOrder = "linear", maxNodes = 100000 } = {},
+) {
+  const normalized = geometry?.kind ? geometry : readGeometry(geometry);
+  if (normalized.meshDimension !== "2D") {
+    throw new FEAScriptError(
+      "INVALID_INPUT",
+      "Triangle elements need a 2D geometry: a rectangle or a shape.",
+    );
+  }
+  // The largest element area from the element side: the area of the equilateral triangle of that side
+  const areaOf = (side) => (Math.sqrt(3) / 4) * side * side;
+  let maxArea;
+  if (typeof size === "function") {
+    maxArea = (x, y) => areaOf(size(x, y));
+  } else if (size !== undefined) {
+    if (!(typeof size === "number" && size > 0)) {
+      throw new FEAScriptError(
+        "INVALID_INPUT",
+        `size must be a positive number or a function (x, y) => size; got ${shown(size)}`,
+      );
+    }
+    maxArea = areaOf(size);
+  }
+  const input = readInput(normalized, { maxArea, minAngle, elementOrder, maxNodes });
   const triangulation = refine(input);
   const parsedMesh = toParsedMesh(input, triangulation);
+  const mesh = toMeshObject(parsedMesh);
+  mesh.aliases = { ...normalized.aliases };
   basicLog(
-    `Generated a triangle mesh of ${parsedMesh.nodesXCoordinates.length} nodes and ` +
-      `${parsedMesh.nodalNumbering.triangleElements.length} ${elementOrder} elements`,
+    `Generated a triangle mesh of ${mesh.nodesXCoordinates.length} nodes and ` +
+      `${mesh.nodalNumbering.length} ${elementOrder} elements`,
   );
-  return parsedMesh;
+  return mesh;
 }
 
 // ───────────────────────────────── Input ─────────────────────────────────
-
-const isPoint = (point) =>
-  Array.isArray(point) && point.length === 2 && Number.isFinite(point[0]) && Number.isFinite(point[1]);
-
-const shown = (value) => {
-  if (typeof value === "function") return "a function";
-  if (value === undefined) return "undefined";
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-};
-
-/**
- * Function to read one polygon of the input
- * @returns {object|null} The points and one boundary name per edge, or null (with the problem recorded)
- */
-function readPolygon(value, label, defaultName, problems) {
-  let pointList = value;
-  let boundaries = defaultName;
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    pointList = value.points;
-    boundaries = value.boundaries ?? defaultName;
-  }
-  if (!Array.isArray(pointList)) {
-    problems.push(
-      `${label} must be an array of [x, y] points, or { points, boundaries }; got ${shown(value)}`,
-    );
-    return null;
-  }
-  const pts = pointList.slice();
-  const bad = pts.findIndex((point) => !isPoint(point));
-  if (bad !== -1) {
-    problems.push(`${label}[${bad}] must be an [x, y] pair of finite numbers; got ${shown(pts[bad])}`);
-    return null;
-  }
-  // A polygon given closed, with its first point repeated at the end
-  if (pts.length > 1 && pts[0][0] === pts[pts.length - 1][0] && pts[0][1] === pts[pts.length - 1][1])
-    pts.pop();
-  if (pts.length < 3) {
-    problems.push(`${label} needs at least 3 points; got ${pts.length}`);
-    return null;
-  }
-  let names;
-  if (typeof boundaries === "string" && boundaries !== "") {
-    names = pts.map(() => boundaries);
-  } else if (
-    Array.isArray(boundaries) &&
-    boundaries.length === pts.length &&
-    boundaries.every((name) => typeof name === "string" && name !== "")
-  ) {
-    names = boundaries;
-  } else {
-    problems.push(
-      `${label}.boundaries must be a name, or one name for each of the ${pts.length} edges ` +
-        `(the edge from point i to point i + 1); got ${shown(boundaries)}`,
-    );
-    return null;
-  }
-  return { label, points: pts, names };
-}
-
-/**
- * Function to test whether two segments meet, including at a point of one of them
- */
-function segmentsMeet(ax, ay, bx, by, cx, cy, dx, dy) {
-  const d1 = orient2d(cx, cy, dx, dy, ax, ay);
-  const d2 = orient2d(cx, cy, dx, dy, bx, by);
-  const d3 = orient2d(ax, ay, bx, by, cx, cy);
-  const d4 = orient2d(ax, ay, bx, by, dx, dy);
-  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return true;
-  const between = (px, py, qx, qy, rx, ry) =>
-    Math.min(px, qx) <= rx && rx <= Math.max(px, qx) && Math.min(py, qy) <= ry && ry <= Math.max(py, qy);
-  if (d1 === 0 && between(cx, cy, dx, dy, ax, ay)) return true;
-  if (d2 === 0 && between(cx, cy, dx, dy, bx, by)) return true;
-  if (d3 === 0 && between(ax, ay, bx, by, cx, cy)) return true;
-  if (d4 === 0 && between(ax, ay, bx, by, dx, dy)) return true;
-  return false;
-}
-
-/**
- * Function to test whether a point is inside the domain (even-odd rule over the outer polygon and the holes)
- */
-function insideLoops(loops, X, Y, x, y) {
-  let inside = false;
-  for (const ids of loops) {
-    for (let i = 0, j = ids.length - 1; i < ids.length; j = i++) {
-      const xi = X[ids[i]];
-      const yi = Y[ids[i]];
-      const xj = X[ids[j]];
-      const yj = Y[ids[j]];
-      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
-    }
-  }
-  return inside;
-}
 
 /**
  * Function to check the input and turn it into vertices, boundary segments and boundary tags
@@ -189,8 +111,9 @@ function insideLoops(loops, X, Y, x, y) {
  *  during refinement), the input segments (with their tags), the loops (vertex ids, for the inside test), the
  *  physical groups, the size of the domain and the options
  */
-function readInput(options) {
-  const { polygon, holes, points, maxArea, minAngle, elementOrder, maxNodes } = options;
+function readInput(geometry, options) {
+  const { maxArea, minAngle, elementOrder, maxNodes } = options;
+  const { points } = geometry;
   const problems = [];
 
   if (!(typeof minAngle === "number" && minAngle >= 0 && minAngle < 60)) {
@@ -210,26 +133,7 @@ function readInput(options) {
     problems.push(`maxNodes must be a positive integer; got ${shown(maxNodes)}`);
   }
 
-  const polygons = [];
-  const outline = readPolygon(polygon, "polygon", "boundary", problems);
-  if (outline) polygons.push(outline);
-  if (!Array.isArray(holes)) {
-    problems.push(`holes must be an array of polygons; got ${shown(holes)}`);
-  } else {
-    holes.forEach((hole, index) => {
-      const loop = readPolygon(hole, `holes[${index}]`, "hole", problems);
-      if (loop) polygons.push(loop);
-    });
-  }
-  if (!Array.isArray(points)) {
-    problems.push(`points must be an array of [x, y] pairs; got ${shown(points)}`);
-  } else {
-    points.forEach((point, index) => {
-      if (!isPoint(point)) {
-        problems.push(`points[${index}] must be an [x, y] pair of finite numbers; got ${shown(point)}`);
-      }
-    });
-  }
+  const polygons = [...geometry.shapes, ...geometry.holes];
   FEAScriptError.throwIfAny("INVALID_INPUT", problems);
 
   // Vertices: the polygon points, merged when two coincide (e.g. a hole touching the outer polygon at a point)
@@ -280,33 +184,6 @@ function readInput(options) {
   const X = vertices.x;
   const Y = vertices.y;
   const edgeText = ({ a, b }) => `from (${X[a]}, ${Y[a]}) to (${X[b]}, ${Y[b]})`;
-
-  // The polygons must be simple: no two edges cross, touch or overlap
-  for (let i = 0; i < inputSegments.length; i++) {
-    const s = inputSegments[i];
-    for (let j = i + 1; j < inputSegments.length; j++) {
-      const t = inputSegments[j];
-      if ((s.a === t.a && s.b === t.b) || (s.a === t.b && s.b === t.a)) {
-        problems.push(`the boundary edge ${edgeText(s)} is given twice`);
-        continue;
-      }
-      const shared = [s.a, s.b].find((id) => id === t.a || id === t.b);
-      if (shared === undefined) {
-        if (segmentsMeet(X[s.a], Y[s.a], X[s.b], Y[s.b], X[t.a], Y[t.a], X[t.b], Y[t.b])) {
-          problems.push(`the boundary edge ${edgeText(s)} crosses or touches the edge ${edgeText(t)}`);
-        }
-      } else {
-        const p = s.a === shared ? s.b : s.a;
-        const q = t.a === shared ? t.b : t.a;
-        const collinear = orient2d(X[shared], Y[shared], X[p], Y[p], X[q], Y[q]) === 0;
-        const sameWay = (X[p] - X[shared]) * (X[q] - X[shared]) + (Y[p] - Y[shared]) * (Y[q] - Y[shared]) > 0;
-        if (collinear && sameWay) {
-          problems.push(`the boundary edges ${edgeText(s)} and ${edgeText(t)} overlap`);
-        }
-      }
-    }
-  }
-  FEAScriptError.throwIfAny("INVALID_INPUT", problems);
 
   const box = { minX: Math.min(...X), maxX: Math.max(...X), minY: Math.min(...Y), maxY: Math.max(...Y) };
   const scale = Math.hypot(box.maxX - box.minX, box.maxY - box.minY);

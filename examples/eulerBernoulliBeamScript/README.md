@@ -45,12 +45,8 @@ always interpolated with cubic Hermite shape functions internally, independent o
 (a "subparametric" element formulation, standard for beam elements).
 
 ```javascript
-model.setMeshConfig({
-  meshDimension: "1D",
-  elementOrder: "linear",
-  numElementsX: 2,
-  maxX: 10,
-});
+model.setGeometry({ line: 10 });
+model.setMeshConfig({ elementOrder: "linear", divisions: 2 });
 ```
 
 ### Coefficient functions

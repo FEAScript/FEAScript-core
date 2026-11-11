@@ -11,7 +11,8 @@
 import { newtonRaphson } from "./solvers/newtonRaphson.js";
 import { solveLinearSystem } from "./solvers/linearSystemSolver.js";
 import { solveLinearSystemAsync } from "./solvers/linearSystemSolver.js";
-import { prepareMesh, resolveMeshConfig } from "./mesh/meshUtils.js";
+import { generateMesh, prepareMesh, readMesh, readMeshConfig } from "./mesh/meshUtils.js";
+import { readGeometry, translateOldMeshConfig } from "./mesh/geometry.js";
 import { assembleFrontPropagationMat, assembleFrontPropagationFront } from "./physics/frontPropagation.js";
 import {
   assembleGeneralFormPDEMat,
@@ -81,7 +82,9 @@ const supportedSolverMethods = {
 export class FEAScriptModel {
   constructor() {
     this.solverConfig = null;
-    this.meshConfig = {};
+    this.geometry = null; // The normalized geometry of setGeometry
+    this.meshConfig = null; // The mesh configuration of setMeshConfig
+    this.mesh = null; // The mesh object: set by setMesh, or generated from the geometry at the first solve
     this.boundaryConditions = {};
     this.solverMethod = "lusolve"; // Default solver method
     this.coefficientFunctions = null; // Add storage for coefficient functions
@@ -122,10 +125,119 @@ export class FEAScriptModel {
     debugLog(`solverConfig set to ${modelConfig}`);
   }
 
+  /**
+   * Method to set the geometry of the domain, which setMeshConfig then meshes
+   * @param {object} geometry - `{ line: length }` (1D, boundaries "left" and "right"), `{ rectangle: [width,
+   *  height] }` (boundaries "bottom", "right", "top", "left") or `{ shapes: [polygon], holes, points }`, a
+   *  polygon with holes whose edges are named (see generateTriangleMesh). The boundary conditions are keyed by
+   *  the boundary names
+   */
+  setGeometry(geometry) {
+    this.geometry = readGeometry(geometry);
+    this.mesh = null;
+    debugLog(`geometry set: ${this.geometry.kind}, boundaries ${this.geometry.boundaryNames.join(", ")}`);
+  }
+
+  /**
+   * Method to set how the geometry is meshed
+   * @param {object} meshConfig - The mesh settings
+   * @param {string} [meshConfig.elements="quadrilaterals"] - "quadrilaterals" (a rectangle or a convex
+   *  four-sided shape, mapped from a grid) or "triangles" (any shape with holes, by Delaunay refinement)
+   * @param {string} [meshConfig.elementOrder="linear"] - "linear" or "quadratic"
+   * @param {number|function} [meshConfig.size] - The length of an element side; for triangles also a function
+   *  (x, y) of position, for a mesh size that varies
+   * @param {number|number[]} [meshConfig.divisions] - Instead of size: the number of elements of a line, or
+   *  [nx, ny] along the bottom and the left side of a quadrilateral
+   * @param {number} [meshConfig.minAngle=20] - Triangles: the smallest angle of the elements, in degrees
+   * @param {number} [meshConfig.maxNodes=100000] - Triangles: the limit on the number of vertices
+   */
   setMeshConfig(meshConfig) {
-    // Settings that a parsed mesh defines (dimension, element order) are filled in from the mesh
-    this.meshConfig = resolveMeshConfig(meshConfig);
-    debugLog(`meshConfig set with dimensions: ${this.meshConfig.meshDimension}`);
+    if (meshConfig && typeof meshConfig === "object") {
+      // The forms of FEAScript 0.3, kept for one minor release with a warning
+      if (meshConfig.parsedMesh !== undefined) {
+        warnLog(
+          "setMeshConfig({ parsedMesh }) is deprecated and will be removed in a future version. Use setMesh(mesh).",
+        );
+        this.setMesh(meshConfig.parsedMesh);
+        return;
+      }
+      if (meshConfig.meshDimension !== undefined || meshConfig.numElementsX !== undefined) {
+        const { geometry, meshConfig: newMeshConfig, aliases } = translateOldMeshConfig(meshConfig);
+        warnLog(
+          `setMeshConfig with meshDimension, numElementsX and maxX is deprecated and will be removed in a future version. Use setGeometry(${JSON.stringify(
+            geometry,
+          )}) and setMeshConfig(${JSON.stringify(newMeshConfig)}), with the boundaries keyed by name.`,
+        );
+        this.setGeometry(geometry);
+        if (aliases) this.geometry.aliases = aliases;
+        this.setMeshConfig(newMeshConfig);
+        return;
+      }
+    }
+    this.meshConfig = readMeshConfig(meshConfig);
+    this.mesh = null;
+    debugLog(`meshConfig set: ${JSON.stringify(this.meshConfig)}`);
+  }
+
+  /**
+   * Method to set the mesh directly: a mesh imported with importGmshMesh, or generated with
+   * generateTriangleMesh or generateQuadrilateralMesh. The geometry and the mesh configuration are not used
+   * @param {object} mesh - The mesh object
+   */
+  setMesh(mesh) {
+    this.mesh = readMesh(mesh);
+    basicLog(
+      `Mesh set: ${this.mesh.nodesXCoordinates.length} nodes, ${this.mesh.nodalNumbering.length} ${
+        this.mesh.elementOrder
+      } elements, boundaries ${Object.keys(this.mesh.boundaryElements).join(", ")}`,
+    );
+  }
+
+  /**
+   * Method to get the mesh object of the model, generating it from the geometry and the mesh configuration at
+   * the first call
+   * @returns {object} The mesh object
+   * @throws {FEAScriptError} INVALID_INPUT when no mesh can be made
+   */
+  getMesh() {
+    if (this.mesh) return this.mesh;
+    if (!this.geometry || !this.meshConfig) {
+      throw new FEAScriptError(
+        "INVALID_INPUT",
+        "No mesh is set. Call setGeometry() and setMeshConfig(), or setMesh() with an imported or generated mesh.",
+      );
+    }
+    this.mesh = generateMesh(this.geometry, this.meshConfig);
+    return this.mesh;
+  }
+
+  /**
+   * Method to get the dimension of the mesh, "1D" or "2D", or null when no mesh is set
+   * @returns {string|null}
+   */
+  getMeshDimension() {
+    return this.mesh?.meshDimension ?? this.geometry?.meshDimension ?? null;
+  }
+
+  /**
+   * Method to get the boundary conditions keyed by the boundary names of the mesh, with the deprecated numeric
+   * keys of FEAScript 0.3 (and the Gmsh tags minus one) mapped to the names, with a warning
+   * @param {object} meshData - The prepared mesh
+   * @returns {object} The boundary conditions by boundary name
+   */
+  resolveBoundaryConditions(meshData) {
+    if (this.solverConfig === "eulerBernoulliBeamScript") return this.boundaryConditions;
+    const resolved = {};
+    Object.entries(this.boundaryConditions).forEach(([key, condition]) => {
+      const name = meshData.boundaryElements[key] !== undefined ? key : meshData.aliases[key];
+      if (name !== undefined && name !== key) {
+        warnLog(
+          `Boundary key "${key}" is deprecated and will be removed in a future version; use the boundary name "${name}".`,
+        );
+      }
+      resolved[name ?? key] = condition;
+    });
+    return resolved;
   }
 
   addBoundaryCondition(boundaryKey, condition) {
@@ -194,8 +306,10 @@ export class FEAScriptModel {
     } else if (!supportedModels.includes(this.solverConfig)) {
       problems.push(`Unknown model "${this.solverConfig}". Supported models: ${supportedModels.join(", ")}.`);
     }
-    if (!this.meshConfig?.meshDimension) {
-      problems.push('No mesh is set. Call setMeshConfig() first, e.g. with meshDimension: "1D" or "2D".');
+    if (!this.mesh && !(this.geometry && this.meshConfig)) {
+      problems.push(
+        "No mesh is set. Call setGeometry() and setMeshConfig(), or setMesh() with an imported or generated mesh.",
+      );
     }
     if (supportedModels.includes(this.solverConfig)) {
       problems.push(...this.findBoundaryConditionProblems(), ...this.findCoefficientFunctionProblems());
@@ -323,29 +437,27 @@ export class FEAScriptModel {
    * @param {object} meshData - Object containing the prepared mesh data
    * @throws {FEAScriptError} INVALID_INPUT, listing each such condition
    */
-  validateBoundaries(meshData) {
+  validateBoundaries(meshData, boundaryConditions = this.boundaryConditions) {
     const problems = [];
     if (this.solverConfig === "eulerBernoulliBeamScript") {
       const totalNodes = meshData.totalNodesX;
-      Object.keys(this.boundaryConditions).forEach((nodeKey) => {
+      Object.keys(boundaryConditions).forEach((nodeKey) => {
         const nodeNumber = Number(nodeKey);
         if (!Number.isInteger(nodeNumber) || nodeNumber < 1 || nodeNumber > totalNodes) {
           problems.push(`Node ${nodeKey} does not exist; the beam mesh has nodes 1 to ${totalNodes}.`);
         }
       });
     } else {
-      const boundaryElements = meshData.boundaryElements ?? [];
-      const meshBoundaries = Object.keys(boundaryElements).filter((key) =>
-        Array.isArray(boundaryElements[key]),
-      );
+      const boundaryElements = meshData.boundaryElements ?? {};
+      const meshBoundaries = Object.keys(boundaryElements).map((name) => `"${name}"`);
       const incompleteBoundaries = meshData.incompleteBoundaries ?? {};
-      Object.keys(this.boundaryConditions).forEach((boundaryKey) => {
+      Object.keys(boundaryConditions).forEach((boundaryKey) => {
         const incomplete = incompleteBoundaries[boundaryKey];
         if (incomplete) {
           problems.push(
-            `Boundary ${boundaryKey}${
-              incomplete.name ? ` ("${incomplete.name}")` : ""
-            } of the imported mesh is incomplete: ${incomplete.missingPairs} of its node pair${
+            `Boundary "${boundaryKey}" of the imported mesh is incomplete: ${
+              incomplete.missingPairs
+            } of its node pair${
               incomplete.missingPairs > 1 ? "s are" : " is"
             } not on an element side, so its condition would apply to only part of it. Check the physical group of tag ${
               incomplete.tag
@@ -354,7 +466,7 @@ export class FEAScriptModel {
         }
         if (!Array.isArray(boundaryElements[boundaryKey])) {
           problems.push(
-            `Boundary ${boundaryKey} does not exist in the mesh. Boundaries of the mesh: ${meshBoundaries.join(
+            `Boundary "${boundaryKey}" does not exist in the mesh. Boundaries of the mesh: ${meshBoundaries.join(
               ", ",
             )}.`,
           );
@@ -412,8 +524,9 @@ export class FEAScriptModel {
 
     // Prepare the mesh
     basicLog("Preparing mesh...");
-    const meshData = prepareMesh(this.meshConfig);
-    this.validateBoundaries(meshData);
+    const meshData = prepareMesh(this);
+    const boundaryConditions = this.resolveBoundaryConditions(meshData);
+    this.validateBoundaries(meshData, boundaryConditions);
     basicLog("Mesh preparation completed");
 
     // Extract node coordinates and nodal numbering from meshData
@@ -430,7 +543,7 @@ export class FEAScriptModel {
       // Check if using frontal solver
       if (this.solverMethod === "frontal") {
         const thermalBoundaryConditions = new ThermalBoundaryConditions(
-          this.boundaryConditions,
+          boundaryConditions,
           meshData.boundaryElements,
           meshData.nop,
           meshData.meshDimension,
@@ -451,7 +564,7 @@ export class FEAScriptModel {
         // Use regular linear solver methods
         ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(
           meshData,
-          this.boundaryConditions,
+          boundaryConditions,
           this.coefficientFunctions,
         ));
         const linearSystemResult = solveLinearSystem(this.solverMethod, jacobianMatrix, residualVector, {
@@ -468,7 +581,7 @@ export class FEAScriptModel {
       // Create context object with all necessary properties
       const context = {
         meshData: meshData,
-        boundaryConditions: this.boundaryConditions,
+        boundaryConditions: boundaryConditions,
         eikonalActivationFlag: eikonalActivationFlag,
         solverMethod: this.solverMethod,
         initialSolution,
@@ -482,7 +595,7 @@ export class FEAScriptModel {
             eikonalActivationFlag: context.eikonalActivationFlag,
           }),
         boundaryConditionsHandler: new GenericBoundaryConditions(
-          this.boundaryConditions,
+          boundaryConditions,
           meshData.boundaryElements,
           meshData.nop,
           meshData.meshDimension,
@@ -524,7 +637,7 @@ export class FEAScriptModel {
       // Check if using frontal solver for the linear PDE (the nonlinear PDE uses it inside Newton-Raphson)
       if (this.solverMethod === "frontal" && !this.nonlinear) {
         const genericBoundaryConditions = new GenericBoundaryConditions(
-          this.boundaryConditions,
+          boundaryConditions,
           meshData.boundaryElements,
           meshData.nop,
           meshData.meshDimension,
@@ -545,7 +658,7 @@ export class FEAScriptModel {
         // Solve the nonlinear PDE with the Newton-Raphson method
         const context = {
           meshData,
-          boundaryConditions: this.boundaryConditions,
+          boundaryConditions: boundaryConditions,
           solverMethod: this.solverMethod,
           maxIterations: options.maxIterations ?? this.maxIterations,
           tolerance: options.tolerance ?? this.tolerance,
@@ -556,7 +669,7 @@ export class FEAScriptModel {
               coefficientFunctions: this.coefficientFunctions,
             }),
           boundaryConditionsHandler: new GenericBoundaryConditions(
-            this.boundaryConditions,
+            boundaryConditions,
             meshData.boundaryElements,
             meshData.nop,
             meshData.meshDimension,
@@ -590,7 +703,7 @@ export class FEAScriptModel {
         // Use regular linear solver methods
         ({ jacobianMatrix, residualVector } = assembleGeneralFormPDEMat(
           meshData,
-          this.boundaryConditions,
+          boundaryConditions,
           this.coefficientFunctions,
         ));
 
@@ -604,7 +717,7 @@ export class FEAScriptModel {
       // Use regular linear solver methods for steady creeping flow
       const creepingFlowResult = assembleCreepingFlowMatrix(
         meshData,
-        this.boundaryConditions,
+        boundaryConditions,
         this.coefficientFunctions,
       );
       jacobianMatrix = creepingFlowResult.jacobianMatrix;
@@ -626,7 +739,7 @@ export class FEAScriptModel {
       // Use regular linear solver methods for the 1D Euler-Bernoulli beam model
       const beamResult = assembleEulerBernoulliBeamMat(
         meshData,
-        this.boundaryConditions,
+        boundaryConditions,
         this.coefficientFunctions,
       );
       jacobianMatrix = beamResult.jacobianMatrix;
@@ -671,8 +784,9 @@ export class FEAScriptModel {
     let solutionVector = new Float64Array(0);
 
     basicLog("Preparing mesh...");
-    const meshData = prepareMesh(this.meshConfig);
-    this.validateBoundaries(meshData);
+    const meshData = prepareMesh(this);
+    const boundaryConditions = this.resolveBoundaryConditions(meshData);
+    this.validateBoundaries(meshData, boundaryConditions);
     basicLog("Mesh preparation completed");
     const nodesCoordinates = {
       nodesXCoordinates: meshData.nodesXCoordinates,
@@ -686,7 +800,7 @@ export class FEAScriptModel {
     if (this.solverConfig === "heatConductionScript") {
       ({ jacobianMatrix, residualVector } = assembleHeatConductionMat(
         meshData,
-        this.boundaryConditions,
+        boundaryConditions,
         this.coefficientFunctions,
       ));
 

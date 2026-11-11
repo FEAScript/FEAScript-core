@@ -54,12 +54,8 @@ function runSimulation() {
       q: (x) => (x <= distributedLoadSpan[1] ? distributedLoad : 0),
     },
   });
-  model.setMeshConfig({
-    meshDimension: "1D",
-    elementOrder: "linear",
-    numElementsX: 2,
-    maxX: 10,
-  });
+  model.setGeometry({ line: 10 });
+  model.setMeshConfig({ elementOrder: "linear", divisions: 2 });
 
   model.addBoundaryCondition("1", [["fixed"]]);
   model.addBoundaryCondition("2", [["pinned"], ["moment", appliedMoment]]);

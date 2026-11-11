@@ -60,75 +60,94 @@ const RELATIVE_TOLERANCE = 5e-3;
 const OUTLIER_POINT = { x: 0.2, y: 0.2 };
 const OUTLIER_RELATIVE_TOLERANCE = 1.5e-2;
 
-// The Gmsh meshes: physical tags in lshape.geo are 1 left, 2 right, 3 insulated (boundary keys 0-2)
+// The Gmsh meshes: the physical groups of lshape.geo are named left, right and insulated
 const gmshMesh = (meshFile) => async () => {
   const meshContent = fs.readFileSync(path.join(meshesDirectory, meshFile), "utf8");
-  const parsedMesh = await importGmshMesh({ text: async () => meshContent });
-  return { parsedMesh, boundaryKeys: { left: "0", right: "1", insulated: "2" } };
+  return importGmshMesh({ text: async () => meshContent });
 };
 
 // The generated mesh: the L-shape of lshape.geo, with its boundary split at the 0.2 m grid and the
 // interior reference points embedded, quadratic triangles, element size 0.05 m growing from 0.01 m at
-// the re-entrant corner C as in lshape.geo (the area of an equilateral triangle of side h is 0.433 h²).
-// The boundary names first appear in the order insulated, right, left (boundary keys 0-2)
+// the re-entrant corner C as in lshape.geo, with the same boundary names as lshape.geo
 const generatedMesh = async () => {
   const sizeAt = (x, y) => Math.min(0.05, 0.01 + 0.2 * Math.hypot(x - 0.4, y - 0.4));
-  const parsedMesh = generateTriangleMesh({
-    polygon: {
-      points: [
-        [0, 0], // A
-        [0.2, 0],
-        [0.4, 0], // B
-        [0.4, 0.2],
-        [0.4, 0.4], // C
-        [0.6, 0.4],
-        [0.8, 0.4], // D
-        [0.8, 0.8], // E
-        [0.6, 0.8],
-        [0.4, 0.8],
-        [0.2, 0.8],
-        [0, 0.8], // F
+  return generateTriangleMesh(
+    {
+      shapes: [
+        [
+          {
+            name: "insulated",
+            points: [
+              [0, 0],
+              [0.2, 0],
+              [0.4, 0],
+            ],
+          }, // AB
+          {
+            name: "insulated",
+            points: [
+              [0.4, 0],
+              [0.4, 0.2],
+              [0.4, 0.4],
+            ],
+          }, // BC
+          {
+            name: "insulated",
+            points: [
+              [0.4, 0.4],
+              [0.6, 0.4],
+              [0.8, 0.4],
+            ],
+          }, // CD
+          {
+            name: "right",
+            points: [
+              [0.8, 0.4],
+              [0.8, 0.8],
+            ],
+          }, // DE
+          {
+            name: "insulated",
+            points: [
+              [0.8, 0.8],
+              [0.6, 0.8],
+              [0.4, 0.8],
+              [0.2, 0.8],
+              [0, 0.8],
+            ],
+          }, // EF
+          {
+            name: "left",
+            points: [
+              [0, 0.8],
+              [0, 0],
+            ],
+          }, // FA
+        ],
       ],
-      boundaries: [
-        "insulated", // AB
-        "insulated",
-        "insulated", // BC
-        "insulated",
-        "insulated", // CD
-        "insulated",
-        "right", // DE
-        "insulated", // EF
-        "insulated",
-        "insulated",
-        "insulated",
-        "left", // FA
+      points: [
+        [0.2, 0.2],
+        [0.2, 0.4],
+        [0.2, 0.6],
+        [0.4, 0.6],
+        [0.6, 0.6],
       ],
     },
-    points: [
-      [0.2, 0.2],
-      [0.2, 0.4],
-      [0.2, 0.6],
-      [0.4, 0.6],
-      [0.6, 0.6],
-    ],
-    maxArea: (x, y) => 0.433 * sizeAt(x, y) ** 2,
-    minAngle: 30,
-    elementOrder: "quadratic",
-  });
-  return { parsedMesh, boundaryKeys: { insulated: "0", right: "1", left: "2" } };
+    { size: sizeAt, minAngle: 30, elementOrder: "quadratic" },
+  );
 };
 
 async function runSimulation(meshSource) {
-  const { parsedMesh, boundaryKeys } = await meshSource();
+  const mesh = await meshSource();
 
   const model = new FEAScriptModel();
 
   model.setModelConfig("heatConductionScript", { coefficientFunctions: { thermalConductivity: 1 } });
-  model.setMeshConfig({ parsedMesh, meshDimension: "2D", elementOrder: "quadratic" });
+  model.setMesh(mesh);
 
-  model.addBoundaryCondition(boundaryKeys.left, ["constantTemperature", 10]); // Left edge (FA)
-  model.addBoundaryCondition(boundaryKeys.right, ["constantTemperature", 0]); // Right edge (DE)
-  model.addBoundaryCondition(boundaryKeys.insulated, ["symmetry"]); // Edges AB, BC, CD, EF, insulated
+  model.addBoundaryCondition("left", ["constantTemperature", 10]); // Left edge (FA)
+  model.addBoundaryCondition("right", ["constantTemperature", 0]); // Right edge (DE)
+  model.addBoundaryCondition("insulated", ["symmetry"]); // Edges AB, BC, CD, EF, insulated
   model.setSolverMethod("lusolve");
 
   const { solutionVector, nodesCoordinates } = model.solve();

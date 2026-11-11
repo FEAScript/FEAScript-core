@@ -58,10 +58,40 @@ class workerWrapper {
    */
   setMeshConfig(meshConfig) {
     try {
-      this.model.setMeshConfig(meshConfig);
+      this.model.setMeshConfig(deserializeFunctions(meshConfig));
       return true;
     } catch (error) {
       console.error("FEA Worker: Error in setMeshConfig", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Function to set the geometry of the FEAScriptModel
+   * @param {object} geometry - The geometry, as in FEAScriptModel.setGeometry
+   * @returns {boolean} Returns true if the geometry is set successfully
+   */
+  setGeometry(geometry) {
+    try {
+      this.model.setGeometry(geometry);
+      return true;
+    } catch (error) {
+      console.error("FEA Worker: Error in setGeometry", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Function to set the mesh of the FEAScriptModel directly
+   * @param {object} mesh - The mesh object, as in FEAScriptModel.setMesh
+   * @returns {boolean} Returns true if the mesh is set successfully
+   */
+  setMesh(mesh) {
+    try {
+      this.model.setMesh(mesh);
+      return true;
+    } catch (error) {
+      console.error("FEA Worker: Error in setMesh", error);
       throw error;
     }
   }
@@ -114,7 +144,7 @@ class workerWrapper {
         nodesCoordinates: result.nodesCoordinates,
         ...(result.fields && { fields: result.fields }),
         solverConfig: this.model.solverConfig,
-        meshDimension: this.model.meshConfig.meshDimension,
+        meshDimension: this.model.getMeshDimension(),
       };
     } catch (error) {
       console.error("FEA Worker: Error in solve", error);
@@ -131,7 +161,9 @@ class workerWrapper {
     try {
       return {
         solverConfig: this.model.solverConfig,
+        geometry: this.model.geometry,
         meshConfig: this.model.meshConfig,
+        meshDimension: this.model.getMeshDimension(),
         boundaryConditions: this.model.boundaryConditions,
         solverMethod: this.model.solverMethod,
       };

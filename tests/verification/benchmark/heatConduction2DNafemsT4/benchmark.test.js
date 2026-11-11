@@ -34,19 +34,17 @@ function runSimulation(numElementsX, numElementsY) {
   const model = new FEAScriptModel();
 
   model.setModelConfig("heatConductionScript", { coefficientFunctions: { thermalConductivity: 52 } });
+  model.setGeometry({ rectangle: [0.6, 1.0] });
   model.setMeshConfig({
-    meshDimension: "2D",
+    elements: "quadrilaterals",
     elementOrder: "quadratic",
-    numElementsX,
-    numElementsY,
-    maxX: 0.6,
-    maxY: 1.0,
+    divisions: [numElementsX, numElementsY],
   });
 
-  model.addBoundaryCondition("0", ["constantTemperature", 100]); // Bottom edge (AB), fixed 100 degC
+  model.addBoundaryCondition("bottom", ["constantTemperature", 100]); // Bottom edge (AB), fixed 100 degC
   // Left edge (AD) is insulated and left unspecified (natural, zero-flux boundary)
-  model.addBoundaryCondition("2", ["convection", 750, 0]); // Top edge (CD), convection to 0 degC
-  model.addBoundaryCondition("3", ["convection", 750, 0]); // Right edge (BC), convection to 0 degC
+  model.addBoundaryCondition("top", ["convection", 750, 0]); // Top edge (CD), convection to 0 degC
+  model.addBoundaryCondition("right", ["convection", 750, 0]); // Right edge (BC), convection to 0 degC
   model.setSolverMethod("lusolve");
 
   const { solutionVector, nodesCoordinates } = model.solve();

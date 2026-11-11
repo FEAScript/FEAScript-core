@@ -80,12 +80,12 @@ const meshCases = [
   },
 ];
 
-// Gmsh physical tags: 1 bottom, 2 right, 3 top, 4 left (stored as boundary keys 0-3)
+// The physical groups of the meshes: bottom, right, top and left (tags 1 to 4)
 const boundaryConditions = {
-  0: ["constantTemperature", 200],
-  1: ["constantTemperature", 200],
-  2: ["convection", 1, 20],
-  3: ["symmetry"],
+  bottom: ["constantTemperature", 200],
+  right: ["constantTemperature", 200],
+  top: ["convection", 1, 20],
+  left: ["symmetry"],
 };
 
 const readMeshFile = (meshFile) => fs.readFileSync(path.join(meshesDirectory, meshFile), "utf8");
@@ -101,10 +101,10 @@ const largestDifference = (a, b) => {
   return Math.max(0, ...a.flat(Infinity).map((value, i) => Math.abs(value - flatB[i])));
 };
 
-function runSimulation(parsedMesh, meshSettings, solverMethod) {
+function runSimulation(parsedMesh, solverMethod) {
   const model = new FEAScriptModel();
   model.setModelConfig("heatConductionScript");
-  model.setMeshConfig({ parsedMesh, ...meshSettings });
+  model.setMesh(parsedMesh);
   Object.entries(boundaryConditions).forEach(([boundaryKey, condition]) => {
     model.addBoundaryCondition(boundaryKey, condition);
   });
@@ -126,24 +126,42 @@ for (const { meshFile, elementOrder } of meshCases) {
     `${meshFile}: detected element order '${elementOrder}' (got '${parsed.elementOrder}')`,
   );
 
-  // The model configuration holds the detected settings (e.g., for plotting)
+  // The mesh object of the model holds the detected settings (e.g., for plotting), and names its boundaries
+  // after the physical groups, with the tags minus one as aliases
   const model = new FEAScriptModel();
-  model.setMeshConfig({ parsedMesh: parsed });
+  model.setMesh(parsed);
+  const mesh = model.getMesh();
   assert(
-    model.meshConfig.meshDimension === "2D" && model.meshConfig.elementOrder === elementOrder,
-    `${meshFile}: model mesh configuration filled in with '2D' and '${elementOrder}' (got '${model.meshConfig.meshDimension}' and '${model.meshConfig.elementOrder}')`,
+    model.getMeshDimension() === "2D" && mesh.elementOrder === elementOrder,
+    `${meshFile}: mesh dimension '2D' and element order '${elementOrder}' detected (got '${model.getMeshDimension()}' and '${
+      mesh.elementOrder
+    }')`,
+  );
+  assert(
+    JSON.stringify(Object.keys(mesh.boundaryElements)) ===
+      JSON.stringify(["bottom", "right", "top", "left"]) &&
+      JSON.stringify(mesh.aliases) === JSON.stringify({ 0: "bottom", 1: "right", 2: "top", 3: "left" }),
+    `${meshFile}: boundaries named bottom, right, top, left with the aliases 0 to 3 (got ${Object.keys(
+      mesh.boundaryElements,
+    ).join(", ")})`,
   );
 
-  const configuredSolution = runSimulation(
-    await parseMesh(meshContent),
-    { meshDimension: "2D", elementOrder },
-    "lusolve",
-  ).solutionVector;
-  const detectedSolution = runSimulation(await parseMesh(meshContent), {}, "lusolve").solutionVector;
-  const solutionDifference = largestDifference(Array.from(detectedSolution), Array.from(configuredSolution));
+  // The deprecated keys (tag minus one) give the same solution as the names
+  const namedSolution = runSimulation(await parseMesh(meshContent), "lusolve").solutionVector;
+  const aliasModel = new FEAScriptModel();
+  aliasModel.setModelConfig("heatConductionScript");
+  aliasModel.setMesh(await parseMesh(meshContent));
+  Object.entries({
+    0: boundaryConditions.bottom,
+    1: boundaryConditions.right,
+    2: boundaryConditions.top,
+    3: boundaryConditions.left,
+  }).forEach(([key, condition]) => aliasModel.addBoundaryCondition(key, condition));
+  const aliasSolution = aliasModel.solve().solutionVector;
+  const solutionDifference = largestDifference(Array.from(aliasSolution), Array.from(namedSolution));
   assert(
     solutionDifference === 0,
-    `${meshFile}: same solution without meshDimension and elementOrder in the mesh configuration (largest difference ${solutionDifference})`,
+    `${meshFile}: same solution with the deprecated numeric boundary keys (largest difference ${solutionDifference})`,
   );
 }
 
@@ -235,10 +253,9 @@ for (const { meshFile, solverMethods } of meshCases) {
 
   // The simulation modifies the parsed mesh, so each one parses its own copy
   for (const solverMethod of solverMethods) {
-    const originalSolution = runSimulation(await parseMesh(meshContent), {}, solverMethod).solutionVector;
+    const originalSolution = runSimulation(await parseMesh(meshContent), solverMethod).solutionVector;
     const gappedSolution = runSimulation(
       await parseMesh(addNodeTagGaps(meshContent)),
-      {},
       solverMethod,
     ).solutionVector;
 
@@ -262,7 +279,7 @@ for (const { meshFile, solverMethods } of meshCases) {
   basicLog("");
   basicLog("[Incomplete boundary]");
 
-  // Add to the right boundary (physical tag 2, boundary key 1) the pair of opposite corners (0, 0) and (4, 2) of
+  // Add to the right boundary (physical tag 2) the pair of opposite corners (0, 0) and (4, 2) of
   // the rectangle, nodes 1 and 3, which no element contains
   const incompleteMesh = async () => {
     const parsedMesh = await parseMesh(readMeshFile("rect_quad_linear.msh"));
@@ -272,7 +289,7 @@ for (const { meshFile, solverMethods } of meshCases) {
   const solveWith = (parsedMesh, conditions) => {
     const model = new FEAScriptModel();
     model.setModelConfig("heatConductionScript");
-    model.setMeshConfig({ parsedMesh });
+    model.setMesh(parsedMesh);
     Object.entries(conditions).forEach(([key, condition]) => model.addBoundaryCondition(key, condition));
     try {
       model.solve();
@@ -286,13 +303,13 @@ for (const { meshFile, solverMethods } of meshCases) {
   assert(
     withCondition instanceof FEAScriptError &&
       withCondition.code === "INVALID_INPUT" &&
-      withCondition.message.includes("Boundary 1") &&
+      withCondition.message.includes('Boundary "right"') &&
       withCondition.message.includes("is incomplete") &&
       withCondition.message.includes("tag 2"),
     "a condition on an incomplete boundary throws INVALID_INPUT",
   );
 
-  const { 1: rightCondition, ...otherConditions } = boundaryConditions;
+  const { right: rightCondition, ...otherConditions } = boundaryConditions;
   assert(
     solveWith(await incompleteMesh(), otherConditions) === null,
     "a mesh with an incomplete boundary still solves without a condition on it",

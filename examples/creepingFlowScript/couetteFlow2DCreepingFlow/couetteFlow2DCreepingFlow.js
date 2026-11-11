@@ -28,20 +28,14 @@ model.setModelConfig("creepingFlowScript", {
 });
 
 // 2. Define the mesh (creeping flow needs quadratic elements)
-model.setMeshConfig({
-  meshDimension: "2D",
-  elementOrder: "quadratic",
-  numElementsX: 4,
-  numElementsY: 2,
-  maxX: 4,
-  maxY: channelHeight,
-});
+model.setGeometry({ rectangle: [4, channelHeight] });
+model.setMeshConfig({ elements: "quadrilaterals", elementOrder: "quadratic", divisions: [4, 2] });
 
 // 3. Apply the boundary conditions
-model.addBoundaryCondition("0", ["constantVelocity", 0, 0]); // Bottom: fixed wall
-model.addBoundaryCondition("1", ["stressFree"]); // Left: open end
-model.addBoundaryCondition("2", ["constantVelocity", wallVelocity, 0]); // Top: moving wall
-model.addBoundaryCondition("3", ["stressFree"]); // Right: open end
+model.addBoundaryCondition("bottom", ["constantVelocity", 0, 0]); // Bottom: fixed wall
+model.addBoundaryCondition("left", ["stressFree"]); // Left: open end
+model.addBoundaryCondition("top", ["constantVelocity", wallVelocity, 0]); // Top: moving wall
+model.addBoundaryCondition("right", ["stressFree"]); // Right: open end
 
 // 4. Solve
 model.setSolverMethod("lusolve");

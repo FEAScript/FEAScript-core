@@ -39,17 +39,27 @@ const SOLVER_TOLERANCE = 1e-8;
 const INTERIOR_TOLERANCE = 1e-5;
 const INTERIOR_LIMIT = 1.5; // y <= 1.5 is 50 boundary layer widths away from the top boundary
 
-function runSimulation(meshConfig, solverMethod) {
+// A mesh source is either a geometry with its mesh configuration, or a mesh object (e.g. imported from Gmsh)
+function setMeshSource(model, source) {
+  if (source.mesh) {
+    model.setMesh(source.mesh);
+  } else {
+    model.setGeometry(source.geometry);
+    model.setMeshConfig(source.meshConfig);
+  }
+}
+
+function runSimulation(meshSource, solverMethod) {
   const model = new FEAScriptModel();
 
   model.setModelConfig("frontPropagationScript");
-  model.setMeshConfig(meshConfig);
+  setMeshSource(model, meshSource);
 
-  // Front starts at the bottom boundary (key 0 for both the structured and the Gmsh meshes)
-  model.addBoundaryCondition("0", ["constantValue", 0]);
-  model.addBoundaryCondition("1", ["zeroGradient"]);
-  model.addBoundaryCondition("2", ["zeroGradient"]);
-  model.addBoundaryCondition("3", ["zeroGradient"]);
+  // Front starts at the bottom boundary
+  model.addBoundaryCondition("bottom", ["constantValue", 0]);
+  model.addBoundaryCondition("left", ["zeroGradient"]);
+  model.addBoundaryCondition("top", ["zeroGradient"]);
+  model.addBoundaryCondition("right", ["zeroGradient"]);
   model.setSolverMethod(solverMethod);
 
   const { solutionVector, nodesCoordinates } = model.solve();
@@ -85,46 +95,26 @@ const cases = [
   {
     label: "Quadrilaterals, linear",
     meshConfig: {
-      meshDimension: "2D",
-      elementOrder: "linear",
-      numElementsX: 12,
-      numElementsY: 8,
-      maxX: 4,
-      maxY: 2,
+      geometry: { rectangle: [4, 2] },
+      meshConfig: { elements: "quadrilaterals", elementOrder: "linear", divisions: [12, 8] },
     },
   },
   {
     label: "Gmsh quadrilaterals, linear",
     tolerance: COARSE_MESH_TOLERANCE,
-    meshConfig: {
-      parsedMesh: await loadGmshMesh("rect_quad_linear.msh"),
-      meshDimension: "2D",
-      elementOrder: "linear",
-    },
+    meshConfig: { mesh: await loadGmshMesh("rect_quad_linear.msh") },
   },
   {
     label: "Gmsh quadrilaterals, quadratic",
-    meshConfig: {
-      parsedMesh: await loadGmshMesh("rect_quad_quadratic.msh"),
-      meshDimension: "2D",
-      elementOrder: "quadratic",
-    },
+    meshConfig: { mesh: await loadGmshMesh("rect_quad_quadratic.msh") },
   },
   {
     label: "Triangles, linear",
-    meshConfig: {
-      parsedMesh: await loadGmshMesh("rect_triang_linear.msh"),
-      meshDimension: "2D",
-      elementOrder: "linear",
-    },
+    meshConfig: { mesh: await loadGmshMesh("rect_triang_linear.msh") },
   },
   {
     label: "Triangles, quadratic",
-    meshConfig: {
-      parsedMesh: await loadGmshMesh("rect_triang_quadratic.msh"),
-      meshDimension: "2D",
-      elementOrder: "quadratic",
-    },
+    meshConfig: { mesh: await loadGmshMesh("rect_triang_quadratic.msh") },
   },
 ];
 
@@ -152,7 +142,10 @@ for (const { label, meshConfig, tolerance = TOLERANCE } of cases) {
 
 // Interior, away from the boundary layer at the top boundary, on a mesh that resolves the layer
 const { solution, nodesYCoordinates } = runSimulation(
-  { meshDimension: "2D", elementOrder: "linear", numElementsX: 80, numElementsY: 40, maxX: 4, maxY: 2 },
+  {
+    geometry: { rectangle: [4, 2] },
+    meshConfig: { elements: "quadrilaterals", elementOrder: "linear", divisions: [80, 40] },
+  },
   "lusolve",
 );
 const interiorError = Math.max(

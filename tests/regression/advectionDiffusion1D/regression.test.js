@@ -53,15 +53,11 @@ function runSimulation(elementOrder, solverMethod) {
       D: (x) => 10 * Math.exp(-200 * Math.pow(x - 0.5, 2)), // Source term
     },
   });
-  model.setMeshConfig({
-    meshDimension: "1D",
-    elementOrder,
-    numElementsX: 20,
-    maxX: 1.0,
-  });
+  model.setGeometry({ line: 1.0 });
+  model.setMeshConfig({ elementOrder, divisions: 20 });
 
-  model.addBoundaryCondition("0", ["constantValue", 1]);
-  model.addBoundaryCondition("1", ["zeroGradient"]);
+  model.addBoundaryCondition("left", ["constantValue", 1]);
+  model.addBoundaryCondition("right", ["zeroGradient"]);
   model.setSolverMethod(solverMethod);
 
   return model.solve({ maxIterations: 200000, tolerance: 1e-8 });

@@ -31,13 +31,13 @@ async function main() {
 
   // 2. Load the Gmsh mesh (in Node.js, any object with an async text() method replaces a File)
   const mesh = await importGmshMesh({ text: async () => meshContent });
-  model.setMeshConfig({ parsedMesh: mesh });
+  model.setMesh(mesh);
 
-  // 3. Apply the boundary conditions (key = Gmsh physical group tag - 1)
-  model.addBoundaryCondition("0", ["constantTemperature", 200]); // Bottom
-  model.addBoundaryCondition("1", ["symmetry"]); // Left
-  model.addBoundaryCondition("2", ["convection", 1, 20]); // Top
-  model.addBoundaryCondition("3", ["constantTemperature", 200]); // Right
+  // 3. Apply the boundary conditions, keyed by the names of the Gmsh physical groups
+  model.addBoundaryCondition("bottom", ["constantTemperature", 200]); // Bottom
+  model.addBoundaryCondition("left", ["symmetry"]); // Left
+  model.addBoundaryCondition("top", ["convection", 1, 20]); // Top
+  model.addBoundaryCondition("right", ["constantTemperature", 200]); // Right
 
   // 4. Solve
   const { solutionVector, nodesCoordinates } = model.solve();

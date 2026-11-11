@@ -51,13 +51,13 @@ async function main() {
 
   // 2. Load the Gmsh mesh (in Node.js, any object with an async text() method replaces a File)
   const mesh = await importGmshMesh({ text: async () => meshContent });
-  model.setMeshConfig({ parsedMesh: mesh });
+  model.setMesh(mesh);
 
-  // 3. Apply the boundary conditions (key = Gmsh physical group tag - 1)
-  model.addBoundaryCondition("0", ["constantVelocity", 1, 0]); // Inlet (x = 0)
-  model.addBoundaryCondition("1", ["constantVelocity", 0, 0]); // Channel walls (no-slip)
-  model.addBoundaryCondition("2", ["stressFree"]); // Outlet (x = 8)
-  model.addBoundaryCondition("3", ["constantVelocity", 0, 0]); // Pillars (no-slip)
+  // 3. Apply the boundary conditions, keyed by the names of the Gmsh physical groups
+  model.addBoundaryCondition("inlet", ["constantVelocity", 1, 0]); // Inlet (x = 0)
+  model.addBoundaryCondition("walls", ["constantVelocity", 0, 0]); // Channel walls (no-slip)
+  model.addBoundaryCondition("outlet", ["stressFree"]); // Outlet (x = 8)
+  model.addBoundaryCondition("pillars", ["constantVelocity", 0, 0]); // Pillars (no-slip)
 
   // 4. Solve
   model.setSolverMethod("lusolve");

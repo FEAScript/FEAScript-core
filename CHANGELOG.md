@@ -8,15 +8,32 @@ All notable changes to FEAScript-core are documented in this file. The format is
 
 ### Added
 
+- One way to set up a domain, whatever its mesh ([#136](https://github.com/FEAScript/FEAScript-core/issues/136)):
+  `setGeometry()` takes the geometry, `{ line: length }`, `{ rectangle: [width, height] }` or
+  `{ shapes: [polygon], holes, points }`, where a polygon is a list of named boundaries `{ name, points }` chained
+  in order, each a polyline of points; `setMeshConfig()` then takes how to mesh it, `{ elements, elementOrder,
+  size, divisions, minAngle, maxNodes }`, with `elements: "quadrilaterals"` (a rectangle or a convex four-sided
+  shape, mapped from a grid) or `"triangles"` (any shape with holes). The `size` is the length of an element side,
+  for triangles also a function of position for a graded mesh; `divisions` is the number of elements of a line or
+  `[nx, ny]` of a quadrilateral, for an exact element count. The boundary conditions are keyed by the boundary
+  names: `"left"` and `"right"` for a line, `"bottom"`, `"right"`, `"top"` and `"left"` for a rectangle, the
+  names given for a polygon, and the names of the physical groups for a Gmsh mesh
+- `setMesh(mesh)` takes a mesh directly: one imported with `importGmshMesh`, or generated with
+  `generateTriangleMesh(geometry, options)` or `generateQuadrilateralMesh(geometry, options)`, which are exported
+  and return the same mesh object (nodes, elements, boundary element sides by name, aliases). The geometry
+  checks (a polygon that is not simple, a hole outside the shape or inside another hole, a point outside the
+  domain, boundaries that do not chain) throw `FEAScriptError` `"INVALID_INPUT"` listing every problem
 - `generateTriangleMesh()`, a mesh generator for a polygon with holes
   ([#135](https://github.com/FEAScript/FEAScript-core/issues/135)): a constrained Delaunay triangulation of the
   polygon (Delaunator and Constrainautor), refined by Ruppert's algorithm with off-centers until every triangle has
-  angles of at least `minAngle` (default 20°) and an area of at most `maxArea`, a number or a function of position
-  for a graded mesh. Each edge of the polygons takes a boundary name, which groups the edges into the boundaries of
-  the model, and points inside the domain can be made nodes. Small input angles are handled with concentric shell
-  splitting, so the refinement always stops. The result is in the format of `importGmshMesh`, with linear or
-  quadratic triangles, and is used with `setMeshConfig({ parsedMesh })`. A refinement that passes `maxNodes` throws
-  `FEAScriptError` `"MESH_TOO_FINE"`
+  angles of at least `minAngle` (default 20°) and an area of at most that of the equilateral triangle of side
+  `size`, a number or a function of position for a graded mesh. Points inside the domain can be made nodes. Small
+  input angles are handled with concentric shell splitting, so the refinement always stops. Linear or quadratic
+  triangles. A refinement that passes `maxNodes` throws `FEAScriptError` `"MESH_TOO_FINE"`
+- `generateQuadrilateralMesh()`: the structured mesh of 0.3, generalized to any convex four-sided shape by a
+  bilinear map of the grid (a rectangle and the former skewed trapezoid are special cases), with linear or
+  quadratic elements and the same node numbering as before
+- `FEAScriptWorker` has `setGeometry()` and `setMesh()`, and its `setMeshConfig()` accepts a `size` function
 
 - Benchmark tests for 2D heat conduction from the Code_Aster validation manual: TPLP302 (strip with a
   Fourier series solution) and TPLP01 (L-shaped domain with a re-entrant corner, on Gmsh triangle and
@@ -41,6 +58,9 @@ All notable changes to FEAScript-core are documented in this file. The format is
 
 ### Changed
 
+- A mesh imported with `importGmshMesh` is converted to the mesh object once, with its boundaries keyed by the
+  names of the physical groups, and the boundary lines are matched to element sides through a lookup table
+  instead of a search over all elements for each line
 - A solve that cannot succeed now throws a `FEAScriptError` instead of logging an error and returning a result:
   `"UNSUPPORTED_SOLVER"` for a solver method the model does not support, such as the frontal solver for creeping
   flow or beams, and for anything `solveAsync()` cannot run, and `"NOT_CONVERGED"` for a Jacobi solve, a front
@@ -84,6 +104,16 @@ All notable changes to FEAScript-core are documented in this file. The format is
   9600X, together with the CSR assembly, the lid-driven cavity on a 64×64 mesh (16,641 nodes) solves in 10 s
   instead of 145 s, with a peak memory of 0.73 GB instead of 1.26 GB. The ordering and the threshold can be
   passed to `mathjsLUSolver` (`ordering`, `pivotThreshold`)
+
+### Deprecated
+
+- `setMeshConfig({ meshDimension, numElementsX, maxX, numElementsY, maxY, angleLeft, angleRight })`: use
+  `setGeometry()` with `{ line }`, `{ rectangle }` or a four-point shape, and `setMeshConfig({ elements,
+  elementOrder, divisions })`. The old form keeps working with a warning, and is removed in 0.6.0 at the earliest
+- `setMeshConfig({ parsedMesh })`: use `setMesh(mesh)`
+- The numeric boundary keys: `"0"` to `"3"` of the structured meshes (bottom, left, top, right), `"0"` and `"1"`
+  of 1D meshes (left, right), and the Gmsh physical tag minus one. They keep working as aliases of the boundary
+  names, with a warning
 
 ### Removed
 

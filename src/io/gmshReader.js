@@ -8,7 +8,7 @@
  */
 
 // Internal imports
-import { triangleBoundarySides } from "../elements/basisFunctions.js";
+import { getBoundarySides } from "../elements/basisFunctions.js";
 import { FEAScriptError } from "../utilities/errors.js";
 import { debugLog, warnLog } from "../utilities/logging.js";
 
@@ -322,415 +322,174 @@ const importGmshMesh = async (file) => {
 export { importGmshMesh };
 
 /**
- * Function to convert a mesh imported with importGmshMesh to the FEAScript format. The nodal numbering is
- * mapped in place to the FEAScript node ordering, and boundary node pairs are converted to element sides
- * @param {object} parsedMesh - Mesh data returned by importGmshMesh (modified in place)
- * @returns {boolean} True when the boundary elements have been processed
+ * Function to convert a mesh imported with importGmshMesh to the FEAScript mesh object, the form that
+ * `model.setMesh(mesh)` takes: the nodal numbering in the FEAScript node order, and the boundary lines turned
+ * into element sides, keyed by the name of their physical group (and, as aliases, by their tag minus one, the
+ * keys of FEAScript 0.3)
+ * @param {object} parsedMesh - Mesh data returned by importGmshMesh (or by a mesh generator in that form)
+ * @returns {object} The mesh object
  */
-export function mapGmshMeshToFEAScript(parsedMesh) {
-  let boundaryElementsProcessed = false;
-
+export function toMeshObject(parsedMesh) {
   if (!parsedMesh.nodalNumbering) {
     throw new FEAScriptError("INVALID_INPUT", "No valid nodal numbering found in the parsed mesh.");
   }
+  // A mesh converted before
+  if (Array.isArray(parsedMesh.nodalNumbering) && parsedMesh.meshObject) return parsedMesh.meshObject;
 
-  // If this parsed mesh was already converted in a previous run, don't re-process it.
-  // Just mark this Mesh instance as ready so prepareMesh() doesn't fall back to generateMesh().
-  if (Array.isArray(parsedMesh.nodalNumbering)) {
-    parsedMesh.boundaryElementsProcessed = true;
-    return true;
+  const quadElements = parsedMesh.nodalNumbering.quadElements || [];
+  const triangleElements = parsedMesh.nodalNumbering.triangleElements || [];
+  debugLog(
+    "Initial parsed mesh nodal numbering from Gmsh format: " + JSON.stringify(parsedMesh.nodalNumbering),
+  );
+  const hasQuadElements = quadElements.length > 0;
+  const hasTriangleElements = triangleElements.length > 0;
+  if (hasQuadElements && hasTriangleElements) {
+    throw new FEAScriptError(
+      "UNSUPPORTED_MESH",
+      "Mixed quadrilateral and triangular meshes are not supported yet.",
+    );
+  }
+  if (!hasQuadElements && !hasTriangleElements) {
+    throw new FEAScriptError(
+      "UNSUPPORTED_MESH",
+      "The mesh has no 2D elements. In Gmsh, keep a Physical Surface for the domain, or set Mesh.SaveAll = 1.",
+    );
   }
 
-  if (typeof parsedMesh.nodalNumbering === "object" && !Array.isArray(parsedMesh.nodalNumbering)) {
-    // Store the nodal numbering structure before converting
-    const quadElements = parsedMesh.nodalNumbering.quadElements || [];
-    const triangleElements = parsedMesh.nodalNumbering.triangleElements || [];
-
-    debugLog(
-      "Initial parsed mesh nodal numbering from Gmsh format: " + JSON.stringify(parsedMesh.nodalNumbering),
-    );
-
-    const hasQuadElements = quadElements.length > 0;
-    const hasTriangleElements = triangleElements.length > 0;
-
-    if (hasQuadElements && hasTriangleElements) {
-      throw new FEAScriptError(
-        "UNSUPPORTED_MESH",
-        "Mixed quadrilateral and triangular meshes are not supported yet.",
-      );
-    }
-
-    // Check if it has quadElements or triangleElements structure from gmshReader
-    if (hasQuadElements) {
-      parsedMesh.elementShape = "quad";
-      // Map nodal numbering from Gmsh format to FEAScript format for quad elements
-      const mappedNodalNumbering = [];
-
-      for (let elementIndex = 0; elementIndex < quadElements.length; elementIndex++) {
-        const gmshNodes = quadElements[elementIndex];
-        const FEAScriptNodes = new Array(gmshNodes.length);
-
-        // Check for element type based on number of nodes
-        if (gmshNodes.length === 4) {
-          // Simple mapping for linear quad elements (4 nodes)
-          // Gmsh:         FEAScript:
-          // 3 --- 2       1 --- 3
-          // |     |  -->  |     |
-          // 0 --- 1       0 --- 2
-
-          FEAScriptNodes[0] = gmshNodes[0]; // 0 -> 0
-          FEAScriptNodes[1] = gmshNodes[3]; // 3 -> 1
-          FEAScriptNodes[2] = gmshNodes[1]; // 1 -> 2
-          FEAScriptNodes[3] = gmshNodes[2]; // 2 -> 3
-        } else if (gmshNodes.length === 9) {
-          // Mapping for quadratic quad elements (9 nodes)
-          // Gmsh:         FEAScript:
-          // 3--6--2       2--5--8
-          // |     |       |     |
-          // 7  8  5  -->  1  4  7
-          // |     |       |     |
-          // 0--4--1       0--3--6
-
-          FEAScriptNodes[0] = gmshNodes[0]; // 0 -> 0
-          FEAScriptNodes[1] = gmshNodes[7]; // 7 -> 1
-          FEAScriptNodes[2] = gmshNodes[3]; // 3 -> 2
-          FEAScriptNodes[3] = gmshNodes[4]; // 4 -> 3
-          FEAScriptNodes[4] = gmshNodes[8]; // 8 -> 4
-          FEAScriptNodes[5] = gmshNodes[6]; // 6 -> 5
-          FEAScriptNodes[6] = gmshNodes[1]; // 1 -> 6
-          FEAScriptNodes[7] = gmshNodes[5]; // 5 -> 7
-          FEAScriptNodes[8] = gmshNodes[2]; // 2 -> 8
-        }
-
-        mappedNodalNumbering.push(FEAScriptNodes);
+  let elementShape;
+  const nodalNumbering = [];
+  if (hasQuadElements) {
+    elementShape = "quad";
+    quadElements.forEach((gmshNodes) => {
+      if (gmshNodes.length === 4) {
+        // Linear quad elements (4 nodes)
+        // Gmsh:         FEAScript:
+        // 3 --- 2       1 --- 3
+        // |     |  -->  |     |
+        // 0 --- 1       0 --- 2
+        nodalNumbering.push([gmshNodes[0], gmshNodes[3], gmshNodes[1], gmshNodes[2]]);
+      } else if (gmshNodes.length === 9) {
+        // Quadratic quad elements (9 nodes)
+        // Gmsh:         FEAScript:
+        // 3--6--2       2--5--8
+        // |     |       |     |
+        // 7  8  5  -->  1  4  7
+        // |     |       |     |
+        // 0--4--1       0--3--6
+        nodalNumbering.push([
+          gmshNodes[0],
+          gmshNodes[7],
+          gmshNodes[3],
+          gmshNodes[4],
+          gmshNodes[8],
+          gmshNodes[6],
+          gmshNodes[1],
+          gmshNodes[5],
+          gmshNodes[2],
+        ]);
+      } else {
+        throw new FEAScriptError(
+          "UNSUPPORTED_MESH",
+          `Quadrilateral elements with ${gmshNodes.length} nodes are not supported; use 4-node or 9-node ones.`,
+        );
       }
-
-      parsedMesh.nodalNumbering = mappedNodalNumbering;
-    } else if (hasTriangleElements) {
-      parsedMesh.elementShape = "triangle";
-
-      // Map nodal numbering from Gmsh format to FEAScript format for triangular elements
-      const mappedNodalNumbering = [];
-
-      for (let elementIndex = 0; elementIndex < triangleElements.length; elementIndex++) {
-        const gmshNodes = triangleElements[elementIndex];
-        const FEAScriptNodes = new Array(gmshNodes.length);
-
-        // Check for element type based on number of nodes
-        if (gmshNodes.length === 3) {
-          // Mapping for linear triangular elements (3 nodes)
-          // Gmsh:         FEAScript:
-          // 2             1
-          // | \           | \
-          // |   \    -->  |   \
-          // 0 --- 1       0 --- 2
-
-          FEAScriptNodes[0] = gmshNodes[0]; // 0 -> 0
-          FEAScriptNodes[1] = gmshNodes[2]; // 2 -> 1
-          FEAScriptNodes[2] = gmshNodes[1]; // 1 -> 2
-        } else if (gmshNodes.length === 6) {
-          // Mapping for quadratic triangular elements (6 nodes)
-          // Gmsh:         FEAScript:
-          // 2             2
-          // | \           | \
-          // 5   4    -->  1   4
-          // |     \       |     \
-          // 0--3--1       0--3--5
-
-          FEAScriptNodes[0] = gmshNodes[0]; // 0 -> 0
-          FEAScriptNodes[1] = gmshNodes[5]; // 5 -> 1
-          FEAScriptNodes[2] = gmshNodes[2]; // 2 -> 2
-          FEAScriptNodes[3] = gmshNodes[3]; // 3 -> 3
-          FEAScriptNodes[4] = gmshNodes[4]; // 4 -> 4
-          FEAScriptNodes[5] = gmshNodes[1]; // 1 -> 5
-        }
-
-        mappedNodalNumbering.push(FEAScriptNodes);
+    });
+  } else {
+    elementShape = "triangle";
+    triangleElements.forEach((gmshNodes) => {
+      if (gmshNodes.length === 3) {
+        // Linear triangular elements (3 nodes)
+        // Gmsh:         FEAScript:
+        // 2             1
+        // | \           | \
+        // |   \    -->  |   \
+        // 0 --- 1       0 --- 2
+        nodalNumbering.push([gmshNodes[0], gmshNodes[2], gmshNodes[1]]);
+      } else if (gmshNodes.length === 6) {
+        // Quadratic triangular elements (6 nodes)
+        // Gmsh:         FEAScript:
+        // 2             2
+        // | \           | \
+        // 5   4    -->  1   4
+        // |     \       |     \
+        // 0--3--1       0--3--5
+        nodalNumbering.push([
+          gmshNodes[0],
+          gmshNodes[5],
+          gmshNodes[2],
+          gmshNodes[3],
+          gmshNodes[4],
+          gmshNodes[1],
+        ]);
+      } else {
+        throw new FEAScriptError(
+          "UNSUPPORTED_MESH",
+          `Triangular elements with ${gmshNodes.length} nodes are not supported; use 3-node or 6-node ones.`,
+        );
       }
-
-      parsedMesh.nodalNumbering = mappedNodalNumbering;
-    } else {
-      throw new FEAScriptError(
-        "UNSUPPORTED_MESH",
-        "Element type is neither triangle nor quad; mapping for this type is not implemented yet.",
-      );
-    }
-
-    debugLog(
-      "Nodal numbering after mapping from Gmsh to FEAScript format: " +
-        JSON.stringify(parsedMesh.nodalNumbering),
-    );
-
-    // Process boundary elements if they exist and if physical property mapping exists
-    if (parsedMesh.physicalPropMap && parsedMesh.boundaryElements) {
-      // Check if boundary elements need to be processed
-      if (
-        Array.isArray(parsedMesh.boundaryElements) &&
-        parsedMesh.boundaryElements.length > 0 &&
-        parsedMesh.boundaryElements[0] === undefined
-      ) {
-        // Create a new array without the empty first element
-        const fixedBoundaryElements = [];
-        for (let i = 1; i < parsedMesh.boundaryElements.length; i++) {
-          if (parsedMesh.boundaryElements[i]) {
-            fixedBoundaryElements.push(parsedMesh.boundaryElements[i]);
-          }
-        }
-        parsedMesh.boundaryElements = fixedBoundaryElements;
-      }
-
-      // If boundary node pairs exist but boundary elements haven't been processed
-      if (parsedMesh.boundaryNodePairs && !parsedMesh.boundaryElementsProcessed) {
-        // Reset boundary elements array
-        parsedMesh.boundaryElements = [];
-
-        // Boundaries with node pairs that are not on an element side, with the count of such pairs. They are
-        // keyed below by boundary key, so that a solve can refuse a condition on one of them
-        const incompleteBoundaryArrays = new Map();
-
-        // Process each physical property from the Gmsh file
-        parsedMesh.physicalPropMap.forEach((prop) => {
-          // Only process 1D physical entities (boundary lines)
-          if (prop.dimension === 1) {
-            // Get all node pairs for this boundary
-            const boundaryNodePairs = parsedMesh.boundaryNodePairs[prop.tag] || [];
-
-            if (boundaryNodePairs.length > 0) {
-              // Initialize array for this boundary tag
-              if (!parsedMesh.boundaryElements[prop.tag]) {
-                parsedMesh.boundaryElements[prop.tag] = [];
-              }
-
-              // For each boundary line segment (defined by a pair of nodes)
-              boundaryNodePairs.forEach((nodesPair) => {
-                const node1 = nodesPair[0]; // First node in the pair
-                const node2 = nodesPair[1]; // Second node in the pair
-
-                debugLog(
-                  `Processing boundary node pair: [${node1}, ${node2}] for boundary ${prop.tag} (${
-                    prop.name || "unnamed"
-                  })`,
-                );
-
-                // Search through all elements to find which one contains both nodes
-                let foundElement = false;
-
-                // Loop through all elements in the mesh
-                for (let elementIndex = 0; elementIndex < parsedMesh.nodalNumbering.length; elementIndex++) {
-                  const elementConnectivity = parsedMesh.nodalNumbering[elementIndex];
-
-                  // For linear (3 nodes) and quadratic (6 nodes) triangular elements
-                  if (parsedMesh.elementShape === "triangle") {
-                    // Based on FEAScript triangle numbering:
-                    // Linear:       Quadratic:
-                    // 1             2
-                    // | \           | \
-                    // |   \         1   4
-                    // |     \       |     \
-                    // 0 --- 2       0--3--5
-                    // Side 0: bottom, side 1: left, side 2: hypotenuse
-                    const sides =
-                      triangleBoundarySides[elementConnectivity.length === 6 ? "quadratic" : "linear"];
-
-                    // Boundary node pairs are the end vertices of the boundary line, so they are
-                    // compared against the first and last node of each side
-                    const side = Object.keys(sides).find((sideKey) => {
-                      const sideNodes = sides[sideKey];
-                      const firstNode = elementConnectivity[sideNodes[0]];
-                      const lastNode = elementConnectivity[sideNodes[sideNodes.length - 1]];
-                      return (
-                        (firstNode === node1 && lastNode === node2) ||
-                        (firstNode === node2 && lastNode === node1)
-                      );
-                    });
-
-                    if (side !== undefined) {
-                      debugLog(
-                        `  Found triangle ${elementIndex} containing boundary nodes on side ${side}. Element nodes: [${elementConnectivity.join(
-                          ", ",
-                        )}]`,
-                      );
-
-                      parsedMesh.boundaryElements[prop.tag].push([elementIndex, Number(side)]);
-                      foundElement = true;
-                      break;
-                    }
-                  }
-                  // For linear quadrilateral linear elements (4 nodes)
-                  else if (elementConnectivity.length === 4) {
-                    // Check if both boundary nodes are in this element
-                    if (elementConnectivity.includes(node1) && elementConnectivity.includes(node2)) {
-                      // Find which side of the element these nodes form
-                      let side;
-
-                      const node1Index = elementConnectivity.indexOf(node1);
-                      const node2Index = elementConnectivity.indexOf(node2);
-
-                      debugLog(
-                        `  Found element ${elementIndex} containing boundary nodes. Element nodes: [${elementConnectivity.join(
-                          ", ",
-                        )}]`,
-                      );
-                      debugLog(
-                        `  Node ${node1} is at index ${node1Index}, Node ${node2} is at index ${node2Index} in the element`,
-                      );
-
-                      // Based on FEAScript linear quadrilateral numbering:
-                      // 1 --- 3
-                      // |     |
-                      // 0 --- 2
-
-                      if ((node1Index === 0 && node2Index === 2) || (node1Index === 2 && node2Index === 0)) {
-                        side = 0; // Bottom side
-                        debugLog(`  These nodes form the BOTTOM side (${side}) of element ${elementIndex}`);
-                      } else if (
-                        (node1Index === 0 && node2Index === 1) ||
-                        (node1Index === 1 && node2Index === 0)
-                      ) {
-                        side = 1; // Left side
-                        debugLog(`  These nodes form the LEFT side (${side}) of element ${elementIndex}`);
-                      } else if (
-                        (node1Index === 1 && node2Index === 3) ||
-                        (node1Index === 3 && node2Index === 1)
-                      ) {
-                        side = 2; // Top side
-                        debugLog(`  These nodes form the TOP side (${side}) of element ${elementIndex}`);
-                      } else if (
-                        (node1Index === 2 && node2Index === 3) ||
-                        (node1Index === 3 && node2Index === 2)
-                      ) {
-                        side = 3; // Right side
-                        debugLog(`  These nodes form the RIGHT side (${side}) of element ${elementIndex}`);
-                      }
-
-                      // Add the element and side to the boundary elements array
-                      parsedMesh.boundaryElements[prop.tag].push([elementIndex, side]);
-                      debugLog(
-                        `  Added element-side pair [${elementIndex}, ${side}] to boundary tag ${prop.tag}`,
-                      );
-                      foundElement = true;
-                      break;
-                    }
-                  } else if (elementConnectivity.length === 9) {
-                    // For quadratic quadrilateral elements (9 nodes)
-                    // Check if both boundary nodes are in this element
-                    if (elementConnectivity.includes(node1) && elementConnectivity.includes(node2)) {
-                      // Find which side of the element these nodes form
-                      let side;
-
-                      const node1Index = elementConnectivity.indexOf(node1);
-                      const node2Index = elementConnectivity.indexOf(node2);
-
-                      debugLog(
-                        `  Found element ${elementIndex} containing boundary nodes. Element nodes: [${elementConnectivity.join(
-                          ", ",
-                        )}]`,
-                      );
-                      debugLog(
-                        `  Node ${node1} is at index ${node1Index}, Node ${node2} is at index ${node2Index} in the element`,
-                      );
-
-                      // Based on FEAScript quadratic quadrilateral numbering:
-                      // 2--5--8
-                      // |     |
-                      // 1  4  7
-                      // |     |
-                      // 0--3--6
-
-                      // TODO: Transform into dictionaries for better readability
-                      if (
-                        (node1Index === 0 && node2Index === 6) ||
-                        (node1Index === 6 && node2Index === 0) ||
-                        (node1Index === 0 && node2Index === 3) ||
-                        (node1Index === 3 && node2Index === 0) ||
-                        (node1Index === 3 && node2Index === 6) ||
-                        (node1Index === 6 && node2Index === 3)
-                      ) {
-                        side = 0; // Bottom side (nodes 0, 3, 6)
-                        debugLog(`  These nodes form the BOTTOM side (${side}) of element ${elementIndex}`);
-                      } else if (
-                        (node1Index === 0 && node2Index === 2) ||
-                        (node1Index === 2 && node2Index === 0) ||
-                        (node1Index === 0 && node2Index === 1) ||
-                        (node1Index === 1 && node2Index === 0) ||
-                        (node1Index === 1 && node2Index === 2) ||
-                        (node1Index === 2 && node2Index === 1)
-                      ) {
-                        side = 1; // Left side (nodes 0, 1, 2)
-                        debugLog(`  These nodes form the LEFT side (${side}) of element ${elementIndex}`);
-                      } else if (
-                        (node1Index === 2 && node2Index === 8) ||
-                        (node1Index === 8 && node2Index === 2) ||
-                        (node1Index === 2 && node2Index === 5) ||
-                        (node1Index === 5 && node2Index === 2) ||
-                        (node1Index === 5 && node2Index === 8) ||
-                        (node1Index === 8 && node2Index === 5)
-                      ) {
-                        side = 2; // Top side (nodes 2, 5, 8)
-                        debugLog(`  These nodes form the TOP side (${side}) of element ${elementIndex}`);
-                      } else if (
-                        (node1Index === 6 && node2Index === 8) ||
-                        (node1Index === 8 && node2Index === 6) ||
-                        (node1Index === 6 && node2Index === 7) ||
-                        (node1Index === 7 && node2Index === 6) ||
-                        (node1Index === 7 && node2Index === 8) ||
-                        (node1Index === 8 && node2Index === 7)
-                      ) {
-                        side = 3; // Right side (nodes 6, 7, 8)
-                        debugLog(`  These nodes form the RIGHT side (${side}) of element ${elementIndex}`);
-                      }
-
-                      // Add the element and side to the boundary elements array
-                      parsedMesh.boundaryElements[prop.tag].push([elementIndex, side]);
-                      debugLog(
-                        `  Added element-side pair [${elementIndex}, ${side}] to boundary tag ${prop.tag}`,
-                      );
-                      foundElement = true;
-                      break;
-                    }
-                  }
-                }
-
-                if (!foundElement) {
-                  const boundarySides = parsedMesh.boundaryElements[prop.tag];
-                  const incomplete = incompleteBoundaryArrays.get(boundarySides) ?? {
-                    name: prop.name,
-                    tag: prop.tag,
-                    missingPairs: 0,
-                  };
-                  incomplete.missingPairs++;
-                  incompleteBoundaryArrays.set(boundarySides, incomplete);
-                  warnLog(
-                    `Could not find element containing boundary nodes ${node1} and ${node2}. Boundary may be incomplete.`,
-                  );
-                }
-              });
-            }
-          }
-        });
-
-        // Mark as processed
-        boundaryElementsProcessed = true;
-
-        // Fix boundary elements array - remove undefined entries
-        if (parsedMesh.boundaryElements.length > 0 && parsedMesh.boundaryElements[0] === undefined) {
-          const fixedBoundaryElements = [];
-          for (let i = 1; i < parsedMesh.boundaryElements.length; i++) {
-            if (parsedMesh.boundaryElements[i]) {
-              fixedBoundaryElements.push(parsedMesh.boundaryElements[i]);
-            }
-          }
-          parsedMesh.boundaryElements = fixedBoundaryElements;
-        }
-
-        // Key the incomplete boundaries by their position in the final boundary elements array
-        parsedMesh.incompleteBoundaries = {};
-        incompleteBoundaryArrays.forEach((incomplete, boundarySides) => {
-          parsedMesh.incompleteBoundaries[parsedMesh.boundaryElements.indexOf(boundarySides)] = incomplete;
-        });
-      }
-    }
+    });
   }
+  debugLog("Nodal numbering after mapping from Gmsh to FEAScript format: " + JSON.stringify(nodalNumbering));
 
-  return boundaryElementsProcessed;
+  const elementOrder = parsedMesh.elementOrder ?? (nodalNumbering[0].length > 4 ? "quadratic" : "linear");
+
+  // Every side of every element, keyed by its two end nodes, to find the element side of a boundary line
+  const sides = getBoundarySides("2D", elementOrder, elementShape);
+  const sideOf = new Map();
+  const sideKey = (a, b) => (a < b ? `${a}-${b}` : `${b}-${a}`);
+  nodalNumbering.forEach((element, elementIndex) => {
+    Object.entries(sides).forEach(([side, localNodes]) => {
+      sideOf.set(sideKey(element[localNodes[0]], element[localNodes[localNodes.length - 1]]), [
+        elementIndex,
+        Number(side),
+      ]);
+    });
+  });
+
+  // The boundaries: the 1D physical groups, keyed by name. A group without a name is keyed by its tag minus
+  // one, the key of FEAScript 0.3, which every group also gets as an alias
+  const boundaryElements = {};
+  const aliases = {};
+  const incompleteBoundaries = {};
+  (parsedMesh.physicalPropMap ?? [])
+    .filter((prop) => prop.dimension === 1)
+    .forEach((prop) => {
+      const alias = String(prop.tag - 1);
+      let name = prop.name || alias;
+      if (boundaryElements[name] !== undefined) name = `${name} (${prop.tag})`;
+      boundaryElements[name] = [];
+      if (alias !== name) aliases[alias] = name;
+      const nodePairs = parsedMesh.boundaryNodePairs?.[prop.tag] ?? [];
+      nodePairs.forEach(([node1, node2]) => {
+        const found = sideOf.get(sideKey(node1, node2));
+        if (found) {
+          boundaryElements[name].push(found);
+        } else {
+          incompleteBoundaries[name] ??= { name: prop.name, tag: prop.tag, missingPairs: 0 };
+          incompleteBoundaries[name].missingPairs++;
+          warnLog(
+            `Could not find element containing boundary nodes ${node1} and ${node2} of boundary "${name}". Boundary may be incomplete.`,
+          );
+        }
+      });
+    });
+  debugLog(`Boundary elements by name: ${JSON.stringify(boundaryElements)}`);
+
+  const mesh = {
+    meshDimension: "2D",
+    elementOrder,
+    elementShape,
+    nodesXCoordinates: parsedMesh.nodesXCoordinates,
+    nodesYCoordinates: parsedMesh.nodesYCoordinates,
+    nodalNumbering,
+    boundaryElements,
+    aliases,
+    incompleteBoundaries,
+    totalNodesX: parsedMesh.nodesXCoordinates.length,
+    totalNodesY: 1,
+  };
+  // Keep the result on the parsed mesh, so that a second setMesh of the same import is free
+  Object.defineProperty(parsedMesh, "meshObject", { value: mesh, enumerable: false, writable: true });
+  parsedMesh.nodalNumbering = nodalNumbering;
+  return mesh;
 }

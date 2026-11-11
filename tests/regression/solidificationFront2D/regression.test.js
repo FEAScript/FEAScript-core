@@ -34,12 +34,8 @@ const TOLERANCE = 1e-4;
 const solverMethods = ["lusolve", "frontal"];
 
 const structuredMesh = (elementOrder) => ({
-  meshDimension: "2D",
-  elementOrder,
-  numElementsX: 12,
-  numElementsY: 8,
-  maxX: 4,
-  maxY: 2,
+  geometry: { rectangle: [4, 2] },
+  meshConfig: { elements: "quadrilaterals", elementOrder, divisions: [12, 8] },
 });
 
 const cases = [
@@ -85,25 +81,33 @@ const cases = [
   },
 ];
 
-async function getMeshConfig({ mesh, meshFile, elementOrder }) {
+async function getMeshSource({ mesh, meshFile }) {
   if (mesh) return mesh;
   const meshContent = fs.readFileSync(path.join(meshesDirectory, meshFile), "utf8");
-  const parsedMesh = await importGmshMesh({ text: async () => meshContent });
-  return { parsedMesh, meshDimension: "2D", elementOrder };
+  return { mesh: await importGmshMesh({ text: async () => meshContent }) };
 }
 
-function runSimulation(meshConfig, solverMethod) {
+// A mesh source is either a geometry with its mesh configuration, or a mesh object (e.g. imported from Gmsh)
+function setMeshSource(model, source) {
+  if (source.mesh) {
+    model.setMesh(source.mesh);
+  } else {
+    model.setGeometry(source.geometry);
+    model.setMeshConfig(source.meshConfig);
+  }
+}
+
+function runSimulation(meshSource, solverMethod) {
   const model = new FEAScriptModel();
 
   model.setModelConfig("frontPropagationScript");
-  model.setMeshConfig(meshConfig);
+  setMeshSource(model, meshSource);
 
-  // Fixed bottom, left and right sides, free top side. The keys are the same for both mesh kinds:
-  // structured mesh 0 bottom, 1 left, 2 top, 3 right; Gmsh meshes 0 bottom, 1 right, 2 top, 3 left
-  model.addBoundaryCondition("0", ["constantValue", 0]);
-  model.addBoundaryCondition("1", ["constantValue", 0]);
-  model.addBoundaryCondition("2", ["zeroGradient"]);
-  model.addBoundaryCondition("3", ["constantValue", 0]);
+  // Fixed bottom, left and right sides, free top side; the boundary names are the same for both mesh kinds
+  model.addBoundaryCondition("bottom", ["constantValue", 0]);
+  model.addBoundaryCondition("left", ["constantValue", 0]);
+  model.addBoundaryCondition("top", ["zeroGradient"]);
+  model.addBoundaryCondition("right", ["constantValue", 0]);
   model.setSolverMethod(solverMethod);
 
   return model.solve();
@@ -127,7 +131,7 @@ basicLog("================================");
 basicLog("Starting regression test for the solidification front in 2D...");
 
 for (const testCase of cases) {
-  const meshConfig = await getMeshConfig(testCase);
+  const meshConfig = await getMeshSource(testCase);
 
   for (const solverMethod of solverMethods) {
     const label = `${testCase.label}, ${solverMethod}`;

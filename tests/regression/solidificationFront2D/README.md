@@ -21,8 +21,8 @@ and asserts known good values. The exact distance function is checked separately
 | Bottom, left, right | `constantValue`, u = 0     |
 | Top                 | `zeroGradient`             |
 
-The boundary keys are the same for both mesh kinds (0, 1 and 3 fixed, 2 free): the structured
-mesh uses 0 bottom, 1 left, 2 top, 3 right, and the Gmsh meshes use 0 bottom, 1 right, 2 top, 3 left.
+The boundaries are keyed by name (bottom, left and right fixed, top free) for the structured mesh and
+the Gmsh meshes alike.
 
 | Mesh                                                             | Solver methods       |
 | ---------------------------------------------------------------- | -------------------- |

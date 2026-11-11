@@ -35,16 +35,12 @@ model.setModelConfig("heatConductionScript", {
 });
 
 // 2. Define the mesh
-model.setMeshConfig({
-  meshDimension: "1D",
-  elementOrder: "linear",
-  numElementsX: 20,
-  maxX: 0.15,
-});
+model.setGeometry({ line: 0.15 });
+model.setMeshConfig({ elementOrder: "linear", divisions: 20 });
 
 // 3. Apply the boundary conditions
-model.addBoundaryCondition("0", ["convection", 25, 5]); // Left: convection
-model.addBoundaryCondition("1", ["constantTemperature", 20]); // Right: fixed temperature
+model.addBoundaryCondition("left", ["convection", 25, 5]); // Left: convection
+model.addBoundaryCondition("right", ["constantTemperature", 20]); // Right: fixed temperature
 
 // 4. Solve
 const { solutionVector, nodesCoordinates } = model.solve();

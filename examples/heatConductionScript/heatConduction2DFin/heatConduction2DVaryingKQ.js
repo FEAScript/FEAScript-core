@@ -44,20 +44,14 @@ model.setModelConfig("heatConductionScript", {
 });
 
 // 2. Define the mesh
-model.setMeshConfig({
-  meshDimension: "2D",
-  elementOrder: "quadratic",
-  numElementsX: 8,
-  numElementsY: 4,
-  maxX: 4,
-  maxY: 2,
-});
+model.setGeometry({ rectangle: [4, 2] });
+model.setMeshConfig({ elements: "quadrilaterals", elementOrder: "quadratic", divisions: [8, 4] });
 
 // 3. Apply the boundary conditions
-model.addBoundaryCondition("0", ["constantTemperature", 200]); // Bottom
-model.addBoundaryCondition("1", ["symmetry"]); // Left
-model.addBoundaryCondition("2", ["convection", 1, 20]); // Top
-model.addBoundaryCondition("3", ["constantTemperature", 200]); // Right
+model.addBoundaryCondition("bottom", ["constantTemperature", 200]); // Bottom
+model.addBoundaryCondition("left", ["symmetry"]); // Left
+model.addBoundaryCondition("top", ["convection", 1, 20]); // Top
+model.addBoundaryCondition("right", ["constantTemperature", 200]); // Right
 
 // 4. Solve
 const { solutionVector, nodesCoordinates } = model.solve();

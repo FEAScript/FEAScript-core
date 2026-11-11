@@ -55,15 +55,11 @@ function runSimulation(elementOrder, solverMethod) {
       dDdu: (x, u) => 2 * Da * u, // Derivative of D with respect to u, required for the Jacobian
     },
   });
-  model.setMeshConfig({
-    meshDimension: "1D",
-    elementOrder,
-    numElementsX: 20,
-    maxX: 10.0,
-  });
+  model.setGeometry({ line: 10.0 });
+  model.setMeshConfig({ elementOrder, divisions: 20 });
 
-  model.addBoundaryCondition("0", ["constantValue", 1]);
-  model.addBoundaryCondition("1", ["zeroGradient"]);
+  model.addBoundaryCondition("left", ["constantValue", 1]);
+  model.addBoundaryCondition("right", ["zeroGradient"]);
   model.setSolverMethod(solverMethod);
 
   return model.solve();

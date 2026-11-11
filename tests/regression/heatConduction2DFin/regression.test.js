@@ -37,38 +37,26 @@ const EXPECTED_Y = 2;
 const TOLERANCE = 1e-4;
 const PATCH_TOLERANCE = 1e-10;
 
-// Structured mesh boundaries: 0 bottom, 1 left, 2 top, 3 right
-const structuredBoundaryConditions = {
-  0: ["constantTemperature", 200],
-  1: ["symmetry"],
-  2: ["convection", 1, 20],
-  3: ["constantTemperature", 200],
-};
-
-// Gmsh physical tags: 1 bottom, 2 right, 3 top, 4 left (stored as boundary keys 0-3)
-const gmshBoundaryConditions = {
-  0: ["constantTemperature", 200],
-  1: ["constantTemperature", 200],
-  2: ["convection", 1, 20],
-  3: ["symmetry"],
+// The same boundary names for the structured and the Gmsh meshes
+const boundaryConditions = {
+  bottom: ["constantTemperature", 200],
+  left: ["symmetry"],
+  top: ["convection", 1, 20],
+  right: ["constantTemperature", 200],
 };
 
 // Patch test (Gmsh meshes): insulated sides give 1D conduction with T(0) = 200 and -dT/dy = h (T - T∞)
 // at y = 2. The exact solution T = 200 - 60y is linear, so every element type must reproduce it
 const patchBoundaryConditions = {
-  0: ["constantTemperature", 200],
-  1: ["symmetry"],
-  2: ["convection", 1, 20],
-  3: ["symmetry"],
+  bottom: ["constantTemperature", 200],
+  right: ["symmetry"],
+  top: ["convection", 1, 20],
+  left: ["symmetry"],
 };
 
 const structuredMesh = (elementOrder) => ({
-  meshDimension: "2D",
-  elementOrder,
-  numElementsX: 8,
-  numElementsY: 4,
-  maxX: 4,
-  maxY: 2,
+  geometry: { rectangle: [4, 2] },
+  meshConfig: { elements: "quadrilaterals", elementOrder, divisions: [8, 4] },
 });
 
 // The Jacobi method requires diagonally dominant matrices, so it is used with linear elements only,
@@ -122,18 +110,27 @@ const cases = [
   },
 ];
 
-async function getMeshConfig({ mesh, meshFile, elementOrder }) {
+async function getMeshSource({ mesh, meshFile }) {
   if (mesh) return mesh;
   const meshContent = fs.readFileSync(path.join(meshesDirectory, meshFile), "utf8");
-  const parsedMesh = await importGmshMesh({ text: async () => meshContent });
-  return { parsedMesh, meshDimension: "2D", elementOrder };
+  return { mesh: await importGmshMesh({ text: async () => meshContent }) };
 }
 
-function runSimulation(meshConfig, boundaryConditions, solverMethod) {
+// A mesh source is either a geometry with its mesh configuration, or a mesh object (e.g. imported from Gmsh)
+function setMeshSource(model, source) {
+  if (source.mesh) {
+    model.setMesh(source.mesh);
+  } else {
+    model.setGeometry(source.geometry);
+    model.setMeshConfig(source.meshConfig);
+  }
+}
+
+function runSimulation(meshSource, boundaryConditions, solverMethod) {
   const model = new FEAScriptModel();
 
   model.setModelConfig("heatConductionScript");
-  model.setMeshConfig(meshConfig);
+  setMeshSource(model, meshSource);
   Object.entries(boundaryConditions).forEach(([boundaryKey, condition]) => {
     model.addBoundaryCondition(boundaryKey, condition);
   });
@@ -166,8 +163,7 @@ basicLog("================================");
 basicLog("Starting regression test for solid heat transfer in a 2D fin...");
 
 for (const testCase of cases) {
-  const meshConfig = await getMeshConfig(testCase);
-  const boundaryConditions = testCase.mesh ? structuredBoundaryConditions : gmshBoundaryConditions;
+  const meshConfig = await getMeshSource(testCase);
 
   for (const solverMethod of testCase.solverMethods) {
     const label = `${testCase.label}, ${solverMethod}`;

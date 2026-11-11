@@ -17,16 +17,12 @@ const model = new FEAScriptModel();
 model.setModelConfig("heatConductionScript");
 
 // 2. Define the mesh
-model.setMeshConfig({
-  meshDimension: "1D",
-  elementOrder: "linear",
-  numElementsX: 10,
-  maxX: 0.15,
-});
+model.setGeometry({ line: 0.15 });
+model.setMeshConfig({ elementOrder: "linear", divisions: 10 });
 
 // 3. Apply the boundary conditions
-model.addBoundaryCondition("0", ["convection", 1, 25]); // Left
-model.addBoundaryCondition("1", ["constantTemperature", 5]); // Right
+model.addBoundaryCondition("left", ["convection", 1, 25]); // Left
+model.addBoundaryCondition("right", ["constantTemperature", 5]); // Right
 
 // 4. Solve
 model.setSolverMethod("jacobi");

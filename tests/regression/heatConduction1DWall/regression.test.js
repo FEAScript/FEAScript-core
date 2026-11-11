@@ -41,15 +41,11 @@ function runSimulation({ elementOrder, solverMethod }) {
   const model = new FEAScriptModel();
 
   model.setModelConfig("heatConductionScript");
-  model.setMeshConfig({
-    meshDimension: "1D",
-    elementOrder,
-    numElementsX: 10,
-    maxX: 0.15,
-  });
+  model.setGeometry({ line: 0.15 });
+  model.setMeshConfig({ elementOrder, divisions: 10 });
 
-  model.addBoundaryCondition("0", ["convection", 1, 25]);
-  model.addBoundaryCondition("1", ["constantTemperature", 5]);
+  model.addBoundaryCondition("left", ["convection", 1, 25]);
+  model.addBoundaryCondition("right", ["constantTemperature", 5]);
   model.setSolverMethod(solverMethod);
 
   return model.solve({ maxIterations: 200000, tolerance: 1e-8 });

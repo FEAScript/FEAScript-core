@@ -28,12 +28,8 @@ model.setModelConfig("eulerBernoulliBeamScript", {
 });
 
 // 2. Define the mesh
-model.setMeshConfig({
-  meshDimension: "1D",
-  elementOrder: "linear",
-  numElementsX: 4,
-  maxX: beamLength,
-});
+model.setGeometry({ line: beamLength });
+model.setMeshConfig({ elementOrder: "linear", divisions: 4 });
 
 // 3. Apply the boundary conditions (keyed by node number)
 model.addBoundaryCondition("1", [["fixed"]]); // Clamped support at x = 0

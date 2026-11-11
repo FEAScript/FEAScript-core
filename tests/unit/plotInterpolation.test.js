@@ -25,6 +25,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { prepareMesh } from "../../src/mesh/meshUtils.js";
+import { FEAScriptModel } from "../../src/FEAScript.js";
 import { importGmshMesh } from "../../src/io/gmshReader.js";
 import { plotInterpolatedSolution } from "../../src/visualization/plotlyPlot.js";
 import { basicLog, errorLog } from "../../src/utilities/logging.js";
@@ -71,55 +72,48 @@ async function loadGmshMesh(fileName) {
 }
 
 const structuredMesh = (elementOrder) => ({
-  meshDimension: "2D",
   elementOrder,
-  numElementsX: 8,
-  numElementsY: 4,
-  maxX: 4,
-  maxY: 2,
+  geometry: { rectangle: [4, 2] },
+  meshConfig: { elements: "quadrilaterals", elementOrder, divisions: [8, 4] },
 });
+
+// A mesh source is either a geometry with its mesh configuration, or a mesh object (e.g. imported from Gmsh)
+function setMeshSource(model, source) {
+  if (source.mesh) {
+    model.setMesh(source.mesh);
+  } else {
+    model.setGeometry(source.geometry);
+    model.setMeshConfig(source.meshConfig);
+  }
+}
 
 const cases = [
   { label: "linear quadrilaterals", meshConfig: structuredMesh("linear") },
   { label: "quadratic quadrilaterals", meshConfig: structuredMesh("quadratic") },
   {
     label: "Gmsh linear quadrilaterals",
-    meshConfig: {
-      parsedMesh: await loadGmshMesh("rect_quad_linear.msh"),
-      meshDimension: "2D",
-      elementOrder: "linear",
-    },
+    meshConfig: { elementOrder: "linear", mesh: await loadGmshMesh("rect_quad_linear.msh") },
   },
   {
     label: "Gmsh quadratic quadrilaterals",
-    meshConfig: {
-      parsedMesh: await loadGmshMesh("rect_quad_quadratic.msh"),
-      meshDimension: "2D",
-      elementOrder: "quadratic",
-    },
+    meshConfig: { elementOrder: "quadratic", mesh: await loadGmshMesh("rect_quad_quadratic.msh") },
   },
   {
     label: "linear triangles",
-    meshConfig: {
-      parsedMesh: await loadGmshMesh("rect_triang_linear.msh"),
-      meshDimension: "2D",
-      elementOrder: "linear",
-    },
+    meshConfig: { elementOrder: "linear", mesh: await loadGmshMesh("rect_triang_linear.msh") },
   },
   {
     label: "quadratic triangles",
-    meshConfig: {
-      parsedMesh: await loadGmshMesh("rect_triang_quadratic.msh"),
-      meshDimension: "2D",
-      elementOrder: "quadratic",
-    },
+    meshConfig: { elementOrder: "quadratic", mesh: await loadGmshMesh("rect_triang_quadratic.msh") },
   },
 ];
 
 for (const { label, meshConfig } of cases) {
   const field = fields[meshConfig.elementOrder];
-  const { nodesXCoordinates, nodesYCoordinates } = prepareMesh(meshConfig);
-  const model = { meshConfig, solverConfig: "unitTest" };
+  const model = new FEAScriptModel();
+  model.setModelConfig("heatConductionScript");
+  setMeshSource(model, meshConfig);
+  const { nodesXCoordinates, nodesYCoordinates } = prepareMesh(model);
   const result = {
     nodesCoordinates: { nodesXCoordinates, nodesYCoordinates },
     solutionVector: nodesXCoordinates.map((x, nodeIndex) => field(x, nodesYCoordinates[nodeIndex])),

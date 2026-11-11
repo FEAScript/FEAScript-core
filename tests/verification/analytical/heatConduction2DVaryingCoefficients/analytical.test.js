@@ -30,14 +30,8 @@ function runSimulation(coefficientFunctions, boundaryConditions) {
   const model = new FEAScriptModel();
 
   model.setModelConfig("heatConductionScript", { coefficientFunctions });
-  model.setMeshConfig({
-    meshDimension: "2D",
-    elementOrder: "quadratic",
-    numElementsX: 4,
-    numElementsY: 3,
-    maxX: 1,
-    maxY: 1,
-  });
+  model.setGeometry({ rectangle: [1, 1] });
+  model.setMeshConfig({ elements: "quadrilaterals", elementOrder: "quadratic", divisions: [4, 3] });
 
   Object.entries(boundaryConditions).forEach(([boundaryKey, condition]) => {
     model.addBoundaryCondition(boundaryKey, condition);
@@ -113,8 +107,8 @@ assertMatchesAnalyticalSolution(
   runSimulation(
     { thermalConductivity: (x, y) => 1 + x, heatSource: -1 },
     {
-      1: ["constantTemp", 0], // Left boundary (x = 0)
-      3: ["constantTemp", 1], // Right boundary (x = 1)
+      left: ["constantTemp", 0], // Left boundary (x = 0)
+      right: ["constantTemp", 1], // Right boundary (x = 1)
     },
   ),
   (x, y) => x,
@@ -132,8 +126,8 @@ assertMatchesAnalyticalSolution(
   runSimulation(
     { thermalConductivity: (x, y) => 1 + y, heatSource: -1 },
     {
-      0: ["constantTemp", 0], // Bottom boundary (y = 0)
-      2: ["constantTemp", 1], // Top boundary (y = 1)
+      bottom: ["constantTemp", 0], // Bottom boundary (y = 0)
+      top: ["constantTemp", 1], // Top boundary (y = 1)
     },
   ),
   (x, y) => y,

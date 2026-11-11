@@ -17,20 +17,14 @@ const model = new FEAScriptModel();
 model.setModelConfig("frontPropagationScript");
 
 // 2. Define the mesh
-model.setMeshConfig({
-  meshDimension: "2D",
-  elementOrder: "quadratic",
-  numElementsX: 12,
-  numElementsY: 8,
-  maxX: 4,
-  maxY: 2,
-});
+model.setGeometry({ rectangle: [4, 2] });
+model.setMeshConfig({ elements: "quadrilaterals", elementOrder: "quadratic", divisions: [12, 8] });
 
 // 3. Apply the boundary conditions
-model.addBoundaryCondition("0", ["constantValue", 0]); // Bottom
-model.addBoundaryCondition("1", ["constantValue", 0]); // Left
-model.addBoundaryCondition("2", ["zeroGradient"]); // Top
-model.addBoundaryCondition("3", ["constantValue", 0]); // Right
+model.addBoundaryCondition("bottom", ["constantValue", 0]); // Bottom
+model.addBoundaryCondition("left", ["constantValue", 0]); // Left
+model.addBoundaryCondition("top", ["zeroGradient"]); // Top
+model.addBoundaryCondition("right", ["constantValue", 0]); // Right
 
 // 4. Solve
 model.setSolverMethod("lusolve");

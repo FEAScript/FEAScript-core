@@ -59,10 +59,11 @@
       }
 
       // Same 1D wall as examples/heatConductionScript/heatConduction1DWall: convection on the left, 5 °C on the right
-      const mesh = { meshDimension: "1D", elementOrder: "linear", numElementsX: 10, maxX: 0.15 };
+      const geometry = { line: 0.15 };
+      const mesh = { elementOrder: "linear", divisions: 10 };
       const conditions = [
-        ["0", ["convection", 1, 25]],
-        ["1", ["constantTemperature", 5]],
+        ["left", ["convection", 1, 25]],
+        ["right", ["constantTemperature", 5]],
       ];
       const expectedRight = 5;
 
@@ -82,6 +83,7 @@
         try {
           const model = new FEAScriptModel();
           model.setModelConfig("heatConductionScript");
+          model.setGeometry(geometry);
           model.setMeshConfig(mesh);
           for (const [boundary, condition] of conditions) model.addBoundaryCondition(boundary, condition);
           model.setSolverMethod("lusolve");
@@ -100,6 +102,7 @@
           const worker = new FEAScriptWorker();
           await worker.ping();
           await worker.setModelConfig("heatConductionScript");
+          await worker.setGeometry(geometry);
           await worker.setMeshConfig(mesh);
           for (const [boundary, condition] of conditions)
             await worker.addBoundaryCondition(boundary, condition);
@@ -127,9 +130,10 @@
             const createModel = (solverMethod) => {
               const model = new FEAScriptModel();
               model.setModelConfig("heatConductionScript");
-              model.setMeshConfig({ ...mesh, numElementsX: 4 });
-              model.addBoundaryCondition("0", ["constantTemperature", 25]);
-              model.addBoundaryCondition("1", ["constantTemperature", 5]);
+              model.setGeometry(geometry);
+              model.setMeshConfig({ ...mesh, divisions: 4 });
+              model.addBoundaryCondition("left", ["constantTemperature", 25]);
+              model.addBoundaryCondition("right", ["constantTemperature", 5]);
               model.setSolverMethod(solverMethod);
               return model;
             };

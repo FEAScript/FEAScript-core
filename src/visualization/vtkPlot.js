@@ -111,8 +111,8 @@ export function createContourLineOptions(options = {}) {
  */
 export async function plotSolutionVtk(model, result, plotType, plotDivId, renderOptions = {}) {
   console.time("plottingTime");
-  const meshDimension = model.meshConfig.meshDimension;
-  const meshData = prepareMesh(model.meshConfig);
+  const meshDimension = model.getMeshDimension();
+  const meshData = prepareMesh(model);
   const vtkData = await transformSolverOutputToVtkData(model, result, meshData, {
     mode: meshDimension === "1D" && plotType === "line" ? "line" : "surface",
     field: renderOptions.field,
@@ -134,17 +134,17 @@ export async function plotInterpolatedSolutionVtk(model, result, plotType, plotD
   console.time("plottingTime");
   const { values } = selectSolutionField(model, result, renderOptions.field);
   result = { ...result, solutionVector: values, fields: undefined }; // Plot the selected field
-  if (model.meshConfig.meshDimension !== "2D" || plotType !== "contour") {
+  if (model.getMeshDimension() !== "2D" || plotType !== "contour") {
     // Fallback to non-interpolated for non-2D contour cases
-    const meshData = prepareMesh(model.meshConfig);
+    const meshData = prepareMesh(model);
     const vtkData = await transformSolverOutputToVtkData(model, result, meshData, {
-      mode: model.meshConfig.meshDimension === "1D" && plotType === "line" ? "line" : "surface",
+      mode: model.getMeshDimension() === "1D" && plotType === "line" ? "line" : "surface",
     });
     await renderVtkScene(vtkData, plotDivId, model.solverConfig, plotType, renderOptions);
     console.timeEnd("plottingTime");
     return;
   }
-  const meshData = prepareMesh(model.meshConfig);
+  const meshData = prepareMesh(model);
   const interpolatedVtkData = await buildInterpolatedVtkData(model, result, meshData);
   await renderVtkScene(
     interpolatedVtkData,
@@ -166,7 +166,7 @@ export async function plotInterpolatedSolutionVtk(model, result, plotType, plotD
  * @returns {Promise<object>} VTK data object with points, scalars, cells, polyData, and metadata
  */
 export async function transformSolverOutputToVtkData(model, result, meshData = null, options = {}) {
-  const preparedMesh = meshData ?? prepareMesh(model.meshConfig);
+  const preparedMesh = meshData ?? prepareMesh(model);
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const { values } = selectSolutionField(model, result, options.field);
   const solutionArray = extractScalarSolution(values, nodesXCoordinates.length);
@@ -188,7 +188,7 @@ export async function transformSolverOutputToVtkData(model, result, meshData = n
     mode,
     metadata: {
       solverConfig: model.solverConfig,
-      meshDimension: model.meshConfig.meshDimension,
+      meshDimension: model.getMeshDimension(),
       numberOfPoints: points.length / 3,
       numberOfCells: countPackedCells(cells),
     },
@@ -587,7 +587,7 @@ function buildVTPString(vtkData) {
 async function buildInterpolatedGridValues(model, result, meshData) {
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const basisFunctions = new BasisFunctions({
-    meshDimension: model.meshConfig.meshDimension,
+    meshDimension: model.getMeshDimension(),
     elementOrder: meshData.elementOrder,
     elementShape: meshData.elementShape,
   });

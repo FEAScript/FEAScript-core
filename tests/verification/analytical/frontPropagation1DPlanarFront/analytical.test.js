@@ -33,11 +33,12 @@ function runSimulation(elementOrder, solverMethod, frontValue = 0, numElementsX 
   const model = new FEAScriptModel();
 
   model.setModelConfig("frontPropagationScript");
-  model.setMeshConfig({ meshDimension: "1D", elementOrder, numElementsX, maxX: 2 });
+  model.setGeometry({ line: 2 });
+  model.setMeshConfig({ elementOrder, divisions: numElementsX });
 
   // Front starts at the left boundary
-  model.addBoundaryCondition("0", ["constantValue", frontValue]);
-  model.addBoundaryCondition("1", ["zeroGradient"]);
+  model.addBoundaryCondition("left", ["constantValue", frontValue]);
+  model.addBoundaryCondition("right", ["zeroGradient"]);
   model.setSolverMethod(solverMethod);
 
   const { solutionVector, nodesCoordinates } = model.solve();

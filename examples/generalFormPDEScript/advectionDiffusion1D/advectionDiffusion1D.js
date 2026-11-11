@@ -25,16 +25,12 @@ model.setModelConfig("generalFormPDEScript", {
 });
 
 // 2. Define the mesh
-model.setMeshConfig({
-  meshDimension: "1D",
-  elementOrder: "quadratic",
-  numElementsX: 20,
-  maxX: 1.0,
-});
+model.setGeometry({ line: 1.0 });
+model.setMeshConfig({ elementOrder: "quadratic", divisions: 20 });
 
 // 3. Apply the boundary conditions
-model.addBoundaryCondition("0", ["constantValue", 1]); // Left
-model.addBoundaryCondition("1", ["zeroGradient"]); // Right
+model.addBoundaryCondition("left", ["constantValue", 1]); // Left
+model.addBoundaryCondition("right", ["zeroGradient"]); // Right
 
 // 4. Solve
 model.setSolverMethod("lusolve");

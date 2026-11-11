@@ -30,12 +30,8 @@ function runSimulation(coefficientFunctions, elementOrder, boundaryConditions, s
   const model = new FEAScriptModel();
 
   model.setModelConfig("heatConductionScript", { coefficientFunctions });
-  model.setMeshConfig({
-    meshDimension: "1D",
-    elementOrder,
-    numElementsX: 8,
-    maxX: 1,
-  });
+  model.setGeometry({ line: 1 });
+  model.setMeshConfig({ elementOrder, divisions: 8 });
 
   Object.entries(boundaryConditions).forEach(([boundaryKey, condition]) => {
     model.addBoundaryCondition(boundaryKey, condition);
@@ -120,8 +116,8 @@ for (const elementOrder of ["linear", "quadratic"]) {
   assertMatchesAnalyticalSolution(
     `Manufactured solution T = x, ${elementOrder} elements`,
     runSimulation({ thermalConductivity: (x) => 1 + x, heatSource: -1 }, elementOrder, {
-      0: ["constantTemp", 0],
-      1: ["constantTemp", 1],
+      left: ["constantTemp", 0],
+      right: ["constantTemp", 1],
     }),
     (x) => x,
   );
@@ -181,9 +177,10 @@ for (const elementOrder of ["linear", "quadratic"]) {
       },
     },
   });
-  model.setMeshConfig({ meshDimension: "1D", elementOrder: "linear", numElementsX: 8, maxX: 1 });
-  model.addBoundaryCondition("0", ["constantTemp", 0]);
-  model.addBoundaryCondition("1", ["constantTemp", 1]);
+  model.setGeometry({ line: 1 });
+  model.setMeshConfig({ elementOrder: "linear", divisions: 8 });
+  model.addBoundaryCondition("left", ["constantTemp", 0]);
+  model.addBoundaryCondition("right", ["constantTemp", 1]);
   model.setSolverMethod("lusolve");
 
   const failure = await model.solveAsync(null).catch((error) => error);

@@ -34,18 +34,14 @@ const TOLERANCE = 1e-4;
 const SYMMETRY_TOLERANCE = 1e-10;
 
 // The lid is the top boundary, key 2 for both the structured and the Gmsh meshes
-const LID_BOUNDARY_KEY = "2";
 
 const cases = [
   {
     label: "12 × 6 Q2-Q1 quadrilaterals",
     mesh: {
-      meshDimension: "2D",
-      elementOrder: "quadratic",
-      numElementsX: 12,
-      numElementsY: 6,
-      maxX: 4,
-      maxY: 2,
+      geometry: { rectangle: [4, 2] },
+      meshConfig: { elements: "quadrilaterals", elementOrder: "quadratic", divisions: [12, 6] },
+      width: 4,
     },
     expectedMinU: -0.32446,
     expectedMeanU: 0.03988,
@@ -70,22 +66,31 @@ const cases = [
   },
 ];
 
-async function getMeshConfig({ mesh, meshFile }) {
+async function getMeshSource({ mesh, meshFile }) {
   if (mesh) return mesh;
   const meshContent = fs.readFileSync(path.join(meshesDirectory, meshFile), "utf8");
-  const parsedMesh = await importGmshMesh({ text: async () => meshContent });
-  return { parsedMesh, meshDimension: "2D", elementOrder: "quadratic" };
+  return { mesh: await importGmshMesh({ text: async () => meshContent }) };
 }
 
-function runSimulation(meshConfig, modelOptions = {}) {
+// A mesh source is either a geometry with its mesh configuration, or a mesh object (e.g. imported from Gmsh)
+function setMeshSource(model, source) {
+  if (source.mesh) {
+    model.setMesh(source.mesh);
+  } else {
+    model.setGeometry(source.geometry);
+    model.setMeshConfig(source.meshConfig);
+  }
+}
+
+function runSimulation(meshSource, modelOptions = {}) {
   const model = new FEAScriptModel();
 
   model.setModelConfig("creepingFlowScript", modelOptions);
-  model.setMeshConfig(meshConfig);
-  ["0", "1", "2", "3"].forEach((boundaryKey) => {
+  setMeshSource(model, meshSource);
+  ["bottom", "left", "top", "right"].forEach((boundaryName) => {
     model.addBoundaryCondition(
-      boundaryKey,
-      boundaryKey === LID_BOUNDARY_KEY ? ["constantVelocity", 1, 0] : ["constantVelocity", 0, 0],
+      boundaryName,
+      boundaryName === "top" ? ["constantVelocity", 1, 0] : ["constantVelocity", 0, 0],
     );
   });
   model.setSolverMethod("lusolve");
@@ -121,7 +126,7 @@ basicLog("Starting regression test for the lid-driven cavity creeping flow in 2D
 
 for (const testCase of cases) {
   const { label } = testCase;
-  const { solutionVector, nodesCoordinates, fields } = runSimulation(await getMeshConfig(testCase));
+  const { solutionVector, nodesCoordinates, fields } = runSimulation(await getMeshSource(testCase));
 
   // DOF ordering: [u_0 … u_{N-1}, v_0 … v_{N-1}, p_0 … p_{M-1}]
   const solution = Array.from(solutionVector);
@@ -147,7 +152,7 @@ for (const testCase of cases) {
     const nodeIndices = new Map(nodesXCoordinates.map((x, i) => [nodeKey(x, nodesYCoordinates[i]), i]));
     let asymmetry = 0;
     nodesXCoordinates.forEach((x, i) => {
-      const mirror = nodeIndices.get(nodeKey(testCase.mesh.maxX - x, nodesYCoordinates[i]));
+      const mirror = nodeIndices.get(nodeKey(testCase.mesh.width - x, nodesYCoordinates[i]));
       asymmetry = Math.max(
         asymmetry,
         Math.abs(xVelocities[i] - xVelocities[mirror]),
@@ -157,7 +162,7 @@ for (const testCase of cases) {
     assert(
       asymmetry < SYMMETRY_TOLERANCE,
       `${label}: velocity is mirror-symmetric about x = ${
-        testCase.mesh.maxX / 2
+        testCase.mesh.width / 2
       }, largest deviation ${asymmetry.toExponential(3)} (tolerance ${SYMMETRY_TOLERANCE})`,
     );
   }
@@ -180,7 +185,7 @@ for (const testCase of cases) {
   );
 
   // A viscosity μ leaves the velocity unchanged and scales the pressure by μ
-  const meshConfig = await getMeshConfig(testCase);
+  const meshConfig = await getMeshSource(testCase);
   const maxPressure = Math.max(...fields.p.map(Math.abs));
   for (const [viscosityLabel, viscosity] of [
     ["viscosity 2.5", 2.5],
