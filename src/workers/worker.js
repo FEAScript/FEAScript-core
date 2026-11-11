@@ -102,17 +102,12 @@ export class FEAScriptWorker {
   }
 
   /**
-   * Function to set the mesh configuration in the worker
-   * @param {object} meshConfig - The mesh configuration to set
-   * @returns {Promise<boolean>} Resolves when the configuration is set
-   */
-  /**
    * Function to set the geometry in the worker
    * @param {object} geometry - The geometry, as in FEAScriptModel.setGeometry
    * @returns {Promise<boolean>} Resolves when the geometry is set
    */
   async setGeometry(geometry) {
-    await this.ensureInitialized();
+    await this._ensureReady();
     return this.feaWorker.setGeometry(geometry);
   }
 
@@ -123,10 +118,16 @@ export class FEAScriptWorker {
    * @returns {Promise<boolean>} Resolves when the mesh is set
    */
   async setMesh(mesh) {
-    await this.ensureInitialized();
+    await this._ensureReady();
     return this.feaWorker.setMesh(mesh);
   }
 
+  /**
+   * Function to set how the geometry is meshed in the worker. A size function is sent as its source code, so
+   * it must be self-contained (no outer variables)
+   * @param {object} meshConfig - The mesh configuration, as in FEAScriptModel.setMeshConfig
+   * @returns {Promise<boolean>} Resolves when the configuration is set
+   */
   async setMeshConfig(meshConfig) {
     await this._ensureReady();
     return this.feaWorker.setMeshConfig(serializeFunctions(meshConfig));

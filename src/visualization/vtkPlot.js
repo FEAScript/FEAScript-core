@@ -8,7 +8,12 @@
  */
 
 // Internal imports
-import { prepareMesh, computeNodeNeighbors, getBoundarySegments } from "../mesh/meshUtils.js";
+import {
+  prepareMesh,
+  computeNodeNeighbors,
+  getBoundarySegments,
+  getModelMeshDimension,
+} from "../mesh/meshUtils.js";
 import { pointInsideQuadrilateral, pointInsideTriangularElement } from "../elements/elementGeometry.js";
 import { BasisFunctions } from "../elements/basisFunctions.js";
 import { FEAScriptError } from "../utilities/errors.js";
@@ -111,7 +116,7 @@ export function createContourLineOptions(options = {}) {
  */
 export async function plotSolutionVtk(model, result, plotType, plotDivId, renderOptions = {}) {
   console.time("plottingTime");
-  const meshDimension = model.getMeshDimension();
+  const meshDimension = getModelMeshDimension(model);
   const meshData = prepareMesh(model);
   const vtkData = await transformSolverOutputToVtkData(model, result, meshData, {
     mode: meshDimension === "1D" && plotType === "line" ? "line" : "surface",
@@ -134,11 +139,11 @@ export async function plotInterpolatedSolutionVtk(model, result, plotType, plotD
   console.time("plottingTime");
   const { values } = selectSolutionField(model, result, renderOptions.field);
   result = { ...result, solutionVector: values, fields: undefined }; // Plot the selected field
-  if (model.getMeshDimension() !== "2D" || plotType !== "contour") {
+  if (getModelMeshDimension(model) !== "2D" || plotType !== "contour") {
     // Fallback to non-interpolated for non-2D contour cases
     const meshData = prepareMesh(model);
     const vtkData = await transformSolverOutputToVtkData(model, result, meshData, {
-      mode: model.getMeshDimension() === "1D" && plotType === "line" ? "line" : "surface",
+      mode: getModelMeshDimension(model) === "1D" && plotType === "line" ? "line" : "surface",
     });
     await renderVtkScene(vtkData, plotDivId, model.solverConfig, plotType, renderOptions);
     console.timeEnd("plottingTime");
@@ -188,7 +193,7 @@ export async function transformSolverOutputToVtkData(model, result, meshData = n
     mode,
     metadata: {
       solverConfig: model.solverConfig,
-      meshDimension: model.getMeshDimension(),
+      meshDimension: getModelMeshDimension(model),
       numberOfPoints: points.length / 3,
       numberOfCells: countPackedCells(cells),
     },
@@ -587,7 +592,7 @@ function buildVTPString(vtkData) {
 async function buildInterpolatedGridValues(model, result, meshData) {
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const basisFunctions = new BasisFunctions({
-    meshDimension: model.getMeshDimension(),
+    meshDimension: getModelMeshDimension(model),
     elementOrder: meshData.elementOrder,
     elementShape: meshData.elementShape,
   });

@@ -131,13 +131,40 @@ export function readMesh(mesh) {
 }
 
 /**
+ * Function to get the mesh object of a model, or of the plain object that FEAScriptWorker.getModelInfo() returns
+ * (with `mesh`, or `geometry` and `meshConfig`), so that plots work with both
+ * @param {object} model - A FEAScriptModel or the model information of a worker
+ * @returns {object} The mesh object
+ */
+export function getModelMesh(model) {
+  if (typeof model.getMesh === "function") return model.getMesh();
+  if (model.mesh) return model.mesh;
+  if (model.geometry && model.meshConfig) return generateMesh(model.geometry, model.meshConfig);
+  throw new FEAScriptError(
+    "INVALID_INPUT",
+    "The model has no mesh to plot. Solve it first, or pass the model itself.",
+  );
+}
+
+/**
+ * Function to get the dimension of the mesh of a model, or of the model information of a worker
+ * @param {object} model - A FEAScriptModel or the model information of a worker
+ * @returns {string} "1D" or "2D"
+ */
+export function getModelMeshDimension(model) {
+  if (typeof model.getMeshDimension === "function") return model.getMeshDimension();
+  return model.meshDimension ?? model.mesh?.meshDimension ?? model.geometry?.meshDimension;
+}
+
+/**
  * Function to prepare the mesh of a model for the finite element analysis
- * @param {object} model - The FEAScriptModel (its getMesh() gives the mesh object, generating it if needed)
+ * @param {object} model - The FEAScriptModel (its getMesh() gives the mesh object, generating it if needed), or
+ *  the model information of a worker
  * @returns {object} An object containing all mesh-related data: the mesh object's fields, plus `nop` (the
  *  nodal numbering), `totalNodes` and `totalElements`
  */
 export function prepareMesh(model) {
-  const mesh = model.getMesh();
+  const mesh = getModelMesh(model);
   const nop = mesh.nodalNumbering;
   const totalNodes = mesh.nodesXCoordinates.length;
   return {

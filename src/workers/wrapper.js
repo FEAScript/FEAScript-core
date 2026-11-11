@@ -162,7 +162,13 @@ class workerWrapper {
       return {
         solverConfig: this.model.solverConfig,
         geometry: this.model.geometry,
-        meshConfig: this.model.meshConfig,
+        // A size function cannot be sent back from the worker; the mesh it gave is sent instead
+        meshConfig:
+          typeof this.model.meshConfig?.size === "function"
+            ? { ...this.model.meshConfig, size: "function" }
+            : this.model.meshConfig,
+        // The mesh: given with setMesh, or generated at the solve (null before a solve)
+        mesh: this.model.mesh,
         meshDimension: this.model.getMeshDimension(),
         boundaryConditions: this.model.boundaryConditions,
         solverMethod: this.model.solverMethod,

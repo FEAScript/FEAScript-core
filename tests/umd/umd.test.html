@@ -119,6 +119,48 @@
           report("Worker solve", false, error.message);
         }
 
+        // 3b. Triangles with a size function in the worker: the function is sent as its source, and the
+        // model information sent back plots the generated mesh
+        try {
+          const shape = {
+            start: [0, 0],
+            boundaries: [
+              { name: "bottom", to: [4, 0] },
+              { name: "right", to: [4, 2] },
+              { name: "top", to: [0, 2] },
+              { name: "left" },
+            ],
+          };
+          const meshConfig = { elements: "triangles", elementOrder: "quadratic", size: (x, y) => 0.3 + 0.1 * y };
+          const setUp = async (model) => {
+            await model.setModelConfig("heatConductionScript");
+            await model.setGeometry({ shape });
+            await model.setMeshConfig(meshConfig);
+            await model.addBoundaryCondition("bottom", ["constantTemperature", 200]);
+            await model.addBoundaryCondition("top", ["convection", 1, 20]);
+          };
+          const mainModel = new FEAScriptModel();
+          await setUp(mainModel);
+          const mainResult = mainModel.solve();
+          const worker = new FEAScriptWorker();
+          await worker.ping();
+          await setUp(worker);
+          const workerResult = await worker.solve();
+          const maxDiff = Math.max(
+            ...Array.from(workerResult.solutionVector, (value, i) => Math.abs(value - mainResult.solutionVector[i])),
+          );
+          report(
+            "Worker triangles with a size function match the main thread",
+            workerResult.solutionVector.length === mainResult.solutionVector.length && maxDiff < 1e-12,
+            `${workerResult.solutionVector.length} nodes, max difference ${maxDiff}`,
+          );
+          plotSolution(await worker.getModelInfo(), workerResult, "contour", "workerPlot");
+          report("Plot from the worker model information", true);
+          worker.terminate();
+        } catch (error) {
+          report("Worker triangles with a size function", false, error.message);
+        }
+
         // 4. Solve with "jacobi-gpu": checks that the WebGPU worker is found in src/workers/ beside dist/.
         // Plain Jacobi converges slowly on the wall above (the convection node is weakly coupled), so this uses
         // 4 elements with both temperatures fixed. Taichi.js works in 32-bit floats: the residual cannot go much

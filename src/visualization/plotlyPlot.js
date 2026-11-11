@@ -8,7 +8,12 @@
  */
 
 // Internal imports
-import { prepareMesh, computeNodeNeighbors, getBoundarySegments } from "../mesh/meshUtils.js";
+import {
+  prepareMesh,
+  computeNodeNeighbors,
+  getBoundarySegments,
+  getModelMeshDimension,
+} from "../mesh/meshUtils.js";
 import { pointInsideQuadrilateral, pointInsideTriangularElement } from "../elements/elementGeometry.js";
 import { BasisFunctions } from "../elements/basisFunctions.js";
 import { selectSolutionField } from "./solutionFields.js";
@@ -110,7 +115,7 @@ export function plotSolution(model, result, plotType, plotDivId, options = {}) {
   const { values: solutionVector, fieldName } = selectSolutionField(model, result, options.field);
   const solutionLabel = fieldName ?? "Solution";
   const solverConfig = model.solverConfig;
-  const meshDimension = model.getMeshDimension();
+  const meshDimension = getModelMeshDimension(model);
 
   if (meshDimension === "1D" && plotType === "line") {
     const yData = Array.from(solutionVector);
@@ -188,12 +193,12 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId, opt
   const { values, fieldName } = selectSolutionField(model, result, options.field);
   result = { ...result, solutionVector: values, fields: undefined }; // Interpolate the selected field
   const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates; // TODO: Check if we should place it inside the 2D block
-  const meshDimension = model.getMeshDimension();
+  const meshDimension = getModelMeshDimension(model);
   const meshData = prepareMesh(model); // Retrieve mesh connectivity details
 
   // Initialize BasisFunctions once here to avoid creating it inside the loop
   const basisFunctions = new BasisFunctions({
-    meshDimension: model.getMeshDimension(),
+    meshDimension: getModelMeshDimension(model),
     elementOrder: meshData.elementOrder,
     elementShape: meshData.elementShape,
   });
