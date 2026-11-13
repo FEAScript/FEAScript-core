@@ -32,6 +32,11 @@ import { runFrontalSolver } from "./solvers/frontalSolver.js";
 import { FEAScriptError } from "./utilities/errors.js";
 import { basicLog, debugLog, warnLog } from "./utilities/logging.js";
 
+/**
+ * @import { ModelName, ModelOptions, Geometry, MeshConfig, Mesh, SolverOptions, SolverMethod,
+ *  BoundaryCondition, ArrayBoundaryCondition, SolveOptions, SolveResult } from "./types.js"
+ */
+
 // Model names. The names of FEAScript 0.3, with the "Script" suffix, still work with a warning
 const deprecatedModelNames = {
   heatConductionScript: "heatConduction",
@@ -240,16 +245,12 @@ export class FEAScriptModel {
 
   /**
    * Method to set the model configuration
-   * @param {string} modelConfig - The model: "heatConduction", "generalFormPDE", "frontPropagation",
+   * @param {ModelName} modelConfig - The model: "heatConduction", "generalFormPDE", "frontPropagation",
    *  "creepingFlow" or "eulerBernoulliBeam" (the names of FEAScript 0.3, with the "Script" suffix, are deprecated)
-   * @param {object} [options] - Optional additional configuration
-   * @param {object} [options.coefficientFunctions] - The coefficients of the model
-   * @param {boolean} [options.nonlinear] - Solve the general form PDE with the Newton-Raphson method
-   * @param {number} [options.maxIterations] - Iteration limit of the Newton-Raphson method (and of the iterative
-   *  linear solvers, unless options.solver gives one)
-   * @param {number} [options.tolerance] - Tolerance of the Newton-Raphson method (and of the iterative linear
-   *  solvers, unless options.solver gives one)
-   * @param {object} [options.solver] - The linear solver, { method, maxIterations, tolerance } (see setSolverOptions)
+   * @param {ModelOptions} [options] - Optional additional configuration: the coefficients of the model
+   *  (coefficientFunctions), nonlinear (the general form PDE with the Newton-Raphson method), the linear solver
+   *  (solver, see setSolverOptions), and maxIterations and tolerance of the Newton-Raphson method (and of the
+   *  iterative linear solvers, unless options.solver gives them)
    */
   setModelConfig(modelConfig, options = {}) {
     if (Object.prototype.hasOwnProperty.call(deprecatedModelNames, modelConfig)) {
@@ -291,7 +292,7 @@ export class FEAScriptModel {
 
   /**
    * Method to set the geometry of the domain, which setMeshConfig then meshes
-   * @param {object} geometry - `{ line: length }` (1D, boundaries "left" and "right"), `{ rectangle: [width,
+   * @param {Geometry} geometry - `{ line: length }` (1D, boundaries "left" and "right"), `{ rectangle: [width,
    *  height] }` (boundaries "bottom", "right", "top", "left") or `{ shape, holes, points }`, a
    *  polygon with holes whose boundaries are named, written as a path `{ start, boundaries: [{ name, to }] }`
    *  (see geometry.js). The boundary conditions are keyed by the boundary names
@@ -304,16 +305,12 @@ export class FEAScriptModel {
 
   /**
    * Method to set how the geometry is meshed
-   * @param {object} meshConfig - The mesh settings
-   * @param {string} [meshConfig.elements="quadrilaterals"] - "quadrilaterals" (a rectangle or a convex
-   *  four-sided shape, mapped from a grid) or "triangles" (any shape with holes, by Delaunay refinement)
-   * @param {string} [meshConfig.elementOrder="linear"] - "linear" or "quadratic"
-   * @param {number|function} [meshConfig.size] - The length of an element side; for triangles also a function
-   *  (x, y) of position, for a mesh size that varies
-   * @param {number|number[]} [meshConfig.divisions] - Instead of size: the number of elements of a line, or
-   *  [nx, ny] along the bottom and the left side of a quadrilateral
-   * @param {number} [meshConfig.minAngle=20] - Triangles: the smallest angle of the elements, in degrees
-   * @param {number} [meshConfig.maxNodes=100000] - Triangles: the limit on the number of vertices
+   * @param {MeshConfig} meshConfig - The mesh settings: elements, "quadrilaterals" (default; a rectangle or a
+   *  convex four-sided shape, mapped from a grid) or "triangles" (any shape with holes, by Delaunay refinement);
+   *  elementOrder, "linear" (default) or "quadratic"; size, the length of an element side (for triangles also a
+   *  function (x, y) of position, for a mesh size that varies); divisions, instead of size, the number of
+   *  elements of a line or [nx, ny] along the bottom and the left side of a quadrilateral; minAngle (default 20)
+   *  and maxNodes (default 100000) for triangles
    */
   setMeshConfig(meshConfig) {
     if (meshConfig && typeof meshConfig === "object") {
@@ -346,7 +343,7 @@ export class FEAScriptModel {
   /**
    * Method to set the mesh directly: a mesh imported with importGmshMesh, or generated with
    * generateTriangleMesh or generateQuadrilateralMesh. The geometry and the mesh configuration are not used
-   * @param {object} mesh - The mesh object
+   * @param {Mesh} mesh - The mesh object
    */
   setMesh(mesh) {
     this.mesh = readMesh(mesh);
@@ -360,7 +357,7 @@ export class FEAScriptModel {
   /**
    * Method to get the mesh object of the model, generating it from the geometry and the mesh configuration at
    * the first call
-   * @returns {object} The mesh object
+   * @returns {Mesh} The mesh object
    * @throws {FEAScriptError} INVALID_INPUT when no mesh can be made
    */
   getMesh() {
@@ -377,7 +374,7 @@ export class FEAScriptModel {
 
   /**
    * Method to get the dimension of the mesh, "1D" or "2D", or null when no mesh is set
-   * @returns {string|null}
+   * @returns {"1D" | "2D" | null}
    */
   getMeshDimension() {
     return this.mesh?.meshDimension ?? this.geometry?.meshDimension ?? null;
@@ -388,6 +385,7 @@ export class FEAScriptModel {
    * keys of FEAScript 0.3 (and the Gmsh tags minus one) mapped to the names, with a warning
    * @param {object} meshData - The prepared mesh
    * @returns {object} The boundary conditions by boundary name
+   * @private
    */
   resolveBoundaryConditions(meshData) {
     if (this.solverConfig === "eulerBernoulliBeam") return this.boundaryConditions;
@@ -406,11 +404,9 @@ export class FEAScriptModel {
 
   /**
    * Method to set the solver options. Called by setModelConfig with its `solver` option
-   * @param {object} solver - The solver options
-   * @param {string} [solver.method="lusolve"] - "lusolve", "jacobi", "frontal", or "jacobi-gpu" (with solveAsync)
-   * @param {number} [solver.maxIterations] - Iteration limit of the iterative linear solvers (Jacobi)
-   * @param {number} [solver.tolerance] - Tolerance of the iterative linear solvers, on the residual relative to the
-   *  right-hand side
+   * @param {SolverOptions} solver - The solver options: method, "lusolve" (default), "jacobi", "frontal", or
+   *  "jacobi-gpu" (with solveAsync); maxIterations and tolerance of the iterative linear solvers, the tolerance
+   *  on the residual relative to the right-hand side
    * @throws {FEAScriptError} INVALID_INPUT, listing each problem
    */
   setSolverOptions(solver) {
@@ -458,6 +454,7 @@ export class FEAScriptModel {
    * the solver options, else those of setModelConfig
    * @param {object} [options] - The options of the solve call
    * @returns {object} The maxIterations and tolerance of the linear solver
+   * @private
    */
   getLinearSolverOptions(options = {}) {
     return {
@@ -468,10 +465,11 @@ export class FEAScriptModel {
 
   /**
    * Method to add a boundary condition
-   * @param {string} boundaryKey - The boundary name (for the Euler-Bernoulli beam, the 1-based node number)
-   * @param {object|object[]} condition - The condition as an object with its type and named parameters, e.g.
-   *  { type: "convection", h: 1, ambientTemperature: 20 }; for the Euler-Bernoulli beam, one such object or a list
-   *  of them for the node. The array form of FEAScript 0.3, e.g. ["convection", 1, 20], is deprecated
+   * @param {string | number} boundaryKey - The boundary name (for the Euler-Bernoulli beam, the 1-based node
+   *  number)
+   * @param {BoundaryCondition | BoundaryCondition[] | ArrayBoundaryCondition | ArrayBoundaryCondition[]} condition -
+   *  The condition as an object with its type and named parameters, e.g. { type: "convection", h: 1,
+   *  ambientTemperature: 20 }; for the Euler-Bernoulli beam, one such object or a list of them for the node. The array form of FEAScript 0.3, e.g. ["convection", 1, 20], is deprecated
    * @throws {FEAScriptError} INVALID_INPUT for a condition object with no or an unknown type, or with an unknown
    *  or missing parameter
    */
@@ -521,6 +519,7 @@ export class FEAScriptModel {
   /**
    * Method to stop a solve with a solver method that the selected model cannot use
    * @throws {FEAScriptError} If the combination is not supported
+   * @private
    */
   validateSolverMethod() {
     const { solverConfig, solverMethod, nonlinear } = this;
@@ -539,6 +538,7 @@ export class FEAScriptModel {
    * Method to check the model input that does not depend on the mesh, before anything is computed. Every
    * problem found is reported at once, in one error
    * @throws {FEAScriptError} INVALID_INPUT, listing each problem
+   * @private
    */
   validateModel() {
     const problems = [];
@@ -565,6 +565,7 @@ export class FEAScriptModel {
    * Method to find boundary conditions with a type that the selected model does not recognize, or with missing
    * or non-numeric values (an unrecognized condition would otherwise be ignored, and a missing value gives NaN)
    * @returns {string[]} The problems found
+   * @private
    */
   findBoundaryConditionProblems() {
     const problems = [];
@@ -626,6 +627,7 @@ export class FEAScriptModel {
    * Method to find missing coefficient functions, coefficients of the wrong type, and coefficient names that the
    * model does not use (e.g. a misspelled one, which would otherwise leave the default value in place)
    * @returns {string[]} The problems found
+   * @private
    */
   findCoefficientFunctionProblems() {
     const problems = [];
@@ -684,6 +686,7 @@ export class FEAScriptModel {
    * part of it
    * @param {object} meshData - Object containing the prepared mesh data
    * @throws {FEAScriptError} INVALID_INPUT, listing each such condition
+   * @private
    */
   validateBoundaries(meshData, boundaryConditions = this.boundaryConditions) {
     const problems = [];
@@ -729,6 +732,7 @@ export class FEAScriptModel {
    * returns NaN for some x, instead of returning it
    * @param {Float64Array} solutionVector - The solution vector
    * @throws {FEAScriptError} NON_FINITE_VALUES
+   * @private
    */
   validateSolution(solutionVector) {
     const entryIndex = solutionVector.findIndex((value) => !Number.isFinite(value));
@@ -743,7 +747,7 @@ export class FEAScriptModel {
    * Method to set the solver method
    * @deprecated Use setModelConfig(model, { solver: { method } }); setSolverMethod will be removed in a future
    *  version
-   * @param {string} solverMethod - The solver method
+   * @param {SolverMethod} solverMethod - The solver method
    */
   setSolverMethod(solverMethod) {
     warnLog(
@@ -755,8 +759,8 @@ export class FEAScriptModel {
 
   /**
    * Method to solve the finite element problem synchronously
-   * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
-   * @returns {object} An object containing the solution vector (Float64Array, the same for every solver method) and mesh information.
+   * @param {SolveOptions} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
+   * @returns {SolveResult} An object containing the solution vector (Float64Array, the same for every solver method) and mesh information.
    *  Models with more than one unknown per node (creeping flow, Euler-Bernoulli beam) also return `fields`, an object of
    *  named nodal fields (one value per mesh node) that can be plotted directly, e.g. `plotSolution(model, result, "contour", id, { field: "u" })`.
    *  Every result has `info`, the run report: `{ method, converged, iterations, residual, newton, solveTime }`, where
@@ -1051,11 +1055,11 @@ export class FEAScriptModel {
 
   /**
    * Method to solve the finite element problem asynchronously
-   * @param {object} [computeEngine] - An initialized WebGPU compute engine to reuse across solves; when omitted
+   * @param {object | null} [computeEngine] - An initialized WebGPU compute engine to reuse across solves; when omitted
    *  or null, a temporary one is created for this solve and terminated afterwards. A provided engine is not
    *  terminated, so the caller remains responsible for it
-   * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
-   * @returns {Promise<object>} A promise that resolves to an object containing the solution vector (Float64Array), the
+   * @param {SolveOptions} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
+   * @returns {Promise<SolveResult>} A promise that resolves to an object containing the solution vector (Float64Array), the
    *  coordinates of the mesh nodes, and the run report `info` (as for solve)
    */
   async solveAsync(computeEngine, options = {}) {

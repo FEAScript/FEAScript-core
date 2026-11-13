@@ -1,0 +1,10 @@
+{
+  "//": "Generates the TypeScript declarations (dist/types/) from the JSDoc of the source: npm run build:types",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "emitDeclarationOnly": true,
+    "declarationDir": "./dist/types",
+    "sourceMap": false
+  },
+  "include": ["src/index.js"]
+}

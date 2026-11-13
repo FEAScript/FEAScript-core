@@ -18,6 +18,8 @@ import { insideLoops, readGeometry, shown } from "./geometry.js";
 import { FEAScriptError } from "../utilities/errors.js";
 import { basicLog, debugLog } from "../utilities/logging.js";
 
+/** @import { Geometry, Mesh } from "../types.js" */
+
 /**
  * Triangle mesh generation of a polygon with holes, by Delaunay refinement
  *
@@ -47,20 +49,22 @@ const MAX_PASSES = 10000;
 /**
  * Function to generate a mesh of triangles in a polygon with holes, in the form that `model.setMesh(mesh)` takes
  * (the same as the meshes of importGmshMesh and generateQuadrilateralMesh)
- * @param {object} geometry - The geometry, as given to setGeometry: `{ rectangle: [width, height] }` or
+ * @param {Geometry} geometry - The geometry, as given to setGeometry: `{ rectangle: [width, height] }` or
  *  `{ shape, holes, points }`, where a polygon is a path `{ start, boundaries: [{ name, to }] }`, a polygon
  *  `{ name, points }` with one name, or a plain list of points (see geometry.js). The boundaries with the same
  *  name form one boundary. Points inside the domain, or on its boundary, become nodes
  * @param {object} [options] - The mesh settings
- * @param {number|function} [options.size] - The length of an element side, as a number or as a function (x, y)
+ * @param {number | ((x: number, y: number) => number)} [options.size] - The length of an element side, as a
+ *  number or as a function (x, y)
  *  of the element center for a mesh size that varies; the largest element area is that of the equilateral
  *  triangle of this side. Without it, only the angles are refined
  * @param {number} [options.minAngle=20] - The smallest angle of the elements, in degrees. Ruppert's refinement
  *  always stops below 20.7 degrees, and usually up to about 33; above that, it may reach maxNodes
- * @param {string} [options.elementOrder="linear"] - "linear" (3-node) or "quadratic" (6-node) triangles
+ * @param {"linear" | "quadratic"} [options.elementOrder="linear"] - "linear" (3-node) or "quadratic" (6-node)
+ *  triangles
  * @param {number} [options.maxNodes=100000] - The limit on the number of vertices (the corner nodes of the
  *  elements) before the refinement stops with an error
- * @returns {object} The mesh object: the boundaries are keyed by their names
+ * @returns {Mesh} The mesh object: the boundaries are keyed by their names
  * @throws {FEAScriptError} "INVALID_INPUT" for a polygon that is not simple, a hole or a point outside the
  *  domain or a setting out of range; "MESH_TOO_FINE" when the refinement passes maxNodes
  */

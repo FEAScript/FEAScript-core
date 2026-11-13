@@ -25,6 +25,9 @@ export {
 } from "./visualization/vtkPlot.js";
 export { FEAScriptWorker } from "./workers/worker.js";
 
+// Types of the public API, for TypeScript and editors (types.js has no runtime code)
+export * from "./types.js";
+
 /** The version of FEAScript, as in its npm package (e.g. "0.4.0") */
 export const version = "0.4.0-rc.2";
 

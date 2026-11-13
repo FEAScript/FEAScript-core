@@ -12,10 +12,13 @@ import { getBoundarySides } from "../elements/basisFunctions.js";
 import { FEAScriptError } from "../utilities/errors.js";
 import { debugLog, warnLog } from "../utilities/logging.js";
 
+/** @import { Mesh } from "../types.js" */
+
 /**
  * Function to import mesh data from Gmsh (.msh v4.1) containing quadrilateral and triangular elements
- * @param {File} file
- * @returns {object}
+ * @param {Blob | { text(): Promise<string> }} file - The .msh file: a File or Blob, or any object with a text()
+ *  method that resolves to the file contents
+ * @returns {Promise<Mesh>} The mesh, for `model.setMesh(mesh)`
  */
 const importGmshMesh = async (file) => {
   let result = {

@@ -5,7 +5,9 @@
   "main": "dist/feascript.cjs",
   "module": "dist/feascript.esm.js",
   "browser": "dist/feascript.umd.js",
+  "types": "dist/types/index.d.ts",
   "exports": {
+    "types": "./dist/types/index.d.ts",
     "import": "./dist/feascript.esm.js",
     "require": "./dist/feascript.cjs"
   },
@@ -17,7 +19,8 @@
     "example": "examples"
   },
   "scripts": {
-    "build": "rollup -c",
+    "build": "rollup -c && npm run build:types",
+    "build:types": "tsc -p tsconfig.types.json && node scripts/addTypeBanners.js",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build",
     "test": "node --test",

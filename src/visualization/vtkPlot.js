@@ -20,6 +20,8 @@ import { FEAScriptError } from "../utilities/errors.js";
 import { warnLog } from "../utilities/logging.js";
 import { selectSolutionField } from "./solutionFields.js";
 
+/** @import { PlotModel, PlotResult } from "../types.js" */
+
 let _vtkModules = null;
 
 /**
@@ -71,7 +73,7 @@ const rendererCache = new Map();
 
 /**
  * Creates a color scale configuration for visualization
- * @param {object} options - Color scale options
+ * @param {object} [options] - Color scale options
  * @param {string} [options.presetName="Cool to Warm"] - Color map preset name
  * @param {boolean} [options.reverse=false] - Whether to reverse the color map
  * @param {boolean} [options.showScalarBar=true] - Whether to display the scalar bar
@@ -89,7 +91,7 @@ export function createColorScale(options = {}) {
 
 /**
  * Creates contour line options for visualization
- * @param {object} options - Contour line options
+ * @param {object} [options] - Contour line options
  * @param {boolean} [options.enabled=true] - Whether contour lines are enabled
  * @param {number} [options.numberOfContours=12] - Number of contour lines
  * @param {Array<number>} [options.color=[0.15,0.15,0.15]] - RGB color array for contour lines
@@ -107,8 +109,8 @@ export function createContourLineOptions(options = {}) {
 
 /**
  * Plots the FEA solution using the VTK.js backend
- * @param {object} model - FEAScript model containing mesh and solver configuration
- * @param {object} result - Object containing solution vector and node coordinates
+ * @param {PlotModel} model - The model, or its information from FEAScriptWorker.getModelInfo()
+ * @param {PlotResult} result - The result of solve(), with the solution vector and the node coordinates
  * @param {string} plotType - The type of plot (e.g., "line", "contour")
  * @param {string} plotDivId - The id of the HTML element for rendering
  * @param {object} [renderOptions={}] - Rendering options including colorScale, contourLines and field (the named
@@ -128,8 +130,8 @@ export async function plotSolutionVtk(model, result, plotType, plotDivId, render
 
 /**
  * Plots an interpolated FEA solution using the VTK.js backend
- * @param {object} model - FEAScript model containing mesh and solver configuration
- * @param {object} result - Object containing solution vector and node coordinates
+ * @param {PlotModel} model - The model, or its information from FEAScriptWorker.getModelInfo()
+ * @param {PlotResult} result - The result of solve(), with the solution vector and the node coordinates
  * @param {string} plotType - The type of plot (e.g., "contour")
  * @param {string} plotDivId - The id of the HTML element for rendering
  * @param {object} [renderOptions={}] - Rendering options including colorScale, contourLines and field (the named
@@ -163,8 +165,8 @@ export async function plotInterpolatedSolutionVtk(model, result, plotType, plotD
 
 /**
  * Transforms solver output into VTK-compatible data structures
- * @param {object} model - FEAScript model containing mesh and solver configuration
- * @param {object} result - Object containing solution vector and node coordinates
+ * @param {PlotModel} model - The model, or its information from FEAScriptWorker.getModelInfo()
+ * @param {PlotResult} result - The result of solve(), with the solution vector and the node coordinates
  * @param {object|null} [meshData=null] - Pre-prepared mesh data, or null to auto-prepare
  * @param {object} [options={}] - Options including mode ("surface" or "line") and field (the named field to export,
  *  for models with more than one unknown per node)
@@ -202,8 +204,8 @@ export async function transformSolverOutputToVtkData(model, result, meshData = n
 
 /**
  * Transforms solver output into a VTP (VTK PolyData XML) string
- * @param {object} model - FEAScript model containing mesh and solver configuration
- * @param {object} result - Object containing solution vector and node coordinates
+ * @param {PlotModel} model - The model, or its information from FEAScriptWorker.getModelInfo()
+ * @param {PlotResult} result - The result of solve(), with the solution vector and the node coordinates
  * @param {object|null} [meshData=null] - Pre-prepared mesh data, or null to auto-prepare
  * @param {object} [options={}] - Options including mode ("surface" or "line") and field (the named field to export)
  * @returns {Promise<string>} VTP XML string
@@ -215,7 +217,7 @@ export async function transformSolverOutputToVTP(model, result, meshData = null,
 
 /**
  * Transforms solver output into typed array buffers suitable for ML pipelines
- * @param {object} result - Object containing solution vector and node coordinates
+ * @param {PlotResult} result - The result of solve(), with the solution vector and the node coordinates
  * @returns {object} Object with features (Float32Array), featuresShape, labels, and points
  */
 export function transformSolverOutputToMLBuffers(result) {

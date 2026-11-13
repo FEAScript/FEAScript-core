@@ -7,6 +7,8 @@
  * ════════════════════════════════════════════════════════════════
  */
 
+/** @import { ErrorCode } from "../types.js" */
+
 /**
  * Class of the errors that stop a solve, because it would otherwise return an empty or a wrong result.
  * The error codes, which programs can check:
@@ -26,7 +28,7 @@
 export class FEAScriptError extends Error {
   /**
    * Constructor to initialize the FEAScriptError class
-   * @param {string} code - The error code, see the list above
+   * @param {ErrorCode} code - The error code, see the list above
    * @param {string} message - The message for the user
    * @param {string[]} [details] - Each problem found, when one check finds more than one (the message then lists
    *  them all)
@@ -41,7 +43,7 @@ export class FEAScriptError extends Error {
   /**
    * Function to throw one error that lists every problem found by a check, like a compiler that reports all the
    * errors of a file at once. Does nothing when no problem was found
-   * @param {string} code - The error code
+   * @param {ErrorCode} code - The error code
    * @param {string[]} problems - The problems found
    * @throws {FEAScriptError} If there is at least one problem
    */

@@ -19,6 +19,7 @@ import { BasisFunctions } from "../elements/basisFunctions.js";
 import { selectSolutionField } from "./solutionFields.js";
 import { FEAScriptError } from "../utilities/errors.js";
 
+/** @import { PlotModel, PlotResult } from "../types.js" */
 /**
  * Function to stop a plot whose container does not exist (Plotly would otherwise fail with a plain Error). Outside
  * a browser there is no document to check, and the call is left to Plotly
@@ -100,11 +101,11 @@ function drawContourPlot(plotDivId, contourData, title, xCoordinates, yCoordinat
 
 /**
  * Function to create plots of the solution vector
- * @param {object} result - Object containing solution vector and mesh information
- * @param {object} model - Object containing model properties
+ * @param {PlotModel} model - The model, or its information from FEAScriptWorker.getModelInfo()
+ * @param {PlotResult} result - The result of solve(), with the solution vector and the node coordinates
  * @param {string} plotType - The type of plot
  * @param {string} plotDivId - The id of the div where the plot will be rendered
- * @param {object} [options] - Plot options:
+ * @param {{ field?: string }} [options] - Plot options:
  *  - field: The named field to plot, for models with more than one unknown per node (e.g. "u", "v", "p" for
  *    creeping flow, "w", "theta" for the Euler-Bernoulli beam); defaults to the main field of the model
  */
@@ -180,11 +181,11 @@ export function plotSolution(model, result, plotType, plotDivId, options = {}) {
 
 /**
  * Function to generate a dense visualization grid and interpolate the FEM solution on it
- * @param {object} result - Object containing solution vector and mesh information
- * @param {object} model - Object containing model properties
+ * @param {PlotModel} model - The model, or its information from FEAScriptWorker.getModelInfo()
+ * @param {PlotResult} result - The result of solve(), with the solution vector and the node coordinates
  * @param {string} plotType - The type of plot
  * @param {string} plotDivId - The id of the div where the plot will be rendered
- * @param {object} [options] - Plot options:
+ * @param {{ field?: string }} [options] - Plot options:
  *  - field: The named field to plot, for models with more than one unknown per node; defaults to the main field of the model
  */
 export function plotInterpolatedSolution(model, result, plotType, plotDivId, options = {}) {

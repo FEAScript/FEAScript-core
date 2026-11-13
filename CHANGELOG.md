@@ -91,6 +91,13 @@ All notable changes to FEAScript-core are documented in this file. The format is
   in 64-bit floats for every method (`null` for `"frontal"`, which assembles no system matrix, and for nonlinear
   models), `newton` is `{ iterations, increment }` for the nonlinear models, and `solveTime` is the time of the
   whole solve in milliseconds
+- TypeScript declarations in the npm package ([#126](https://github.com/FEAScript/FEAScript-core/issues/126)),
+  generated from the JSDoc of the source into `dist/types/` (`npm run build:types`, part of `npm run build`) and
+  named by `types` in `package.json`. TypeScript projects are type-checked against the API, and editors complete
+  the model names, solver methods, geometry and mesh settings, boundary condition types with their parameters,
+  and the result with its run report. The types of the inputs and results (`Geometry`, `MeshConfig`,
+  `BoundaryCondition`, `SolveResult`, `RunReport`, ...) are exported for `import type`. A test type-checks a
+  TypeScript use of the package against the declarations, and checks that they catch common mistakes
 
 ### Changed
 

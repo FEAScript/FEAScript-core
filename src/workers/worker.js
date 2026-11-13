@@ -14,6 +14,11 @@ import * as Comlink from "../vendor/comlink.mjs";
 import { serializeFunctions } from "./functionSerialization.js";
 import "./errorTransfer.js"; // Keeps the code of a FEAScriptError thrown in the worker
 
+/**
+ * @import { ModelName, ModelOptions, Geometry, MeshConfig, Mesh, SolverMethod, BoundaryCondition,
+ *  ArrayBoundaryCondition, SolveOptions, WorkerSolveResult, ModelInfo } from "../types.js"
+ */
+
 const readyTimeout = 50000; // Milliseconds. A slow connection can take a while to load the worker bundle
 
 /**
@@ -91,8 +96,8 @@ export class FEAScriptWorker {
 
   /**
    * Function to set the model configuration in the worker
-   * @param {string} modelConfig - The model configuration to set
-   * @param {object} [options] - Optional additional configuration, as in FEAScriptModel.setModelConfig. The
+   * @param {ModelName} modelConfig - The model configuration to set
+   * @param {ModelOptions} [options] - Optional additional configuration, as in FEAScriptModel.setModelConfig. The
    *  coefficient functions are sent to the worker as source code, so they must be self-contained (no outer variables)
    * @returns {Promise<boolean>} Resolves when the configuration is set
    */
@@ -103,7 +108,7 @@ export class FEAScriptWorker {
 
   /**
    * Function to set the geometry in the worker
-   * @param {object} geometry - The geometry, as in FEAScriptModel.setGeometry
+   * @param {Geometry} geometry - The geometry, as in FEAScriptModel.setGeometry
    * @returns {Promise<boolean>} Resolves when the geometry is set
    */
   async setGeometry(geometry) {
@@ -114,7 +119,7 @@ export class FEAScriptWorker {
   /**
    * Function to set the mesh in the worker directly (a mesh of importGmshMesh, generateTriangleMesh or
    * generateQuadrilateralMesh)
-   * @param {object} mesh - The mesh object, as in FEAScriptModel.setMesh
+   * @param {Mesh} mesh - The mesh object, as in FEAScriptModel.setMesh
    * @returns {Promise<boolean>} Resolves when the mesh is set
    */
   async setMesh(mesh) {
@@ -125,7 +130,7 @@ export class FEAScriptWorker {
   /**
    * Function to set how the geometry is meshed in the worker. A size function is sent as its source code, so
    * it must be self-contained (no outer variables)
-   * @param {object} meshConfig - The mesh configuration, as in FEAScriptModel.setMeshConfig
+   * @param {MeshConfig} meshConfig - The mesh configuration, as in FEAScriptModel.setMeshConfig
    * @returns {Promise<boolean>} Resolves when the configuration is set
    */
   async setMeshConfig(meshConfig) {
@@ -135,8 +140,9 @@ export class FEAScriptWorker {
 
   /**
    * Function to add a boundary condition to the worker
-   * @param {string} boundaryKey - The boundary name (for the Euler-Bernoulli beam, the 1-based node number)
-   * @param {object|object[]} condition - The condition object, as in FEAScriptModel.addBoundaryCondition, e.g.
+   * @param {string | number} boundaryKey - The boundary name (for the Euler-Bernoulli beam, the 1-based node
+   *  number)
+   * @param {BoundaryCondition | BoundaryCondition[] | ArrayBoundaryCondition | ArrayBoundaryCondition[]} condition - The condition object, as in FEAScriptModel.addBoundaryCondition, e.g.
    *  { type: "convection", h: 1, ambientTemperature: 20 }
    * @returns {Promise<boolean>} Resolves when the boundary condition is added
    */
@@ -149,7 +155,7 @@ export class FEAScriptWorker {
    * Function to set the solver method in the worker
    * @deprecated Use setModelConfig(model, { solver: { method } }); setSolverMethod will be removed in a future
    *  version
-   * @param {string} solverMethod - The solver method to set
+   * @param {SolverMethod} solverMethod - The solver method to set
    * @returns {Promise<boolean>} Resolves when the solver method is set
    */
   async setSolverMethod(solverMethod) {
@@ -159,8 +165,8 @@ export class FEAScriptWorker {
 
   /**
    * Function to request the worker to solve the problem
-   * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
-   * @returns {Promise<object>} Resolves with the solution result
+   * @param {SolveOptions} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
+   * @returns {Promise<WorkerSolveResult>} Resolves with the solution result
    */
   async solve(options = {}) {
     await this._ensureReady();
@@ -169,7 +175,7 @@ export class FEAScriptWorker {
 
   /**
    * Function to retrieve model information from the worker
-   * @returns {Promise<object>} Resolves with the model information
+   * @returns {Promise<ModelInfo>} Resolves with the model information
    */
   async getModelInfo() {
     await this._ensureReady();

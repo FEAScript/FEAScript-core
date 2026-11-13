@@ -12,7 +12,7 @@ let currentLogLevel = "basic";
 
 /**
  * Function to set the logging system level
- * @param {string} level - Logging level (none, basic, debug)
+ * @param {"none" | "basic" | "debug"} level - Logging level (none, basic, debug)
  */
 export function logSystem(level) {
   if (level !== "none" && level !== "basic" && level !== "debug") {

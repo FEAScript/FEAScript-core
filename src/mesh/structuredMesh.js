@@ -12,6 +12,8 @@ import { readGeometry, shown } from "./geometry.js";
 import { FEAScriptError } from "../utilities/errors.js";
 import { basicLog, debugLog } from "../utilities/logging.js";
 
+/** @import { Geometry, Mesh } from "../types.js" */
+
 /**
  * Structured meshes: a line of 1D elements, and a quadrilateral (a rectangle, a trapezoid or any convex
  * four-sided shape) mapped from a grid of quadrilateral elements. The mesh objects they return are in the form
@@ -51,11 +53,12 @@ function checkElementOrder(elementOrder, problems) {
 /**
  * Function to generate a mesh of a line, from x = 0 to x = length, with the boundaries "left" and "right"
  * @param {number} length - The length of the domain
- * @param {object} options - The mesh settings
- * @param {string} [options.elementOrder="linear"] - "linear" (2-node) or "quadratic" (3-node) elements
+ * @param {object} [options] - The mesh settings
+ * @param {"linear" | "quadratic"} [options.elementOrder="linear"] - "linear" (2-node) or "quadratic" (3-node)
+ *  elements
  * @param {number} [options.size] - The length of the elements (rounded to a whole number of elements)
  * @param {number} [options.divisions] - The number of elements, instead of `size`
- * @returns {object} The mesh, for `model.setMesh(mesh)`
+ * @returns {Mesh} The mesh, for `model.setMesh(mesh)`
  * @throws {FEAScriptError} "INVALID_INPUT" for a setting out of range
  */
 export function generateLineMesh(length, { elementOrder = "linear", size, divisions } = {}) {
@@ -108,15 +111,16 @@ export function generateLineMesh(length, { elementOrder = "linear", size, divisi
  * mapped onto the shape by its corners (a bilinear map), so that the rows of nodes run from the bottom side
  * to the top side and the columns from the left side to the right side. The nodes are numbered column by
  * column, along y first
- * @param {object} geometry - The geometry (see geometry.js): a rectangle, or one shape of exactly four points
+ * @param {Geometry} geometry - The geometry (see geometry.js): a rectangle, or one shape of exactly four points
  *  without holes or points
- * @param {object} options - The mesh settings
- * @param {string} [options.elementOrder="linear"] - "linear" (4-node) or "quadratic" (9-node) elements
+ * @param {object} [options] - The mesh settings
+ * @param {"linear" | "quadratic"} [options.elementOrder="linear"] - "linear" (4-node) or "quadratic" (9-node)
+ *  elements
  * @param {number} [options.size] - The length of an element side; each side of the shape is divided into
  *  round(length / size) elements, the longer of two opposite sides deciding
- * @param {number[]} [options.divisions] - [nx, ny], the number of elements along the bottom and the left
+ * @param {[number, number]} [options.divisions] - [nx, ny], the number of elements along the bottom and the left
  *  side, instead of `size`
- * @returns {object} The mesh, for `model.setMesh(mesh)`
+ * @returns {Mesh} The mesh, for `model.setMesh(mesh)`
  * @throws {FEAScriptError} "INVALID_INPUT" for a shape that is not a quadrilateral or a setting out of range
  */
 export function generateQuadrilateralMesh(geometry, { elementOrder = "linear", size, divisions } = {}) {
