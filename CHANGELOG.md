@@ -4,7 +4,7 @@ All notable changes to FEAScript-core are documented in this file. The format is
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 [Semantic Versioning](https://semver.org/) (while in 0.x, minor versions may contain breaking changes).
 
-## [0.4.0] (RC)
+## [0.4.0] - 2026-11-13
 
 ### Added
 
@@ -185,8 +185,8 @@ All notable changes to FEAScript-core are documented in this file. The format is
   `numElementsX`, ...) or an imported mesh (`parsedMesh`) in `meshConfig`: pass the model itself, the information
   of `FEAScriptWorker.getModelInfo()`, or `{ solverConfig, mesh }`. It keeps working with a warning
 - `printVersion`: use `version` ([#128](https://github.com/FEAScript/FEAScript-core/issues/128)). `printVersion`
-  is a string, so reading it cannot log a warning; it is marked `@deprecated` for editors, and keeps its value
-  `"0.4.0 (RC)"` until it is removed
+  is a string, so reading it cannot log a warning; it is marked `@deprecated` for editors, and holds the version
+  as text, `"0.4.0"`, until it is removed
 
 ### Removed
 
@@ -360,7 +360,7 @@ All notable changes to FEAScript-core are documented in this file. The format is
 - Initial release: steady heat conduction in 1D and 2D (`solidHeatTransferScript`), structured meshes and
   Gmsh import, Jacobi and LU solvers, Plotly plotting, and a web worker (`FEAScriptWorker`)
 
-[0.4.0]: https://github.com/FEAScript/FEAScript-core/compare/0.3.1...HEAD
+[0.4.0]: https://github.com/FEAScript/FEAScript-core/compare/0.3.1...0.4.0
 [0.3.1]: https://github.com/FEAScript/FEAScript-core/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/FEAScript/FEAScript-core/compare/0.2.0...0.3.0
 [0.2.0]: https://github.com/FEAScript/FEAScript-core/compare/0.1.3...0.2.0
