@@ -98,6 +98,11 @@ All notable changes to FEAScript-core are documented in this file. The format is
   and the result with its run report. The types of the inputs and results (`Geometry`, `MeshConfig`,
   `BoundaryCondition`, `SolveResult`, `RunReport`, ...) are exported for `import type`. A test type-checks a
   TypeScript use of the package against the declarations, and checks that they catch common mistakes
+- Loading from a classic `<script>` tag: the UMD bundle, `dist/feascript.umd.js`, defines the global `FEAScript`
+  with every export, e.g. `const { FEAScriptModel, plotSolution } = FEAScript;`. It reads its own script URL, so
+  `FEAScriptWorker` and the WebGPU worker find their files next to the bundle, also when it is loaded from a CDN,
+  instead of next to the page. `tests/umd/umd.test.html` checks the script-tag build in headless Chromium and
+  Firefox (`npm run test:browser`, not part of `npm test`)
 
 ### Changed
 
@@ -202,6 +207,9 @@ All notable changes to FEAScript-core are documented in this file. The format is
 - `FEAScriptWorker` starts its first call as soon as the worker is ready. It checked once a second, so every new
   worker added up to a second before the first result. A worker that fails to start now reports the failure to the
   waiting call straight away, instead of after the 50 s timeout
+- `"jacobi-gpu"` where WebGPU is missing: it checks for `navigator.gpu` and a GPU adapter, in the page and in the
+  worker, and throws `FEAScriptError` `"UNSUPPORTED_SOLVER"` with the reason, instead of hanging. A WebGPU worker
+  whose initialisation fails is terminated
 - Frontal solver memory and run time on medium-sized problems
   ([#121](https://github.com/FEAScript/FEAScript-core/issues/121)):
   - The front was allocated with the size of the whole system (N × N), and the solver eliminated at most one node
