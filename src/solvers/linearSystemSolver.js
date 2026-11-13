@@ -157,7 +157,9 @@ async function createDefaultComputeEngine() {
  * @throws {FEAScriptError} If the method is unknown, or if it does not converge
  */
 export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, residualVector, options = {}) {
-  // Extract options
+  // Extract options. The tolerance applies to the residual relative to the right-hand side, as for "jacobi", but
+  // the GPU works in 32-bit floats: the relative residual stops falling at about 1e-7 to 1e-5, depending on the
+  // size of the system, hence a looser default than the 1e-8 of "jacobi"
   const { maxIterations = 10000, tolerance = 1e-4 } = options;
 
   basicLog(`Solving system using ${solverMethod}...`);

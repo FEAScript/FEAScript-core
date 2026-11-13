@@ -163,8 +163,8 @@
 
         // 4. Solve with "jacobi-gpu": checks that the WebGPU worker is found in src/workers/ beside dist/.
         // Plain Jacobi converges slowly on the wall above (the convection node is weakly coupled), so this uses
-        // 4 elements with both temperatures fixed. Taichi.js works in 32-bit floats: the residual cannot go much
-        // below 1e-4 here, hence the tolerance and the looser match with LU
+        // 4 elements with both temperatures fixed. Taichi.js works in 32-bit floats: the relative residual cannot
+        // go much below 1e-7, hence the tolerance and the looser match with LU
         if (!navigator.gpu || !(await navigator.gpu.requestAdapter().catch(() => null))) {
           report("WebGPU solve", true, "SKIP: no WebGPU adapter in this browser");
         } else {
@@ -181,7 +181,7 @@
             const reference = Array.from(createModel("lusolve").solve().solutionVector);
             const result = await createModel("jacobi-gpu").solveAsync(null, {
               maxIterations: 500,
-              tolerance: 1e-3,
+              tolerance: 1e-6,
             });
             const gpuSolution = Array.from(result.solutionVector);
             const maxDiff = Math.max(...gpuSolution.map((value, i) => Math.abs(value - reference[i])));

@@ -124,6 +124,14 @@ All notable changes to FEAScript-core are documented in this file. The format is
 - The Jacobi solver (`"jacobi"`) stops on the residual relative to the right-hand side, ‖R − J u‖ / ‖R‖, instead
   of on the size of the update, and its default `tolerance` is `1e-8`. The update size could be small while the
   solution was still about 1e-3 away, so the method reported convergence too early
+- The WebGPU Jacobi solver (`"jacobi-gpu"`) stops on the same relative residual, ‖R − J u‖ / ‖R‖, as `"jacobi"`
+  ([#113](https://github.com/FEAScript/FEAScript-core/issues/113)), instead of on the largest absolute residual,
+  which depended on the scale of the problem (e.g. on fixed temperatures of 200 °C). Its default `tolerance` stays
+  `1e-4`: the GPU works in 32-bit floats, where the relative residual stops falling at about 1e-7 to 1e-5,
+  depending on the size of the system
+- A WebGPU compute engine reused for systems of different sizes (`solveAsync(computeEngine)`) kept running its
+  kernels on the fields of the first system, and returned a wrong solution as converged. The kernels are now
+  compiled again when the system size changes
 - The sparse LU solver imports only the math.js functions it uses (`slu`, `lusolve`, `flatten`, `SparseMatrix`)
   instead of the whole library. This makes the bundles in `dist/` about 60% smaller, e.g. `feascript.esm.js`
   goes from 730 KB to 308 KB

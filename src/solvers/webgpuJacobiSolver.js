@@ -48,7 +48,8 @@ export class WebGPUComputeEngine {
    * @param {array} systemMatrix - The system matrix
    * @param {array} rightHandSideVector - The right-hand side vector
    * @param {array} initialGuess - Initial guess for solution vector
-   * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance`
+   * @param {object} [options] - Optional parameters for the solver, such as `maxIterations` and `tolerance` (on the
+   *  residual relative to the right-hand side, ‖R − J u‖₂ / ‖R‖₂, as for the CPU Jacobi solver)
    * @returns {Promise<object>} Result object containing the solution, iteration count, and convergence flag
    */
   async webgpuJacobiSolver(systemMatrix, rightHandSideVector, initialGuess, options = {}) {
@@ -57,6 +58,12 @@ export class WebGPUComputeEngine {
     const n = rightHandSideVector.length;
     const flatSystemMatrix = systemMatrix.flat();
 
+    // The right-hand side norm, in 64-bit floats on the CPU. The kernel divides each residual entry by it before
+    // squaring, so the sum is the squared relative residual and cannot overflow 32-bit floats
+    let rightHandSideNorm = 0;
+    for (let i = 0; i < n; i++) rightHandSideNorm += rightHandSideVector[i] * rightHandSideVector[i];
+    rightHandSideNorm = Math.sqrt(rightHandSideNorm) || 1; // An absolute residual for a zero right-hand side
+
     if (!this.fields || this.cachedSize !== n) {
       this.fields = {
         systemMatrixField: ti.field(ti.f32, [n * n]),
@@ -64,9 +71,14 @@ export class WebGPUComputeEngine {
         solutionField: ti.field(ti.f32, [n]),
         updatedSolutionField: ti.field(ti.f32, [n]),
         diagField: ti.field(ti.f32, [n]),
-        maxResidualField: ti.field(ti.f32, [1]),
+        residualSquaredField: ti.field(ti.f32, [1]),
       };
       this.cachedSize = n;
+      // Kernels capture the fields in scope when they are compiled, so new fields need new kernels. Otherwise a
+      // solve of another size runs on the fields of the first one and returns a wrong solution as converged
+      this.extractDiagonalKernel = null;
+      this.jacobiStepKernel = null;
+      this.swapSolutionKernel = null;
     }
 
     const {
@@ -75,7 +87,7 @@ export class WebGPUComputeEngine {
       solutionField,
       updatedSolutionField,
       diagField,
-      maxResidualField,
+      residualSquaredField,
     } = this.fields;
 
     systemMatrixField.fromArray(flatSystemMatrix);
@@ -89,7 +101,7 @@ export class WebGPUComputeEngine {
       solutionField,
       updatedSolutionField,
       diagField,
-      maxResidualField,
+      residualSquaredField,
     });
     if (!this.extractDiagonalKernel) {
       this.extractDiagonalKernel = ti.kernel((size) => {
@@ -98,8 +110,8 @@ export class WebGPUComputeEngine {
         }
       });
 
-      this.jacobiStepKernel = ti.kernel((size) => {
-        maxResidualField[0] = 0.0;
+      this.jacobiStepKernel = ti.kernel((size, rightHandSideNorm) => {
+        residualSquaredField[0] = 0.0;
         for (let i of ti.ndrange(size)) {
           let sum = 0.0;
           for (let j of ti.ndrange(size)) {
@@ -107,7 +119,8 @@ export class WebGPUComputeEngine {
           }
           const residual = rightHandSideField[i] - sum;
           updatedSolutionField[i] = solutionField[i] + residual / diagField[i];
-          ti.atomicMax(maxResidualField[0], ti.abs(residual));
+          const relativeResidual = residual / rightHandSideNorm;
+          ti.atomicAdd(residualSquaredField[0], relativeResidual * relativeResidual);
         }
       });
 
@@ -125,7 +138,7 @@ export class WebGPUComputeEngine {
     let converged = false;
 
     for (let iter = 0; iter < maxIterations; iter++) {
-      this.jacobiStepKernel(n);
+      this.jacobiStepKernel(n, rightHandSideNorm);
       this.swapSolutionKernel(n);
 
       const shouldCheckResidual = (iter + 1) % residualCheckInterval === 0 || iter === maxIterations - 1;
@@ -133,10 +146,11 @@ export class WebGPUComputeEngine {
         continue;
       }
 
-      const rnorm = (await maxResidualField.toArray())[0];
+      // Residual of the iterate before this step, r = R - J u, relative to the right-hand side (as the CPU Jacobi)
+      const residual = Math.sqrt((await residualSquaredField.toArray())[0]);
       iterations = iter + 1;
-      debugLog(`Jacobi: Iteration ${iterations}, residual norm: ${rnorm}`);
-      if (rnorm < tolerance) {
+      debugLog(`Jacobi: Iteration ${iterations}, relative residual: ${residual}`);
+      if (residual < tolerance) {
         converged = true;
         break;
       }
