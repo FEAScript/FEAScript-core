@@ -115,6 +115,34 @@ const solverMethods = ["lusolve", "jacobi", "frontal", "jacobi-gpu"];
 const solverOptionKeys = ["method", "maxIterations", "tolerance"];
 
 /**
+ * Function to record the run report of a linear solve (see solveLinearSystem)
+ * @param {object} report - The run report being built, { iterations, residual, newton }
+ * @param {object} linearSystemResult - The result of solveLinearSystem or solveLinearSystemAsync
+ */
+function recordLinearSolve(report, linearSystemResult) {
+  report.iterations = linearSystemResult.iterations;
+  report.residual = linearSystemResult.residual;
+}
+
+/**
+ * Function to record the run report of a Newton-Raphson solve. Front propagation runs one per incremental step:
+ * the iterations add up, and the increment is that of the last step. The residual is left null: the last linear
+ * system has the converged (nearly zero) increment as its solution, so its residual relative to the right-hand
+ * side measures rounding, not accuracy. The increment is the convergence measure of a nonlinear model
+ * @param {object} report - The run report being built, { iterations, residual, newton }
+ * @param {object} newtonRaphsonResult - The result of newtonRaphson
+ */
+function recordNewtonSolve(report, newtonRaphsonResult) {
+  if (newtonRaphsonResult.linearIterations !== null) {
+    report.iterations = (report.iterations ?? 0) + newtonRaphsonResult.linearIterations;
+  }
+  report.newton = {
+    iterations: (report.newton?.iterations ?? 0) + newtonRaphsonResult.iterations,
+    increment: newtonRaphsonResult.increment,
+  };
+}
+
+/**
  * Function to write a boundary condition in the array form as a condition object, for messages
  * @param {array} condition - The condition in the array form [type, ...values]
  * @returns {string} The condition as an object literal, e.g. { type: "convection", h: 1, ambientTemperature: 20 }
@@ -730,9 +758,14 @@ export class FEAScriptModel {
    * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
    * @returns {object} An object containing the solution vector (Float64Array, the same for every solver method) and mesh information.
    *  Models with more than one unknown per node (creeping flow, Euler-Bernoulli beam) also return `fields`, an object of
-   *  named nodal fields (one value per mesh node) that can be plotted directly, e.g. `plotSolution(model, result, "contour", id, { field: "u" })`
+   *  named nodal fields (one value per mesh node) that can be plotted directly, e.g. `plotSolution(model, result, "contour", id, { field: "u" })`.
+   *  Every result has `info`, the run report: `{ method, converged, iterations, residual, newton, solveTime }`, where
+   *  `iterations` are those of the linear solver (null for the direct solvers), `residual` is ‖R − J u‖₂ / ‖R‖₂ of
+   *  the linear system (null for the frontal solver and for nonlinear models), `newton` is `{ iterations, increment }` for nonlinear
+   *  models (null otherwise), and `solveTime` is the time of the whole solve in milliseconds
    */
   solve(options = {}) {
+    const startTime = performance.now();
     this.validateModel();
     this.validateSolverMethod();
     /**
@@ -750,6 +783,7 @@ export class FEAScriptModel {
     let solutionVector = new Float64Array(0);
     let initialSolution = [];
     let fields = null; // Named nodal fields, for models with more than one unknown per node
+    const report = { iterations: null, residual: null, newton: null }; // The run report of the linear solver
 
     // Prepare the mesh
     basicLog("Preparing mesh...");
@@ -803,6 +837,7 @@ export class FEAScriptModel {
           this.getLinearSolverOptions(options),
         );
         solutionVector = linearSystemResult.solutionVector;
+        recordLinearSolve(report, linearSystemResult);
       }
     } else if (this.solverConfig === "frontPropagation") {
       // Initialize eikonalActivationFlag
@@ -857,6 +892,7 @@ export class FEAScriptModel {
         jacobianMatrix = newtonRaphsonResult.jacobianMatrix;
         residualVector = newtonRaphsonResult.residualVector;
         solutionVector = newtonRaphsonResult.solutionVector;
+        recordNewtonSolve(report, newtonRaphsonResult);
 
         // Stop at the first step that does not converge, instead of continuing from a wrong solution
         if (!newtonRaphsonResult.converged) {
@@ -934,6 +970,7 @@ export class FEAScriptModel {
         jacobianMatrix = newtonRaphsonResult.jacobianMatrix;
         residualVector = newtonRaphsonResult.residualVector;
         solutionVector = newtonRaphsonResult.solutionVector;
+        recordNewtonSolve(report, newtonRaphsonResult);
       } else {
         // Use regular linear solver methods
         ({ jacobianMatrix, residualVector } = assembleGeneralFormPDEMat(
@@ -949,6 +986,7 @@ export class FEAScriptModel {
           this.getLinearSolverOptions(options),
         );
         solutionVector = linearSystemResult.solutionVector;
+        recordLinearSolve(report, linearSystemResult);
       }
     } else if (this.solverConfig === "creepingFlow") {
       // Use regular linear solver methods for steady creeping flow
@@ -968,6 +1006,7 @@ export class FEAScriptModel {
         pivotThreshold: 0.001,
       });
       solutionVector = linearSystemResult.solutionVector;
+      recordLinearSolve(report, linearSystemResult);
 
       // Split the solution vector into velocity and pressure fields
       fields = extractCreepingFlowFields(solutionVector, meshData, creepingFlowResult.pressureNodeIndices);
@@ -988,6 +1027,7 @@ export class FEAScriptModel {
         this.getLinearSolverOptions(options),
       );
       solutionVector = linearSystemResult.solutionVector;
+      recordLinearSolve(report, linearSystemResult);
 
       // Split the solution vector into deflection and rotation fields (2 DOFs per node)
       fields = extractEulerBernoulliBeamFields(solutionVector, beamResult.dofsPerNode);
@@ -997,7 +1037,16 @@ export class FEAScriptModel {
     this.validateSolution(solutionVector);
     basicLog("Solving process completed");
 
-    return fields ? { solutionVector, nodesCoordinates, fields } : { solutionVector, nodesCoordinates };
+    // A solve that does not converge throws NOT_CONVERGED, so a returned result has converged
+    const info = {
+      method: this.solverMethod,
+      converged: true,
+      ...report,
+      solveTime: performance.now() - startTime,
+    };
+    return fields
+      ? { solutionVector, nodesCoordinates, fields, info }
+      : { solutionVector, nodesCoordinates, info };
   }
 
   /**
@@ -1006,9 +1055,11 @@ export class FEAScriptModel {
    *  or null, a temporary one is created for this solve and terminated afterwards. A provided engine is not
    *  terminated, so the caller remains responsible for it
    * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
-   * @returns {Promise<object>} A promise that resolves to an object containing the solution vector (Float64Array) and the coordinates of the mesh nodes
+   * @returns {Promise<object>} A promise that resolves to an object containing the solution vector (Float64Array), the
+   *  coordinates of the mesh nodes, and the run report `info` (as for solve)
    */
   async solveAsync(computeEngine, options = {}) {
+    const startTime = performance.now();
     this.validateModel();
     const refuse = () =>
       new FEAScriptError(
@@ -1020,6 +1071,7 @@ export class FEAScriptModel {
     let jacobianMatrix = [];
     let residualVector = [];
     let solutionVector = new Float64Array(0);
+    const report = { iterations: null, residual: null, newton: null }; // The run report of the linear solver
 
     basicLog("Preparing mesh...");
     const meshData = prepareMesh(this);
@@ -1047,21 +1099,23 @@ export class FEAScriptModel {
         throw refuse();
       }
 
-      const { solutionVector: x } = await solveLinearSystemAsync(
-        "jacobi-gpu",
-        jacobianMatrix,
-        residualVector,
-        {
-          computeEngine,
-          ...this.getLinearSolverOptions(options),
-        },
-      );
-      solutionVector = x;
+      const linearSystemResult = await solveLinearSystemAsync("jacobi-gpu", jacobianMatrix, residualVector, {
+        computeEngine,
+        ...this.getLinearSolverOptions(options),
+      });
+      solutionVector = linearSystemResult.solutionVector;
+      recordLinearSolve(report, linearSystemResult);
     }
     console.timeEnd("totalSolvingTime");
     this.validateSolution(solutionVector);
     basicLog("Solving process completed");
 
-    return { solutionVector, nodesCoordinates };
+    const info = {
+      method: this.solverMethod,
+      converged: true,
+      ...report,
+      solveTime: performance.now() - startTime,
+    };
+    return { solutionVector, nodesCoordinates, info };
   }
 }

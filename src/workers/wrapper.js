@@ -133,7 +133,7 @@ class workerWrapper {
   /**
    * Function to solve the problem using the FEAScriptModel
    * @param {object} [options] - Additional parameters for the solver, such as `maxIterations` and `tolerance`
-   * @returns {object} Returns the solution result, including the solution vector, node coordinates, named fields (for models with more than one unknown per node), solver configuration, and mesh dimension
+   * @returns {object} Returns the solution result, including the solution vector, node coordinates, named fields (for models with more than one unknown per node), the run report (info), solver configuration, and mesh dimension
    * @throws Will throw an error if the solve operation fails
    */
   solve(options = {}) {
@@ -144,6 +144,7 @@ class workerWrapper {
         solutionVector: result.solutionVector,
         nodesCoordinates: result.nodesCoordinates,
         ...(result.fields && { fields: result.fields }),
+        info: result.info,
         solverConfig: this.model.solverConfig,
         meshDimension: this.model.getMeshDimension(),
       };

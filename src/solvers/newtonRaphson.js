@@ -25,6 +25,9 @@ import { runFrontalSolver } from "./frontalSolver.js";
  *  - solutionVector: The solution vector (Float64Array)
  *  - iterations: The number of iterations performed
  *  - converged: Boolean indicating whether the method converged
+ *  - increment: The norm of the last increment, ‖Δu‖₂ (the convergence measure)
+ *  - linearIterations: The iterations of the linear solver, summed over the Newton-Raphson iterations (null
+ *    for direct solvers)
  */
 
 export function newtonRaphson(assembleMat, context = {}) {
@@ -33,6 +36,7 @@ export function newtonRaphson(assembleMat, context = {}) {
   let iterations = 0;
   let jacobianMatrix = [];
   let residualVector = [];
+  let linearIterations = null;
 
   // Extract context
   const { maxIterations = 100, tolerance = 1e-4 } = context;
@@ -79,6 +83,9 @@ export function newtonRaphson(assembleMat, context = {}) {
         context.linearSolverOptions,
       );
       deltaX = linearSystemResult.solutionVector;
+      if (linearSystemResult.iterations !== null) {
+        linearIterations = (linearIterations ?? 0) + linearSystemResult.iterations;
+      }
     }
 
     // Check convergence
@@ -101,6 +108,8 @@ export function newtonRaphson(assembleMat, context = {}) {
     solutionVector,
     converged,
     iterations,
+    increment: errorNorm,
+    linearIterations,
     jacobianMatrix,
     residualVector,
   };

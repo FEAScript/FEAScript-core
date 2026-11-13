@@ -40,6 +40,13 @@
  *  - The interpolated contour plot is the same whichever solver method produced the solution
  *  - The LU solver returns a Float64Array also for a single unknown
  *
+ * Run report (result.info), every model and every applicable solver method:
+ *  - The method, converged and a non-negative solveTime are reported
+ *  - Iterations: counted for "jacobi", null for the direct solvers
+ *  - Residual: ‖R − J u‖₂ / ‖R‖₂ below the solve tolerance for "lusolve" and "jacobi", null for "frontal" and
+ *    for the nonlinear models
+ *  - Newton-Raphson iterations and increment for the nonlinear models, null for the linear ones
+ *
  * Worker model options, sent through the same steps as in the worker (serializeFunctions, structured clone,
  * deserializeFunctions):
  *  - Arrow functions, function expressions and methods are rebuilt and can be called
@@ -852,7 +859,9 @@ function assert(condition, message) {
 
   function runSimulation({ modelConfig, meshConfig, boundaryConditions }, solverMethod) {
     const model = new FEAScriptModel();
-    model.setModelConfig(...modelConfig, { solver: { method: solverMethod } });
+    // The solver goes into the options of the model, beside its coefficient functions
+    const [modelName, modelOptions = {}] = modelConfig;
+    model.setModelConfig(modelName, { ...modelOptions, solver: { method: solverMethod } });
     applyMesh(model, meshConfig);
     Object.entries(boundaryConditions).forEach(([boundaryKey, condition]) => {
       model.addBoundaryCondition(boundaryKey, condition);
@@ -875,6 +884,38 @@ function assert(condition, message) {
       assert(
         solutionVector.length === testCase.degreesOfFreedom,
         `${label}: ${testCase.degreesOfFreedom} entries (got ${solutionVector.length})`,
+      );
+
+      // Run report
+      const { info } = result;
+      const nonlinear = testCase.modelConfig[0] === "frontPropagation" || testCase.modelConfig[1]?.nonlinear;
+      assert(
+        info?.method === solverMethod && info.converged === true,
+        `${label}: run report names the method and convergence (got ${JSON.stringify(info)})`,
+      );
+      assert(
+        typeof info.solveTime === "number" && info.solveTime >= 0,
+        `${label}: run report has the solve time (${info.solveTime} ms)`,
+      );
+      assert(
+        solverMethod === "jacobi" ? info.iterations > 0 : info.iterations === null,
+        `${label}: run report iterations ${solverMethod === "jacobi" ? "counted" : "null"} (got ${
+          info.iterations
+        })`,
+      );
+      assert(
+        solverMethod === "frontal" || nonlinear
+          ? info.residual === null
+          : info.residual >= 0 && info.residual < 1e-10,
+        `${label}: run report residual ${
+          solverMethod === "frontal" || nonlinear ? "null" : "below 1e-10"
+        } (got ${info.residual})`,
+      );
+      assert(
+        nonlinear ? info.newton?.iterations > 0 && info.newton.increment <= 1e-4 : info.newton === null,
+        `${label}: run report Newton-Raphson ${
+          nonlinear ? "iterations and increment" : "null"
+        } (got ${JSON.stringify(info.newton)})`,
       );
 
       if (testCase.plot) {

@@ -53,6 +53,35 @@ function validateLinearSystem(jacobianMatrix, residualVector) {
 }
 
 /**
+ * Function to compute the residual of a solution relative to the right-hand side, ‖R − J u‖₂ / ‖R‖₂, in 64-bit
+ * floats. It is the same measure for every solver method, so the run reports of the direct and the iterative
+ * solvers can be compared
+ * @param {SparseMatrix|array} jacobianMatrix - The coefficient matrix (SparseMatrix or dense array of arrays)
+ * @param {array} residualVector - The right-hand side vector
+ * @param {array} solutionVector - The solution vector
+ * @returns {number} The relative residual (the absolute residual for a zero right-hand side)
+ */
+export function relativeResidual(jacobianMatrix, residualVector, solutionVector) {
+  const n = residualVector.length;
+  let residualSquared = 0;
+  let rightHandSideSquared = 0;
+  for (let i = 0; i < n; i++) {
+    let product = 0;
+    if (jacobianMatrix instanceof SparseMatrix) {
+      jacobianMatrix.forEachInRow(i, (j, value) => {
+        product += value * solutionVector[j];
+      });
+    } else {
+      const row = jacobianMatrix[i];
+      for (let j = 0; j < n; j++) product += row[j] * solutionVector[j];
+    }
+    residualSquared += (residualVector[i] - product) ** 2;
+    rightHandSideSquared += residualVector[i] ** 2;
+  }
+  return Math.sqrt(residualSquared) / (Math.sqrt(rightHandSideSquared) || 1);
+}
+
+/**
  * Function to solve a system of linear equations using different solver methods
  * @param {string} solverMethod - The solver method to use ("lusolve" or "jacobi")
  * @param {SparseMatrix} jacobianMatrix - The coefficient matrix
@@ -61,8 +90,9 @@ function validateLinearSystem(jacobianMatrix, residualVector) {
  *  and `ordering` and `pivotThreshold` (LU decomposition, see mathjsLUSolver)
  * @returns {object} An object containing:
  *  - solutionVector: The solution vector (Float64Array)
- *  - converged: Boolean indicating whether the method converged (for iterative methods)
- *  - iterations: Number of iterations performed (for iterative methods)
+ *  - converged: Boolean indicating whether the method converged (always true for direct methods)
+ *  - iterations: Number of iterations performed (null for direct methods)
+ *  - residual: The residual relative to the right-hand side (see relativeResidual)
  * @throws {FEAScriptError} If the method is unknown, or if it does not converge
  */
 export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, options = {}) {
@@ -71,7 +101,7 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
 
   let solutionVector = new Float64Array(0);
   let converged = true;
-  let iterations = 0;
+  let iterations = null;
 
   validateLinearSystem(jacobianMatrix, residualVector);
 
@@ -113,7 +143,8 @@ export function solveLinearSystem(solverMethod, jacobianMatrix, residualVector, 
   }
   basicLog("System solved successfully");
 
-  return { solutionVector, converged, iterations };
+  const residual = relativeResidual(jacobianMatrix, residualVector, solutionVector);
+  return { solutionVector, converged, iterations, residual };
 }
 
 // Helper to lazily create a default WebGPU compute engine (Comlink + worker)
@@ -152,8 +183,9 @@ async function createDefaultComputeEngine() {
  *  `computeEngine` (an initialized WebGPU compute engine to reuse; when omitted, a temporary one is created)
  * @returns {Promise<object>} A promise that resolves to an object containing:
  *  - solutionVector: The solution vector (Float64Array)
- *  - converged: Boolean indicating whether the method converged (for iterative methods)
- *  - iterations: Number of iterations performed (for iterative methods)
+ *  - converged: Boolean indicating whether the method converged
+ *  - iterations: Number of iterations performed
+ *  - residual: The residual relative to the right-hand side, in 64-bit floats (see relativeResidual)
  * @throws {FEAScriptError} If the method is unknown, or if it does not converge
  */
 export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, residualVector, options = {}) {
@@ -225,5 +257,6 @@ export async function solveLinearSystemAsync(solverMethod, jacobianMatrix, resid
   }
   basicLog(`System solved successfully (${solverMethod})`);
 
-  return { solutionVector, converged, iterations };
+  const residual = relativeResidual(systemMatrix, rightHandSideVector, solutionVector);
+  return { solutionVector, converged, iterations, residual };
 }

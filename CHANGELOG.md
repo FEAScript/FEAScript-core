@@ -84,6 +84,13 @@ All notable changes to FEAScript-core are documented in this file. The format is
   [#116](https://github.com/FEAScript/FEAScript-core/issues/116))
 - `version`, the version of FEAScript as in its npm package, e.g. `"0.4.0"`
   ([#128](https://github.com/FEAScript/FEAScript-core/issues/128))
+- A run report, `result.info`, from `solve()`, `solveAsync()` and `FEAScriptWorker.solve()`
+  ([#127](https://github.com/FEAScript/FEAScript-core/issues/127)): `{ method, converged, iterations, residual,
+  newton, solveTime }`, with the same properties for every model and solver method. `iterations` are those of the
+  linear solver (`null` for the direct solvers), `residual` is ‖R − J u‖₂ / ‖R‖₂ of the linear system computed
+  in 64-bit floats for every method (`null` for `"frontal"`, which assembles no system matrix, and for nonlinear
+  models), `newton` is `{ iterations, increment }` for the nonlinear models, and `solveTime` is the time of the
+  whole solve in milliseconds
 
 ### Changed
 
