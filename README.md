@@ -25,7 +25,7 @@
 ## Features
 
 - **Physics models:** creeping (Stokes) flow, Euler–Bernoulli beam bending, front propagation, heat conduction, general-form PDE (linear and nonlinear)
-- **Geometry and meshing:** a geometry (line, rectangle, or polygon with holes) with named boundaries, meshed with quadrilaterals (mapped grid) or triangles (Delaunay refinement, graded by position), and unstructured mesh import from Gmsh (`.msh`) with quadrilateral and triangular elements (linear and quadratic)
+- **Geometry and meshing:** a geometry (line, rectangle, or polygon with holes) with named boundaries, meshed with quadrilaterals (mapped grid) or triangles (Delaunay refinement, graded by position, built on [Delaunator](https://github.com/mapbox/delaunator) and [Constrainautor](https://github.com/kninnug/Constrainautor)), and unstructured mesh import from Gmsh (`.msh`) with quadrilateral and triangular elements (linear and quadratic)
 - **Solvers:** frontal, Jacobi (CPU/WebGPU) and LU, Newton–Raphson for nonlinear systems
 - **Spatially varying coefficients:** `thermalConductivity(x, y)` and `heatSource(x, y)` can be scalars or functions, evaluated at each Gauss point
 - **Performance:** web worker support for multi-threaded computation
