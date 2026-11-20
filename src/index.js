@@ -14,6 +14,7 @@ export { generateQuadrilateralMesh } from "./mesh/structuredMesh.js";
 export { FEAScriptError } from "./utilities/errors.js";
 export { logSystem } from "./utilities/logging.js";
 export { plotSolution, plotInterpolatedSolution } from "./visualization/plotlyPlot.js";
+export { evaluateSolution } from "./visualization/solutionEvaluation.js";
 export {
   plotSolutionVtk,
   plotInterpolatedSolutionVtk,

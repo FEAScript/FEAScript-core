@@ -8,15 +8,9 @@
  */
 
 // Internal imports
-import {
-  prepareMesh,
-  computeNodeNeighbors,
-  getBoundarySegments,
-  getModelMeshDimension,
-} from "../mesh/meshUtils.js";
-import { locatePointInElement } from "../elements/elementGeometry.js";
-import { BasisFunctions } from "../elements/basisFunctions.js";
+import { getModelMeshDimension } from "../mesh/meshUtils.js";
 import { selectSolutionField } from "./solutionFields.js";
+import { createSolutionLocator } from "./solutionEvaluation.js";
 import { FEAScriptError } from "../utilities/errors.js";
 
 /** @import { PlotModel, PlotResult } from "../types.js" */
@@ -192,17 +186,8 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId, opt
   validatePlotContainer(plotDivId);
   console.time("plottingTime");
   const { values, fieldName } = selectSolutionField(model, result, options.field);
-  result = { ...result, solutionVector: values, fields: undefined }; // Interpolate the selected field
-  const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates; // TODO: Check if we should place it inside the 2D block
+  const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
   const meshDimension = getModelMeshDimension(model);
-  const meshData = prepareMesh(model); // Retrieve mesh connectivity details
-
-  // Initialize BasisFunctions once here to avoid creating it inside the loop
-  const basisFunctions = new BasisFunctions({
-    meshDimension: getModelMeshDimension(model),
-    elementOrder: meshData.elementOrder,
-    elementShape: meshData.elementShape,
-  });
 
   if (meshDimension === "2D" && plotType === "contour") {
     const visNodeXCoordinates = [];
@@ -235,81 +220,11 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId, opt
       }
     }
 
-    // Initialize visSolution with null for all visualization nodes
-    visSolution = new Array(visNodesX * visNodesY).fill(null);
-
-    // Get boundary segments for ray casting
-    const boundarySegments = getBoundarySegments(meshData);
-
-    // Perform adjacency-based search to find which element contains a given point (quick search)
-    const { nodeNeighbors, neighborCount } = computeNodeNeighbors(meshData);
-    let lastParentElement = 0;
-    for (let visNodeIndex = 0; visNodeIndex < visNodesX * visNodesY; visNodeIndex++) {
-      // Ray casting check
-      if (
-        !pointInsidePolygon(
-          visNodeXCoordinates[visNodeIndex],
-          visNodeYCoordinates[visNodeIndex],
-          boundarySegments,
-        )
-      ) {
-        continue;
-      }
-      let found = false;
-      for (
-        let localNodeIndex = 0;
-        localNodeIndex < meshData.nop[lastParentElement].length;
-        localNodeIndex++
-      ) {
-        let globalNodeIndex = meshData.nop[lastParentElement][localNodeIndex] - 1;
-        for (
-          let neighborElementsIndex = 0;
-          neighborElementsIndex < neighborCount[globalNodeIndex];
-          neighborElementsIndex++
-        ) {
-          let currentElement = nodeNeighbors[globalNodeIndex][neighborElementsIndex];
-          const searchResult = pointSearch(
-            model,
-            meshData,
-            result,
-            currentElement,
-            visNodeXCoordinates[visNodeIndex],
-            visNodeYCoordinates[visNodeIndex],
-            basisFunctions,
-          );
-
-          if (searchResult.inside) {
-            lastParentElement = currentElement;
-            visSolution[visNodeIndex] = searchResult.value;
-            found = true;
-            break;
-          }
-        }
-        if (found) break;
-      }
-
-      // Scan all elements to find which element contains a given point (slow search)
-      if (!found) {
-        for (let currentElement = 0; currentElement < meshData.nop.length; currentElement++) {
-          const searchResult = pointSearch(
-            model,
-            meshData,
-            result,
-            currentElement,
-            visNodeXCoordinates[visNodeIndex],
-            visNodeYCoordinates[visNodeIndex],
-            basisFunctions,
-          );
-
-          if (searchResult.inside) {
-            lastParentElement = currentElement;
-            visSolution[visNodeIndex] = searchResult.value;
-            found = true;
-            break;
-          }
-        }
-      }
-    }
+    // Locate each visualization node in the mesh and interpolate the solution there (null outside the domain)
+    const locateSolution = createSolutionLocator(model, result.nodesCoordinates, values);
+    visSolution = visNodeXCoordinates.map((visNodeX, visNodeIndex) =>
+      locateSolution(visNodeX, visNodeYCoordinates[visNodeIndex]),
+    );
 
     // Create the plot
     let contourData = {
@@ -346,113 +261,4 @@ export function plotInterpolatedSolution(model, result, plotType, plotDivId, opt
       `plotInterpolatedSolution cannot draw a "${plotType}" plot of a ${meshDimension} mesh. Supported: "contour" for 2D meshes (use plotSolution for 1D).`,
     );
   }
-}
-
-/**
- * Function to search if a point is inside an element and interpolate the solution
- * @param {object} model - Object containing model properties
- * @param {object} meshData - Object containing mesh data
- * @param {object} result - Object containing solution vector and mesh information
- * @param {number} currentElement - Index of the element to check
- * @param {number} visNodeXCoordinate - X-coordinate of the point
- * @param {number} visNodeYCoordinate - Y-coordinate of the point
- * @param {object} basisFunctions - Instance of BasisFunctions class
- * @returns {object} Object containing inside boolean and interpolated value
- */
-function pointSearch(
-  model,
-  meshData,
-  result,
-  currentElement,
-  visNodeXCoordinate,
-  visNodeYCoordinate,
-  basisFunctions,
-) {
-  const { nodesXCoordinates, nodesYCoordinates } = result.nodesCoordinates;
-  // All element nodes are passed, as the edges of quadratic elements may be curved
-  const elementNodes = meshData.nop[currentElement].map((globalNodeNumber) => [
-    nodesXCoordinates[globalNodeNumber - 1],
-    nodesYCoordinates[globalNodeNumber - 1],
-  ]);
-  const pointCheck = locatePointInElement(
-    visNodeXCoordinate,
-    visNodeYCoordinate,
-    elementNodes,
-    meshData.elementShape,
-    basisFunctions,
-  );
-  if (!pointCheck.inside) return { inside: false, value: null };
-  return {
-    inside: true,
-    value: solutionInterpolation(
-      model,
-      meshData,
-      result,
-      currentElement,
-      pointCheck.ksi,
-      pointCheck.eta,
-      basisFunctions,
-    ),
-  };
-}
-
-/**
- * Function to interpolate the solution at a specific point (ksi, eta) within an element
- * @param {object} model - Object containing model properties
- * @param {object} meshData - Object containing mesh data
- * @param {object} result - Object containing solution vector and mesh information
- * @param {number} elementIndex - Index of the element containing the point
- * @param {number} ksi - First natural coordinate (ksi)
- * @param {number} eta - Second natural coordinate (eta)
- * @param {object} basisFunctions - Instance of BasisFunctions class
- * @returns {number} Interpolated solution value
- */
-function solutionInterpolation(model, meshData, result, elementIndex, ksi, eta, basisFunctions) {
-  // Initialize FEA components
-  const solutionVector = result.solutionVector;
-  const nodesPerElement = meshData.nop[elementIndex].length;
-
-  // Get basis functions for the current point
-  const basisFunctionsAndDerivatives = basisFunctions.getBasisFunctions(ksi, eta);
-  let basisFunction = basisFunctionsAndDerivatives.basisFunction;
-
-  // Interpolate solution
-  let solutionInterpolationValue = 0;
-  for (let localNodeIndex = 0; localNodeIndex < nodesPerElement; localNodeIndex++) {
-    solutionInterpolationValue +=
-      solutionVector[meshData.nop[elementIndex][localNodeIndex] - 1] * basisFunction[localNodeIndex];
-  }
-
-  return solutionInterpolationValue;
-}
-
-/**
- * Function to check if a point is inside a polygon using ray casting algorithm
- * @param {number} x - X-coordinate of the point
- * @param {number} y - Y-coordinate of the point
- * @param {array} segments - Array of boundary segments
- * @returns {boolean} True if the point is inside the polygon
- */
-function pointInsidePolygon(x, y, segments) {
-  // Points on the boundary count as inside: ray casting alone keeps the bottom and left edges of a
-  // domain but drops the top and right ones, so the plot would stop one grid step short there
-  let inside = false;
-  for (let i = 0; i < segments.length; i++) {
-    const [[x1, y1], [x2, y2]] = segments[i];
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const tolerance = 1e-9 * (Math.abs(dx) + Math.abs(dy)); // Relative to the segment length
-    if (
-      x >= Math.min(x1, x2) - tolerance &&
-      x <= Math.max(x1, x2) + tolerance &&
-      y >= Math.min(y1, y2) - tolerance &&
-      y <= Math.max(y1, y2) + tolerance &&
-      Math.abs(dx * (y - y1) - dy * (x - x1)) <= tolerance * Math.hypot(dx, dy)
-    ) {
-      return true;
-    }
-    const intersect = y1 > y !== y2 > y && x < (dx * (y - y1)) / dy + x1;
-    if (intersect) inside = !inside;
-  }
-  return inside;
 }

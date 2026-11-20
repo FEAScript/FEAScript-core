@@ -13,6 +13,7 @@ export { generateTriangleMesh } from "./mesh/triangleMesh.js";
 export { generateQuadrilateralMesh } from "./mesh/structuredMesh.js";
 export { FEAScriptError } from "./utilities/errors.js";
 export { logSystem } from "./utilities/logging.js";
+export { evaluateSolution } from "./visualization/solutionEvaluation.js";
 export { FEAScriptWorker } from "./workers/worker.js";
 export * from "./types.js";
 /** The version of FEAScript, as in its npm package (e.g. "0.4.0") */

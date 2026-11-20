@@ -4,6 +4,17 @@ All notable changes to FEAScript-core are documented in this file. The format is
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 [Semantic Versioning](https://semver.org/) (while in 0.x, minor versions may contain breaking changes).
 
+## [Unreleased]
+
+### Added
+
+- `evaluateSolution(model, result, points, { field })` gives the solution of a 2D model at given points, as a
+  `Float64Array` with one value per `[x, y]` point, NaN for a point outside the mesh (outside the domain or inside
+  a hole). Each point is located in the mesh and the nodal values of its element are interpolated with the element
+  basis functions, for linear and quadratic triangles and quadrilaterals, including quadratic elements with curved
+  edges. It is the point location of `plotInterpolatedSolution`, which now uses it, so the two give the same
+  values. For sampling a solution on the grid of another program, or along a line
+
 ## [0.4.0] - 2026-11-13
 
 ### Added

@@ -22,6 +22,7 @@ import {
   generateQuadrilateralMesh,
   plotSolution,
   plotInterpolatedSolution,
+  evaluateSolution,
   logSystem,
   version,
 } from "feascript";
@@ -52,6 +53,12 @@ const solveTime: number = info.solveTime;
 const newtonIncrement: number | undefined = info.newton?.increment;
 plotSolution(model, result, "contour", "plot");
 plotInterpolatedSolution(model, result, "contour", "plot", { field: "u" });
+const probed: Float64Array = evaluateSolution(model, result, [
+  [1, 0.5],
+  [3, 1.5],
+]);
+// @ts-expect-error: points are [x, y] pairs, not separate coordinate arrays
+evaluateSolution(model, result, { x: [1], y: [0.5] });
 
 // A polygon with a hole, meshed with triangles, and a generated mesh
 const geometry: Geometry = {

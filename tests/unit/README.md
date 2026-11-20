@@ -5,14 +5,15 @@
 This folder contains unit tests for individual FEAScript modules, including solvers, assemblers,
 and utilities.
 
-| Test file                   | Covers                                                                                                               |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `solvers.test.js`           | Jacobi solver convergence; sparse matrix assembly and CSR/CSC/dense conversion; sparse solver input; WebGPU check    |
-| `model.test.js`             | Boundary condition input checks; solution format for every model and solver method; `FEAScriptWorker` options, start |
-| `elements2D.test.js`        | Basis functions and quadrature rules of linear and quadratic quadrilaterals and triangles                            |
-| `plotInterpolation.test.js` | Point location and solution interpolation of the contour plot, for all 2D element types                              |
-| `gmshReader.test.js`        | Gmsh reader, including meshes with non-contiguous node tags (same nodes, connectivity, solution)                     |
-| `triangleMesh.test.js`      | Triangle mesh generator: angles, areas, boundaries, holes, embedded points, quadratic nodes, small angles, a solve   |
+| Test file                    | Covers                                                                                                               |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `solvers.test.js`            | Jacobi solver convergence; sparse matrix assembly and CSR/CSC/dense conversion; sparse solver input; WebGPU check    |
+| `model.test.js`              | Boundary condition input checks; solution format for every model and solver method; `FEAScriptWorker` options, start |
+| `elements2D.test.js`         | Basis functions and quadrature rules of linear and quadratic quadrilaterals and triangles                            |
+| `plotInterpolation.test.js`  | Point location and solution interpolation of the contour plot, for all 2D element types                              |
+| `solutionEvaluation.test.js` | evaluateSolution: exact values, NaN outside the domain and in holes, a solve, fields, input errors                   |
+| `gmshReader.test.js`         | Gmsh reader, including meshes with non-contiguous node tags (same nodes, connectivity, solution)                     |
+| `triangleMesh.test.js`       | Triangle mesh generator: angles, areas, boundaries, holes, embedded points, quadratic nodes, small angles, a solve   |
 
 Run all unit, regression, and verification tests from the repository root with:
 
