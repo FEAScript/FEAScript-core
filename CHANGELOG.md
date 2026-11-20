@@ -4,7 +4,7 @@ All notable changes to FEAScript-core are documented in this file. The format is
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project follows
 [Semantic Versioning](https://semver.org/) (while in 0.x, minor versions may contain breaking changes).
 
-## [Unreleased]
+## [0.4.1] - 2026-11-20
 
 ### Added
 
@@ -387,6 +387,7 @@ All notable changes to FEAScript-core are documented in this file. The format is
 - Initial release: steady heat conduction in 1D and 2D (`solidHeatTransferScript`), structured meshes and
   Gmsh import, Jacobi and LU solvers, Plotly plotting, and a web worker (`FEAScriptWorker`)
 
+[0.4.1]: https://github.com/FEAScript/FEAScript-core/compare/0.4.0...0.4.1
 [0.4.0]: https://github.com/FEAScript/FEAScript-core/compare/0.3.1...0.4.0
 [0.3.1]: https://github.com/FEAScript/FEAScript-core/compare/0.3.0...0.3.1
 [0.3.0]: https://github.com/FEAScript/FEAScript-core/compare/0.2.0...0.3.0

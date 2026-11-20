@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Finite Element Simulation in JavaScript
- *  Version: 0.4.0 | https://feascript.com
+ *  Version: 0.4.1 | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -158,6 +158,16 @@ export class FEAScriptModel {
      * @private
      */
     private validateBoundaries;
+    /**
+     * Method to stop a heat conduction solve in which no boundary fixes the temperature. With zero heat flux on every
+     * boundary ("symmetry" or no condition, or convection with h = 0) the system matrix is singular: the temperature
+     * is determined only up to a constant, and with a heat source there is no steady solution. Rounding hides this
+     * from the solvers, which return meaningless values (around 1e14) instead of failing
+     * @param {object} boundaryConditions - The boundary conditions by boundary name, in the internal array form
+     * @throws {FEAScriptError} SINGULAR_MATRIX
+     * @private
+     */
+    private validateHeatConductionConditions;
     /**
      * Method to stop a solve whose solution contains NaN or infinite values, e.g. from a coefficient function that
      * returns NaN for some x, instead of returning it

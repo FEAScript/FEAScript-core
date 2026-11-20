@@ -2,7 +2,7 @@
  * ════════════════════════════════════════════════════════════════
  *  FEAScript Core Library
  *  Finite Element Simulation in JavaScript
- *  Version: 0.4.0 | https://feascript.com
+ *  Version: 0.4.1 | https://feascript.com
  *  MIT License © 2023–2026 FEAScript
  * ════════════════════════════════════════════════════════════════
  */
@@ -30,10 +30,10 @@ export { FEAScriptWorker } from "./workers/worker.js";
 export * from "./types.js";
 
 /** The version of FEAScript, as in its npm package (e.g. "0.4.0") */
-export const version = "0.4.0";
+export const version = "0.4.1";
 
 /**
  * The version of FEAScript, as text
  * @deprecated Use `version`; printVersion will be removed in a future version
  */
-export const printVersion = "0.4.0";
+export const printVersion = "0.4.1";

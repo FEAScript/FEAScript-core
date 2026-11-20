@@ -8,7 +8,7 @@ This test checks the UMD build, `dist/feascript.umd.js`, in a browser. The UMD b
 with a classic `<script>` tag, as Plotly is loaded, with no import map and no `type="module"`:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/feascript@0.4.0/dist/feascript.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/feascript@0.4.1/dist/feascript.umd.js"></script>
 <script>
   const { FEAScriptModel, plotSolution } = FEAScript;
 </script>
