@@ -1310,6 +1310,74 @@ function assert(condition, message) {
     );
   }
 
+  // Zero heat flux on every boundary: the temperature is not determined, for every solver method, in 1D and 2D
+  const zeroFluxCases = [
+    {
+      label: "2D symmetry on every side, with a source",
+      geometry: { rectangle: [2, 1] },
+      conditions: ["bottom", "right", "top", "left"].map((name) => [name, { type: "symmetry" }]),
+      heatSource: 1,
+    },
+    { label: "2D no conditions, no source", geometry: { rectangle: [2, 1] }, conditions: [], heatSource: 0 },
+    {
+      label: "2D convection with h = 0",
+      geometry: { rectangle: [2, 1] },
+      conditions: [["top", { type: "convection", h: 0, ambientTemperature: 20 }]],
+      heatSource: 1,
+    },
+    {
+      label: "1D symmetry at both ends",
+      geometry: { line: 1 },
+      conditions: [
+        ["left", { type: "symmetry" }],
+        ["right", { type: "symmetry" }],
+      ],
+      heatSource: 1,
+    },
+  ];
+  for (const { label, geometry, conditions, heatSource } of zeroFluxCases) {
+    for (const solverMethod of ["lusolve", "jacobi", "frontal"]) {
+      const model = new FEAScriptModel();
+      model.setModelConfig("heatConduction", {
+        solver: { method: solverMethod },
+        coefficientFunctions: { heatSource },
+      });
+      model.setGeometry(geometry);
+      model.setMeshConfig(
+        geometry.line ? { divisions: 4 } : { elements: "quadrilaterals", divisions: [4, 2] },
+      );
+      conditions.forEach(([name, condition]) => model.addBoundaryCondition(name, condition));
+      const failure = failureOf(() => model.solve());
+      assert(
+        failure?.code === "SINGULAR_MATRIX" && failure.message.includes("constantTemperature"),
+        `Zero flux on every boundary (${label}) with ${solverMethod} throws SINGULAR_MATRIX`,
+      );
+    }
+  }
+  {
+    const model = new FEAScriptModel();
+    model.setModelConfig("heatConduction", { solver: { method: "jacobi-gpu" } });
+    model.setGeometry({ rectangle: [2, 1] });
+    model.setMeshConfig({ elements: "quadrilaterals", divisions: [4, 2] });
+    const asyncFailure = await model.solveAsync().then(
+      () => null,
+      (failure) => failure,
+    );
+    assert(
+      asyncFailure?.code === "SINGULAR_MATRIX",
+      "Zero flux on every boundary with solveAsync throws SINGULAR_MATRIX",
+    );
+  }
+  {
+    // One convection boundary is enough to fix the temperature
+    const model = new FEAScriptModel();
+    model.setModelConfig("heatConduction", { coefficientFunctions: { heatSource: 1 } });
+    model.setGeometry({ rectangle: [2, 1] });
+    model.setMeshConfig({ elements: "quadrilaterals", divisions: [4, 2] });
+    model.addBoundaryCondition("top", { type: "convection", h: 2, ambientTemperature: 20 });
+    assert(failureOf(() => model.solve()) === null, "One convection boundary with h > 0 solves");
+  }
+
   assert(failureOf(() => flowModel("lusolve").solve()) === null, "Creeping flow still solves with lusolve");
   assert(failureOf(() => beamModel("lusolve").solve()) === null, "A beam still solves with lusolve");
 }

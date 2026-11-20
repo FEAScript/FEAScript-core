@@ -728,6 +728,26 @@ export class FEAScriptModel {
   }
 
   /**
+   * Method to stop a heat conduction solve in which no boundary fixes the temperature. With zero heat flux on every
+   * boundary ("symmetry" or no condition, or convection with h = 0) the system matrix is singular: the temperature
+   * is determined only up to a constant, and with a heat source there is no steady solution. Rounding hides this
+   * from the solvers, which return meaningless values (around 1e14) instead of failing
+   * @param {object} boundaryConditions - The boundary conditions by boundary name, in the internal array form
+   * @throws {FEAScriptError} SINGULAR_MATRIX
+   * @private
+   */
+  validateHeatConductionConditions(boundaryConditions) {
+    const fixesTemperature = Object.values(boundaryConditions).some(
+      ([type, h]) => type === "constantTemperature" || (type === "convection" && h !== 0),
+    );
+    if (fixesTemperature) return;
+    throw new FEAScriptError(
+      "SINGULAR_MATRIX",
+      'No boundary fixes the temperature: every boundary has zero heat flux ("symmetry", no condition, or convection with h = 0), so the temperature is determined only up to a constant, and with a heat source there is no steady solution. Give at least one boundary a "constantTemperature" or "convection" condition.',
+    );
+  }
+
+  /**
    * Method to stop a solve whose solution contains NaN or infinite values, e.g. from a coefficient function that
    * returns NaN for some x, instead of returning it
    * @param {Float64Array} solutionVector - The solution vector
@@ -794,6 +814,7 @@ export class FEAScriptModel {
     const meshData = prepareMesh(this);
     const boundaryConditions = this.resolveBoundaryConditions(meshData);
     this.validateBoundaries(meshData, boundaryConditions);
+    if (this.solverConfig === "heatConduction") this.validateHeatConductionConditions(boundaryConditions);
     basicLog("Mesh preparation completed");
 
     // Extract node coordinates and nodal numbering from meshData
@@ -1081,6 +1102,7 @@ export class FEAScriptModel {
     const meshData = prepareMesh(this);
     const boundaryConditions = this.resolveBoundaryConditions(meshData);
     this.validateBoundaries(meshData, boundaryConditions);
+    if (this.solverConfig === "heatConduction") this.validateHeatConductionConditions(boundaryConditions);
     basicLog("Mesh preparation completed");
     const nodesCoordinates = {
       nodesXCoordinates: meshData.nodesXCoordinates,

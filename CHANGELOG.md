@@ -15,6 +15,14 @@ All notable changes to FEAScript-core are documented in this file. The format is
   edges. It is the point location of `plotInterpolatedSolution`, which now uses it, so the two give the same
   values. For sampling a solution on the grid of another program, or along a line
 
+### Fixed
+
+- Heat conduction with zero heat flux on every boundary (`"symmetry"`, no condition, or convection with `h: 0`)
+  throws `FEAScriptError` `"SINGULAR_MATRIX"`, for every solver method, instead of returning meaningless values
+  (around 1e14). The temperature is then determined only up to a constant, and with a heat source there is no
+  steady solution; the message asks for a `"constantTemperature"` or `"convection"` condition on at least one
+  boundary
+
 ## [0.4.0] - 2026-11-13
 
 ### Added
